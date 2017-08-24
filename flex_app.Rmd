@@ -24,7 +24,7 @@ require(berryFunctions)
 require(DT)
 require(rgeos)
 require(datasets)
-require(xtable)
+require(lubridate)
 
 #require(checkpoint); checkpoint("2017-08-11")
 
@@ -34,7 +34,9 @@ require(xtable)
 povodi <- readOGR("data/prep/povodi.shp")
 reky <- readOGR("data/prep/reky.shp")
 jezera <- readOGR("data/prep/jezera.shp")
+stanice <- readOGR("data/prep/stanice.shp")
 popis <- read.table('data/E_ISVS$UTV_POV.txt',encoding = 'UTF-8', header = TRUE, sep=';')
+QD <- readRDS('data/QD.rds')
 BM <- readRDS('data/mbil/bilan_month.rds')
 BM.long <- dcast(BM, month+year+UPOV_ID~variable)
 u <- readRDS('data/uzivani.rds')
@@ -160,7 +162,7 @@ kde <- gIntersects(povodi.ds(), xy, byid = TRUE)
 Row
 -------------------------------------
 
-### Map
+### Mapa
 
 ```{r}
 # Functions
@@ -183,6 +185,12 @@ default.circle <- reactive({
   NAZICO.sel <- kde()$u$NAZICO[1]}
   else{NAZICO.sel<-input$uzivani_marker_click$id}
   return(NAZICO.sel)})
+
+default.line <- reactive({
+  if(is.null(input$rozvodnice_shape_click$id)){
+  DBCN.sel <- QD$DBCN[1]}
+  else{DBCN.sel <- input$rozvodnice_shape_click$id}
+  return(DBCN.sel)})
 
 #--------------------
 
@@ -447,8 +455,8 @@ output$uzivani <- renderLeaflet({
 
 labels.points <- sprintf(
       "<strong>%s</strong><br/>Povodí: %s<br/>Název toku: %s <br/> Jev: %s",
-      kde()$u$NAZICO, kde()$u$POVODI, kde()$u$NAZTOK, kde()$u$JEV
-      ) %>% lapply(htmltools::HTML)
+      kde()$u$NAZICO, kde()$u$POVODI, kde()$u$NAZTOK, kde()$u$JEV) %>% 
+      lapply(htmltools::HTML)
 
 label.polygon <- sprintf(
       "<strong>%s</strong>",
@@ -558,4 +566,57 @@ renderPlot({
 })
 
 ```
+
+Denní průtoky {data-orientation=rows}
+=====================================
+
+### Mapa denních průtoků
+
+```{r}
+leafletOutput("rozvodnice")
+
+output$rozvodnice <- renderLeaflet({
+  
+  labels.lines <- sprintf(
+      "<strong>%s</strong><br/> DBCN:%s <br/> Plocha [ha]: %s",
+      stanice$NAZEV_TOK, stanice$DBCN, round(stanice$AREA,2)) %>% 
+      lapply(htmltools::HTML)
+  
+rozvodnice <- leaflet() %>%
+    addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13)) %>% 
+    addPolylines(data=stanice, color="#CA5557", weight = 2.3, dashArray = "3",  fill = TRUE,
+                 opacity = 1, stroke= TRUE, group = "Rozvodnice", layerId = stanice$DBCN,
+                 highlightOptions = highlightOptions(color = "red", opacity = 1, fillOpacity = 1, weight = 2.3,
+                                                     bringToFront = TRUE, sendToBack=TRUE),
+                 label = labels.lines,
+                 labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
+                                             "font-family" = "sans-serif", padding = "3px 8px",
+                                             keepInView = TRUE,
+                                             "border-color" = "rgb(255, 255, 255)"),
+                                             textsize = "15px", direction = "auto")) %>% 
+    addPolylines(data=reky, color="#007C8C", weight = 1,
+                 opacity = 1, stroke= TRUE, group = "Řeky") %>% 
+    addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff", 
+                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera") %>% 
+    addLayersControl(overlayGroups = c("Mapový podklad", "Řeky", "Jezera"),
+                     position = "bottomleft",
+                     options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE))%>%   
+    hideGroup("Mapový podklad")
+})
+```
+
+### Časová řada
+
+```{r}
+
+renderDygraph({
+  ts.QD <- QD %>% filter(DBCN == default.line()) %>% select(value)
+  ts.QD <- ts(ts.QD, start = decimal_date(as.Date("1980-11-02")), frequency = 1)
+  
+  dygraph(ts.QD, main = "Časová řada", 
+          xlab = "Čas", ylab = "Průtok") %>% 
+  dySeries('value', label="Denní průtok") %>%
+  dyRoller(showRoller = TRUE, rollPeriod = 1)%>% 
+  dyRangeSelector()
+})
 

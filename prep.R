@@ -3,7 +3,7 @@ require(rmapshaper)
 require(maptools)
 
 #1
-
+setwd()
 #Loading
 #--------------------
 povodi_0 <- readOGR('data/E_HEIS$UPV_HLGP#P2$wm.shp', 'E_HEIS$UPV_HLGP#P2$wm')
@@ -59,6 +59,30 @@ BM = rbindlist(M, idcol = 'UPOV_ID')
 
 #Saving
 #--------------------
-setwd("C:/Users/Irina/Disk Google/1_ČZU/Sucho/data")
+setwd("./data")
 saveRDS(BM, 'mbil/bilan_month.rds')
+
+
+#3
+#--------------------
+setwd("..")
+
+#--------------------
+#Loading
+stanice_0 <- readOGR("data/chmu/156_stanic.shp")
+seznam.st <- read.csv('data/chmu/156_stanic_seznam.csv',encoding = 'UTF-8', header = TRUE, sep = ";", 
+                      colClasses = c("factor", "character", "character", "character", "character"))
+QD <- read.table('data/chmu/QD_156_stanic.txt',encoding = 'UTF-8', header = TRUE, sep=',', 
+                 colClasses = c("factor", "character", "numeric"), col.names = c("DBCN", "DTM", "value"))
+
+
+#Preparation of data
+#--------------------
+stanice <- spTransform(stanice_0, CRS("+init=epsg:4326"))
+QD <- merge(seznam.st,QD, by="DBCN")
+
+#Saving
+#--------------------
+saveRDS(QD, "QD.rds")
+writeOGR(stanice, "data/prep", "stanice", driver="ESRI Shapefile", encoding  = "UTF-8")
 
