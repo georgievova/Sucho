@@ -24,6 +24,7 @@ require(berryFunctions)
 require(DT)
 require(rgeos)
 require(datasets)
+require(xtable)
 
 #require(checkpoint); checkpoint("2017-08-11")
 
@@ -36,8 +37,7 @@ jezera <- readOGR("data/prep/jezera.shp")
 popis <- read.table('data/E_ISVS$UTV_POV.txt',encoding = 'UTF-8', header = TRUE, sep=';')
 BM <- readRDS('data/mbil/bilan_month.rds')
 BM.long <- dcast(BM, month+year+UPOV_ID~variable)
-u = readRDS('data/uzivani.rds')
-u = u[complete.cases(X, Y)]
+u <- readRDS('data/uzivani.rds')
 
 # Merging data
 #--------------------
@@ -71,6 +71,10 @@ seasons <- data.frame(month = c(1:12), seasons = c("Zíma", "Zíma", "Jaro", "Ja
 
 BM <- BM %>% left_join(seasons, by="month") 
 BM.long$m <- as.factor(BM.long$month)
+
+
+u <- u[complete.cases(X, Y)]
+u$DTM <- as.character(u$DTM)
 
 ```
 
@@ -142,6 +146,15 @@ povodi.ds <- reactive({
   povodi[povodi$UPOV_ID==default.shape(), ]
 })
 
+kde <- reactive({
+xy <- SpatialPoints(u[, .(X, Y)], proj4string = CRS("+init=epsg:2065"))
+xy <- spTransform(xy, CRS("+init=epsg:4326") )
+kde <- gIntersects(povodi.ds(), xy, byid = TRUE)
+  xy <- xy[kde[,1],]
+  u <- u[kde[,1],]
+  return(list(u = u, xy=xy))
+  })
+
 ```
 
 Row
@@ -164,6 +177,12 @@ default.shape <- reactive({
   if(is.null(input$map_shape_click$id)){
     UPOV_ID.sel<-'DUN_0010'}else{UPOV_ID.sel<-input$map_shape_click$id}
   return(UPOV_ID.sel)})
+
+default.circle <- reactive({
+  if(is.null(input$uzivani_marker_click$id)){
+  NAZICO.sel <- kde()$u$NAZICO[1]}
+  else{NAZICO.sel<-input$uzivani_marker_click$id}
+  return(NAZICO.sel)})
 
 #--------------------
 
@@ -402,39 +421,44 @@ Row {.tabset .tabset-fade}
 reac2 <- eventReactive(input$go1,{ggpairs(BM.long[UPOV_ID == default.shape(),], columns = input$entry2.variables, mapping=aes(color=m))})
 
 renderPlot({reac2()})
-
-
 ```
+
 
 Uživání {data-orientation=rows}
 ===================================== 
 
-Column
+Column {.sidebar}
+------------------------------------------
+
+```{r}
+helpText(HTML(paste("POD - odběr z podzemních vod",
+         "POV - evidované odběry z povrchových vod",
+         "VYP - vypouštění", sep="<br/>")))
+```
+
+Row
 ------------------------------------------
 
 ```{r}
 #default.shape <- function(){return("DUN_0010")}
-renderLeaflet({
-xy = SpatialPoints(u[, .(X, Y)], proj4string = CRS("+init=epsg:2065"))
-xy = spTransform(xy, CRS("+init=epsg:4326") )
-kde = gIntersects(povodi.ds(), xy, byid = TRUE)
+leafletOutput("uzivani")
 
-u.filtr <- u[kde[,1],]
+output$uzivani <- renderLeaflet({
 
 labels.points <- sprintf(
       "<strong>%s</strong><br/>Povodí: %s<br/>Název toku: %s <br/> Jev: %s",
-      u.filtr$NAZICO, u.filtr$POVODI, u.filtr$NAZTOK, u.filtr$JEV
+      kde()$u$NAZICO, kde()$u$POVODI, kde()$u$NAZTOK, kde()$u$JEV
       ) %>% lapply(htmltools::HTML)
 
 label.polygon <- sprintf(
       "<strong>%s</strong>",
       povodi.ds()$NAZ_UTVAR) %>% lapply(htmltools::HTML)
 
-pal_2 <- colorFactor("Paired", domain = u.filtr$JEV, na.color = "gray50")
+pal_2 <- colorFactor("Paired", domain = kde()$u$JEV, na.color = "gray50")
 
 centr <- getSpPPolygonsLabptSlots(povodi.ds())
 
-leaflet() %>%
+uzivani <- leaflet() %>%
     setView(lng=centr[,1], lat = centr[,2], zoom=12) %>% 
     addTiles(group = "Mapový podklad", options = tileOptions(minZoom=10, maxZoom=13)) %>% 
     #addProviderTiles(providers$Esri.WorldTopoMap, group = "Mapový podklad", options = tileOptions(minZoom=11, maxZoom=13)) %>% 
@@ -446,8 +470,8 @@ leaflet() %>%
                                              keepInView = TRUE,
                                              "border-color" = "rgb(255, 255, 255)"),
                                              textsize = "15px", direction = "auto")) %>% 
-    addCircleMarkers(data=xy[kde[,1],], radius = 5, color = "black", fillColor = pal_2(u.filtr$JEV),
-                 weight = 0.5, opacity = 0.7, fillOpacity = 1,
+    addCircleMarkers(data=kde()$xy, radius = 5, color = "black", fillColor = pal_2(kde()$u$JEV),
+                 weight = 0.5, opacity = 0.7, fillOpacity = 1, layerId = kde()$u$NAZICO,
                  label = labels.points,
                  labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
                                              "font-family" = "sans-serif", padding = "3px 8px",
@@ -461,13 +485,34 @@ leaflet() %>%
     addLayersControl(overlayGroups = c("Mapový podklad", "Řeky", "Jezera"),
                      position = "bottomleft",
                      options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>% 
-    addLegend(pal = pal_2, values =u.filtr$JEV, opacity = 0.7, title = "Legenda",
+    addLegend(pal = pal_2, values =kde()$u$JEV, opacity = 0.7, title = "Legenda",
               position = "bottomright")
 
 })
 
 
 ```
+
+Row {data-height=500}
+------------------------------------------
+
+### Summa za polygon
+
+```{r}
+renderTable({
+  total <- kde()$u %>% select(DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE) %>% replace(is.na(.), 0) %>% summarise_all(funs(sum))
+  total <- cbind("NAZICO" = "Total", total)
+  subtotal <- kde()$u %>% group_by(NAZICO) %>% select(DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE) %>% replace(is.na(.), 0) %>% summarise_all(funs(sum))
+  rbind(total, subtotal)})
+```
+
+### Jednotlivý bod
+
+```{r}
+renderTable({
+  unit <- kde()$u %>% filter(NAZICO == default.circle()) %>%  select(NAZICO, DTM, DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE)})
+```
+
 
 Pokus {data-orientation=rows}
 =====================================
