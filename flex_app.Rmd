@@ -504,7 +504,7 @@ uzivani <- leaflet() %>%
 Row {data-height=500}
 ------------------------------------------
 
-### Summa za polygon
+### Suma za polygon
 
 ```{r}
 renderTable({
@@ -550,7 +550,7 @@ reac3 <- eventReactive(input$go2,{
 
 renderText({
 
-  eval(parse(text=reac2()))
+  eval(parse(text=reac3()))
 
 })
 ```
@@ -561,7 +561,7 @@ renderText({
 
 renderPlot({
 
-  eval(parse(text=reac2()))
+  eval(parse(text=reac3()))
 
 })
 
