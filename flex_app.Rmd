@@ -29,8 +29,6 @@ require(rgeos)
 require(datasets)
 require(lubridate)
 
-#require(checkpoint); checkpoint("2017-08-11")
-
 #--------------------
 #Load data
 #--------------------
@@ -83,7 +81,7 @@ u$DTM <- as.character(u$DTM)
 
 ```
 
-Základní mapa
+Základní mapa {data-icon="fa-map-o"}
 ===================================== 
 
 Column {.sidebar data-width=300}
@@ -165,7 +163,6 @@ kde <- gIntersects(povodi.ds(), xy, byid = TRUE)
 Row
 -------------------------------------
 
-### Mapa
 
 ```{r}
 # Functions
@@ -294,27 +291,30 @@ output$map<-renderLeaflet({
 
 ```
 
-Row {.tabset .tabset-fade}
+Row 
 -------------------------------------
 
-### Časová řada
-
 ```{r}
-
 renderDygraph({
   ts.bilance <- reac()$bilance %>% filter(UPOV_ID == default.shape()) %>% group_by(year) %>% mutate(mean = mean(value)) %>%
     ungroup %>% select(value, mean)
   ts.bilance <- ts(ts.bilance, frequency = 12, start=c(1961,1))
-  
-  dygraph(ts.bilance, main = paste(as.character(title.f())), 
-          xlab = "Čas", ylab = paste(names(choices[choices == input$entry.variable]))) %>% 
+
+  dygraph(ts.bilance, main = paste(as.character(title.f())),
+          xlab = "Čas", ylab = paste(names(choices[choices == input$entry.variable]))) %>%
   dySeries('value', label=input$entry.variable) %>%
   dySeries('mean', label="Roční průměr") %>%
-  dyRoller(showRoller = TRUE, rollPeriod = 1)%>% 
+  dyRoller(showRoller = TRUE, rollPeriod = 1)%>%
   dyRangeSelector()
 })
-
 ```
+              
+              
+Tabulky {data-icon="fa-table"}
+===================================== 
+
+Column {.tabset}
+-------------------------------------
 
 ```{r}
 # ### Tabulka rocnich průmeru
@@ -356,6 +356,7 @@ table_2
   lengthMenu = c(4, 25, 50, 75)))
 ```
 
+
 ### Tabulka: měsíce
 
 ```{r}
@@ -372,6 +373,14 @@ table_3
 
 ```
 
+
+
+Grafy {data-icon="fa-bar-chart"}
+=====================================    
+
+Column {.tabset}
+-------------------------------------
+
 ### Sloupcový graf
 
 ```{r}
@@ -383,53 +392,29 @@ renderPlot({
     geom_bar(aes(year, value, fill = month), colour = "black", stat="identity")+
     scale_fill_brewer(palette="Set3")+
     scale_fill_discrete(name = "Měsíc:")+
+    theme(legend.key.size = unit(1, "cm"), legend.title = element_text(size=15),
+          legend.text = element_text(size=12))+
     facet_wrap(~month)
 })
 
 ```
 
-### "Jen tak" graf
+### GGally
+
 
 ```{r}
-
- renderPlot({
-   dta <- reac()$bilance %>% filter(UPOV_ID == default.shape())
-
- spiralDate(DTM,value, data=dta, drange=as.Date(c("1961-01-01", "2015-12-01")), lines=TRUE)
-
- par(mfrow=c(1,3), mar=c(3,3,6,1), mgp=c(2,0.6,0), las=1)
- colPoints(DTM,value,value, data=dta, col=divPal(100), add=FALSE, legend=FALSE,
-           lines=TRUE, pch=NA, nint=1, lwd=2)
- title(main="")
-
- seasonality(DTM, value, dta, col=divPal(100), mar=c(3,3,6,1), legend=FALSE, main="", shift=61)
- title(main="")
-
- spiralDate(DTM,value, data=dta, drange=as.Date(c("1961-01-01", "2015-01-12")), lines=TRUE)
-   })
-```
-
-GGally {data-orientation=rows}
-=====================================    
-
-Column {.sidebar}
--------------------------------------
-
-```{r}
-checkboxGroupInput("entry2.variables", "Zvolte:", choices = choices, selected = c("RM", "BF", "PET", "ET"))
-
-actionButton("go1", "Start", icon("check"), 
-    style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
-```
+absolutePanel(bottom = 20, right = 20, width = 300,
+    draggable = FALSE,
+  wellPanel(
+  tags$div(class = "row",
+    checkboxGroupInput("entry2.variables", "Zvolte:", choices = choices, selected = c("RM", "BF", "PET", "ET")),
+    actionButton("go1", "Start", icon("check"), 
+    style="color: #fff; background-color: #337ab7; border-color: #2e6da4")),
+    style = "padding: 7px;"),
+    style = "opacity: 0.7")
 
 
-Row {.tabset .tabset-fade}
-------------------------------------------
-
-### Graf
-
-```{r}
-reac2 <- eventReactive(input$go1,{ggpairs(BM.long[UPOV_ID == default.shape(),], columns = input$entry2.variables, mapping=aes(color=m))})
+reac2 <- eventReactive(input$go1,{ggpairs(BM.long[UPOV_ID == default.shape(),], columns = input$entry2.variables, mapping=aes(color=m, alpha = 0.25))})
 
 renderPlot({reac2()})
 ```
