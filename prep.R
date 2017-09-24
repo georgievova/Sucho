@@ -1,6 +1,7 @@
 require(rgdal)
 require(rmapshaper)
 require(maptools)
+require(data.table)
 
 #1
 setwd()
@@ -85,4 +86,5 @@ QD <- merge(seznam.st,QD, by="DBCN")
 #--------------------
 saveRDS(QD, "QD.rds")
 writeOGR(stanice, "data/prep", "stanice", driver="ESRI Shapefile", encoding  = "UTF-8")
+
 
