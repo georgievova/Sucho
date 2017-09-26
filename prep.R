@@ -61,8 +61,27 @@ BM = rbindlist(M, idcol = 'UPOV_ID')
 #Saving
 #--------------------
 setwd("./data")
-saveRDS(BM, 'mbil/bilan_month.rds')
 
+mesice <- c("Leden","Únor","Březen","Duben","Květen","Červen",
+            "Červenec","Srpen","Září","Říjen","Listopad","Prosinec")
+
+seasons <- data.frame(month = c(1:12), seasons = c("Zíma", "Zíma", "Jaro", "Jaro", "Jaro", 
+                                                   "Léto", "Léto", "Léto","Podzim", "Podzim", "Podzim", "Zíma"))
+
+BM <- BM %>% left_join(seasons, by="month") 
+BM$month2 <- as.factor(BM$month)
+levels(BM$month2) <- mesice
+
+BM.long <- dcast(BM, month+year+UPOV_ID~variable)
+BM.long$m <- as.factor(BM.long$month)
+
+u <- readRDS('data/uzivani.rds')
+u <- u[complete.cases(X, Y)]
+u$DTM <- as.character(u$DTM)
+
+saveRDS(BM, 'data/mbil/bilan_month.rds')
+saveRDS(BM.long, 'data/mbil/bilan_month_long.rds')
+saveRDS(u, 'data/uzivani2.rds')
 
 #3
 #--------------------

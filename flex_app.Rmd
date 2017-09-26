@@ -36,11 +36,12 @@ povodi <- readOGR("data/prep/povodi.shp")
 reky <- readOGR("data/prep/reky.shp")
 jezera <- readOGR("data/prep/jezera.shp")
 stanice <- readOGR("data/prep/stanice.shp")
+
 popis <- read.table('data/E_ISVS$UTV_POV.txt',encoding = 'UTF-8', header = TRUE, sep=';')
 QD <- readRDS('data/QD.rds')
 BM <- readRDS('data/mbil/bilan_month.rds')
-BM.long <- dcast(BM, month+year+UPOV_ID~variable)
-u <- readRDS('data/uzivani.rds')
+BM.long <- readRDS('data/mbil/bilan_month_long.rds')
+u <- readRDS('data/uzivani2.rds')
 
 # Merging data
 #--------------------
@@ -69,40 +70,37 @@ names(choices) <- c(
 mesice <- c("Leden","Únor","Březen","Duben","Květen","Červen",
             "Červenec","Srpen","Září","Říjen","Listopad","Prosinec")
 
-seasons <- data.frame(month = c(1:12), seasons = c("Zíma", "Zíma", "Jaro", "Jaro", "Jaro", 
-                                                   "Léto", "Léto", "Léto","Podzim", "Podzim", "Podzim", "Zíma"))
-
-BM <- BM %>% left_join(seasons, by="month") 
-BM.long$m <- as.factor(BM.long$month)
-
-
-u <- u[complete.cases(X, Y)]
-u$DTM <- as.character(u$DTM)
-
 ```
 
 Základní mapa {data-icon="fa-map-o"}
 ===================================== 
 
-Column {.sidebar data-width=300}
+Column {.sidebar data-width=400}
 -----------------------------------------------------------------------
 
 ```{r}
 #Inputs
 #--------------------
 
-selectInput("entry.variable", label="Prvky hydrologické bilance", choices = choices, selected = "P")
+wellPanel(selectInput("entry.variable", label="Prvky hydrologické bilance", choices = choices, selected = "P"))
 
-selectInput("entry.year", label = "Zvolte rok:", choices = seq(1961,2015,1), selected = 2015)
 
-sliderInput("entry.month", "Zvolte měsíc:", 1,12, value = 1)
+wellPanel(HTML('<button data-toggle="collapse" data-target="#box1" class="btn-block btn-primary">Dlouhodobé průměry</button>'),
+        tags$div(id = 'box1', class="collapse in"),
 
-radioButtons("filtr", "Filtr", choices = c("Kartogram" = "A", "Filtrovat podle hodnoty" = "B"), selected = "A")
+        HTML('<button data-toggle="collapse" data-target="#box2" class="btn-block btn-primary">Měsíční průměry</button>'),
+        tags$div(id = 'box2', class="collapse in", 
+                 selectInput("entry.year", label = "Zvolte rok:", choices = seq(1961,2015,1), selected = 2015),
+                 sliderInput("entry.month", "Zvolte měsíc:", 1,12, value = 1)),
+        
+        HTML('<button data-toggle="collapse" data-target="#box3" class="btn-block btn-primary">Filtování dle hodnoty</button>'),
+        tags$div(id = 'box3', class="collapse in",
+                 radioButtons("filtr", "Filtr", 
+                              choices = c("Kartogram" = "A", "Filtrovat podle hodnoty" = "B"), selected = "A"),
+                 helpText("Sem zadejte číslo, podle něhož proběhne filtrace povodí. Filtrování probíhá dle hodnot zvoleného prvku hydrologické bilance v každém povodí ve zvoleném měsíci a roce. Zobrazené mohou být polygony s hodnotou větší nebo rovnající se vepsané hodnotě a s hodnotou menší."),
+                 numericInput("entry.number",  "Zadejte číslo:", value = 50)))
 
-helpText("Sem zadejte číslo, podle něhož proběhne filtrace povodí. Filtrování probíhá dle hodnot zvoleného prvku hydrologické bilance v každém povodí ve zvoleném měsíci a roce. Zobrazené mohou být polygony s hodnotou větší nebo rovnající se vepsané hodnotě a s hodnotou menší.")
-
-numericInput("entry.number",  "Zadejte číslo:", value = 50)
-
+                 
 helpText("Po nastavení vstupu spuste aplikaci tlačitkem:")
 
 actionButton("go", "Start", icon("check"), 
@@ -339,7 +337,7 @@ colnames(table_1) <- c("proměnná", "průměr", "směrodata odchylka", "kvantil
 table_1[,2:dim(table_1)[2]] <- round(table_1[,2:dim(table_1)[2]],2)
 table_1
 }, filter = "top",
-   options = list(scrollY = "200px", width = '100px', pageLength = 18,
+   options = list(pageLength = 18,
   lengthMenu = c(6, 12, 18)))
 ```
 
@@ -352,16 +350,14 @@ colnames(table_2) <- c("proměnná", "roční období", "průměr", "směrodata 
 table_2[,3:dim(table_2)[2]] <- round(table_2[,3:dim(table_2)[2]],2)
 table_2
 }, filter = "top",
-   options = list(scrollY = "200px", width = '100px', pageLength = 4,
-  lengthMenu = c(4, 25, 50, 75)))
+   options = list(lengthMenu = c(4, 72)))
 ```
 
 
 ### Tabulka: měsíce
 
 ```{r}
-BM$month2 <- as.factor(BM$month)
-levels(BM$month2) <- mesice
+#scrollY = "200px", width = '100px'
 
 DT::renderDataTable({
 table_3 <- BM %>% filter(UPOV_ID==default.shape()) %>% group_by(variable, month2) %>% summarise(mean(value, na.rm = TRUE), sd(value, na.rm = TRUE), quantile(value,probs = 0.25,na.rm = TRUE), quantile(value,probs = 0.5,na.rm = TRUE), quantile(value,probs = 0.75,na.rm = TRUE))
@@ -369,7 +365,7 @@ colnames(table_3) <- c("proměnná", "měsíc", "průměr", "směrodata odchylka
 table_3[,3:dim(table_3)[2]] <- round(table_3[,3:dim(table_3)[2]],2)
 table_3
 }, filter = "top",
-   options = list(scrollY = "200px", width = '100px', pageLength = 12))
+   options = list(pageLength = 12, lengthMenu = c(12, 216)))
 
 ```
 
@@ -403,18 +399,18 @@ renderPlot({
 
 
 ```{r}
-absolutePanel(bottom = 20, right = 20, width = 300,
+absolutePanel(bottom = 20, right = 20, width = 420,
     draggable = FALSE,
   wellPanel(
   tags$div(class = "row",
-    checkboxGroupInput("entry2.variables", "Zvolte:", choices = choices, selected = c("RM", "BF", "PET", "ET")),
+    checkboxGroupInput("entry2.variables", "Zvolte:", choices = choices, selected = c("P", "PET", "T")),
     actionButton("go1", "Start", icon("check"), 
     style="color: #fff; background-color: #337ab7; border-color: #2e6da4")),
-    style = "padding: 7px;"),
+    style = "padding: 28px;"),
     style = "opacity: 0.7")
 
 
-reac2 <- eventReactive(input$go1,{ggpairs(BM.long[UPOV_ID == default.shape(),], columns = input$entry2.variables, mapping=aes(color=m, alpha = 0.25))})
+reac2 <- eventReactive(input$go1,{ggpairs(BM.long[BM.long$UPOV_ID == default.shape(),], columns = input$entry2.variables, mapping=aes(color=m, alpha = 0.2))})
 
 renderPlot({reac2()})
 ```
