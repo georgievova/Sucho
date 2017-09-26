@@ -37,10 +37,15 @@ reky <- readOGR("data/prep/reky.shp")
 jezera <- readOGR("data/prep/jezera.shp")
 stanice <- readOGR("data/prep/stanice.shp")
 popis <- read.table('data/E_ISVS$UTV_POV.txt',encoding = 'UTF-8', header = TRUE, sep=';')
-QD <- readRDS('data/QD.rds')
-BM <- readRDS('data/mbil/bilan_month.rds')
-BM.long <- dcast(BM, month+year+UPOV_ID~variable)
-u <- readRDS('data/uzivani.rds')
+
+con <- dbConnect(odbc::odbc(), .connection_string = "Driver={PostgreSQL Unicode(x64)};", uid = 'postgres', pwd='postgres', database = 'dta_Sucho')
+
+BM <- tbl(con, 'bil_monthly')
+BM <- collect(BM)
+BM.long <- tbl(con, 'bil_monthly_long')
+BM.long <- collect(BM.long)
+u <- tbl(con, 'uzivani')
+QD <- tbl(con, 'flow_rates_chmu')
 
 # Merging data
 #--------------------
@@ -48,36 +53,26 @@ povodi <- sp::merge(povodi, popis, by='UPOV_ID')
 
 choices <- c("P", "R", "RM", "BF", "B", "DS", "PET", "ET","SW", "SS", "GS", "INF", "PERC", "RC", "T", "H", "WEI")
 names(choices) <- c(
-'P - srážky na povodí [mm]',
-'R - odtok (pozorovaný) [mm]',
-'RM - celkovy odtok (simulovaný) [mm]',
-'BF - základní odtok (simulovaný) [mm]',
-'B - základní odtok (odvozený) [mm]',
-'DS - zásoba pro přímý odtok [mm]',
-'PET - potenciální evapotranspirace [mm]',
-'ET - územní výpar [mm]',
-'SW - půdní vlhkost (zásoba vody v nenasycené zóně) [mm]',
-'SS - zásoba vody ve sněhu [mm]',
-'GS - zásoba podzemní vody [mm]',
-'INF - infiltrace do půdy [mm]',
-'PERC - perkolace z půdní vrstvy [mm]',
-'RC - dotace zásoby podzemní vody [mm]',
-'T - teplota vzduchu [°C]',
-'H - vlhkost vzduchu [%]',
-'WEI - váhy pro kalibraci odtoku [-]')
+  'P - srážky na povodí [mm]',
+  'R - odtok (pozorovaný) [mm]',
+  'RM - celkovy odtok (simulovaný) [mm]',
+  'BF - základní odtok (simulovaný) [mm]',
+  'B - základní odtok (odvozený) [mm]',
+  'DS - zásoba pro přímý odtok [mm]',
+  'PET - potenciální evapotranspirace [mm]',
+  'ET - územní výpar [mm]',
+  'SW - půdní vlhkost (zásoba vody v nenasycené zóně) [mm]',
+  'SS - zásoba vody ve sněhu [mm]',
+  'GS - zásoba podzemní vody [mm]',
+  'INF - infiltrace do půdy [mm]',
+  'PERC - perkolace z půdní vrstvy [mm]',
+  'RC - dotace zásoby podzemní vody [mm]',
+  'T - teplota vzduchu [°C]',
+  'H - vlhkost vzduchu [%]',
+  'WEI - váhy pro kalibraci odtoku [-]')
 
 mesice <- c("Leden","Únor","Březen","Duben","Květen","Červen",
             "Červenec","Srpen","Září","Říjen","Listopad","Prosinec")
-
-seasons <- data.frame(month = c(1:12), seasons = c("Zíma", "Zíma", "Jaro", "Jaro", "Jaro", 
-                                                   "Léto", "Léto", "Léto","Podzim", "Podzim", "Podzim", "Zíma"))
-
-BM <- BM %>% left_join(seasons, by="month") 
-BM.long$m <- as.factor(BM.long$month)
-
-
-u <- u[complete.cases(X, Y)]
-u$DTM <- as.character(u$DTM)
 
 ```
 
@@ -125,6 +120,7 @@ actionButton("reset_button", "Reset", icon("arrows"),
 #input$entry.year = 1968
 #input$entry.month = 2
 #input$entry.number = 15
+#default.shape <- function(){return("DUN_0010")}
 
 observe({
     input$reset_button
@@ -150,7 +146,8 @@ povodi.ds <- reactive({
 })
 
 kde <- reactive({
-xy <- SpatialPoints(u[, .(X, Y)], proj4string = CRS("+init=epsg:2065"))
+u <- collect(u)
+xy <- SpatialPoints(u[, c("X", "Y")], proj4string = CRS("+init=epsg:2065"))
 xy <- spTransform(xy, CRS("+init=epsg:4326") )
 kde <- gIntersects(povodi.ds(), xy, byid = TRUE)
   xy <- xy[kde[,1],]
@@ -296,8 +293,7 @@ Row
 
 ```{r}
 renderDygraph({
-  ts.bilance <- reac()$bilance %>% filter(UPOV_ID == default.shape()) %>% group_by(year) %>% mutate(mean = mean(value)) %>%
-    ungroup %>% select(value, mean)
+  ts.bilance <- reac()$bilance %>% filter(UPOV_ID == default.shape()) %>% group_by(year) %>% mutate(mean = mean(value)) %>% ungroup %>% select(value, mean)
   ts.bilance <- ts(ts.bilance, frequency = 12, start=c(1961,1))
 
   dygraph(ts.bilance, main = paste(as.character(title.f())),
@@ -335,6 +331,7 @@ Column {.tabset}
 ```{r}
 DT::renderDataTable({
 table_1 <- BM %>% filter(UPOV_ID==default.shape()) %>% group_by(variable) %>% summarise(mean(value, na.rm = TRUE), sd(value, na.rm = TRUE), quantile(value,probs = 0.25,na.rm = TRUE), quantile(value,probs = 0.5,na.rm = TRUE), quantile(value,probs = 0.75,na.rm = TRUE))
+table_1 <- collect(table_1)
 colnames(table_1) <- c("proměnná", "průměr", "směrodata odchylka", "kvantil 25%", "kvantil 50%", "kvantil 75%")
 table_1[,2:dim(table_1)[2]] <- round(table_1[,2:dim(table_1)[2]],2)
 table_1
@@ -348,6 +345,7 @@ table_1
 ```{r}
 DT::renderDataTable({
 table_2 <- BM %>% filter(UPOV_ID==default.shape()) %>% group_by(variable, seasons) %>% summarise(mean(value, na.rm = TRUE), sd(value, na.rm = TRUE), quantile(value,probs = 0.25,na.rm = TRUE), quantile(value,probs = 0.5,na.rm = TRUE), quantile(value,probs = 0.75,na.rm = TRUE))
+table_2 <- collect(table_2)
 colnames(table_2) <- c("proměnná", "roční období", "průměr", "směrodata odchylka", "kvantil 25%", "kvantil 50%", "kvantil 75%")
 table_2[,3:dim(table_2)[2]] <- round(table_2[,3:dim(table_2)[2]],2)
 table_2
@@ -360,11 +358,10 @@ table_2
 ### Tabulka: měsíce
 
 ```{r}
-BM$month2 <- as.factor(BM$month)
-levels(BM$month2) <- mesice
 
 DT::renderDataTable({
 table_3 <- BM %>% filter(UPOV_ID==default.shape()) %>% group_by(variable, month2) %>% summarise(mean(value, na.rm = TRUE), sd(value, na.rm = TRUE), quantile(value,probs = 0.25,na.rm = TRUE), quantile(value,probs = 0.5,na.rm = TRUE), quantile(value,probs = 0.75,na.rm = TRUE))
+table_3 <- collect(table_3)
 colnames(table_3) <- c("proměnná", "měsíc", "průměr", "směrodata odchylka", "kvantil 25%", "kvantil 50%", "kvantil 75%")
 table_3[,3:dim(table_3)[2]] <- round(table_3[,3:dim(table_3)[2]],2)
 table_3
@@ -598,6 +595,7 @@ rozvodnice <- leaflet() %>%
 ```{r}
 
 renderDygraph({
+  QD <- collect(QD)
   ts.QD <- QD %>% filter(DBCN == default.line()) %>% select(value)
   ts.QD <- ts(ts.QD, start = decimal_date(as.Date("1980-11-02")), frequency = 1)
   

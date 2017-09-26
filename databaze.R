@@ -34,6 +34,9 @@ seasons <- data.frame(month = c(1:12), seasons = c("Zíma", "Zíma", "Jaro", "Ja
                                                    "Léto", "Léto", "Léto","Podzim", "Podzim", "Podzim", "Zíma"))
 BM.long$m <- as.factor(BM.long$month)
 
+BM$month2 <- as.factor(BM$month)
+levels(BM$month2) <- mesice
+
 BM <- BM %>% left_join(seasons, by="month") 
 
 dbWriteTable(con, 'bil_monthly', BM)
