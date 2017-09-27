@@ -1,10 +1,10 @@
 ---
-title: "Útvary povrchových vod ČR"
+title: "`r HTML('<div style=width: 75%> Demo </div>')`"
 output: 
   flexdashboard::flex_dashboard:
     orientation: rows
     vertical_layout: fill
-runtime: shiny
+    runtime: shiny
 ---
 
 ```{r global, include=FALSE}
@@ -28,6 +28,7 @@ require(DT)
 require(rgeos)
 require(datasets)
 require(lubridate)
+
 
 #--------------------
 #Load data
@@ -94,7 +95,7 @@ wellPanel(HTML('<button data-toggle="collapse" data-target="#box1" class="btn-bl
                  sliderInput("entry.month", "Zvolte měsíc:", 1,12, value = 1)),
         
         HTML('<button data-toggle="collapse" data-target="#box3" class="btn-block btn-primary">Filtování dle hodnoty</button>'),
-        tags$div(id = 'box3', class="collapse in",
+        tags$div(id = 'box3', class="collapse",
                  radioButtons("filtr", "Filtr", 
                               choices = c("Kartogram" = "A", "Filtrovat podle hodnoty" = "B"), selected = "A"),
                  helpText("Sem zadejte číslo, podle něhož proběhne filtrace povodí. Filtrování probíhá dle hodnot zvoleného prvku hydrologické bilance v každém povodí ve zvoleném měsíci a roce. Zobrazené mohou být polygony s hodnotou větší nebo rovnající se vepsané hodnotě a s hodnotou menší."),
@@ -103,7 +104,7 @@ wellPanel(HTML('<button data-toggle="collapse" data-target="#box1" class="btn-bl
                  
 helpText("Po nastavení vstupu spuste aplikaci tlačitkem:")
 
-actionButton("go", "Start", icon("check"), 
+actionButton("go", "Spustit", icon("check"), 
     style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
 
 hr()
@@ -189,6 +190,13 @@ default.line <- reactive({
   DBCN.sel <- QD$DBCN[1]}
   else{DBCN.sel <- input$rozvodnice_shape_click$id}
   return(DBCN.sel)})
+
+title.f2 <- reactive({
+  if(is.null(input$rozvodnice_shape_click$id)){
+     title <- stanice$NAZEV_TOK[stanice$DBCN == "003000"]}else{
+     title <- stanice$NAZEV_TOK[stanice$DBCN==input$rozvodnice_shape_click$id]}
+  return(title)
+  })
 
 #--------------------
 
@@ -404,7 +412,7 @@ absolutePanel(bottom = 20, right = 20, width = 420,
   wellPanel(
   tags$div(class = "row",
     checkboxGroupInput("entry2.variables", "Zvolte:", choices = choices, selected = c("P", "PET", "T")),
-    actionButton("go1", "Start", icon("check"), 
+    actionButton("go1", "Spustit", icon("check"), 
     style="color: #fff; background-color: #337ab7; border-color: #2e6da4")),
     style = "padding: 28px;"),
     style = "opacity: 0.7")
@@ -416,20 +424,19 @@ renderPlot({reac2()})
 ```
 
 
-Uživání {data-orientation=rows}
+Uživání {data-icon="fa-circle-o"}
 ===================================== 
 
-Column {.sidebar}
-------------------------------------------
-
 ```{r}
-helpText(HTML(paste("POD - odběr z podzemních vod",
-         "POV - evidované odběry z povrchových vod",
-         "VYP - vypouštění", sep="<br/>")))
+# absolutePanel(wellPanel(HTML(paste("POD - odběr z podzemních vod",
+#          "POV - evidované odběry z povrchových vod",
+#          "VYP - vypouštění", sep="<br/>"))))
 ```
 
-Row
-------------------------------------------
+Row {data-height=600}
+-------------------------------------
+
+### Mapa
 
 ```{r}
 #default.shape <- function(){return("DUN_0010")}
@@ -479,79 +486,106 @@ uzivani <- leaflet() %>%
                      options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>% 
     addLegend(pal = pal_2, values =kde()$u$JEV, opacity = 0.7, title = "Legenda",
               position = "bottomright")
-
 })
-
 
 ```
 
-Row {data-height=500}
-------------------------------------------
+### Časová řada
 
-### Suma za polygon
+```{r}
+renderDygraph({
+  ts.QD <-  kde()$u %>% filter(kde()$u$NAZICO == default.circle()) %>%  select(value)
+  ts.QD <- ts(ts.QD, start = decimal_date(as.Date("1980-11-02")), frequency = 1)
+
+  dygraph(ts.QD, main = "Časová řada",
+          xlab = "Čas", ylab = "Průtok") %>%
+  dySeries('value', label="Denní průtok") %>%
+  dyRoller(showRoller = TRUE, rollPeriod = 1)%>%
+  dyRangeSelector()
+})
+```
+
+Row {.tabset .tabset-fade data-heigth=400}
+-------------------------------------
+
+### Suma za celý povodí
 
 ```{r}
 renderTable({
   total <- kde()$u %>% select(DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE) %>% replace(is.na(.), 0) %>% summarise_all(funs(sum))
-  total <- cbind("NAZICO" = "Total", total)
-  subtotal <- kde()$u %>% group_by(NAZICO) %>% select(DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE) %>% replace(is.na(.), 0) %>% summarise_all(funs(sum))
-  rbind(total, subtotal)})
+  total <- cbind("NAZICO" = "Suma", total)})
+```
+
+### Suma za odběratele
+
+```{r}
+renderTable({
+  subtotal <- kde()$u %>% group_by(NAZICO) %>% select(DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE) %>% replace(is.na(.), 0) %>% summarise_all(funs(sum))})
+```
+
+### Suma dle jevu
+
+```{r}  
+renderTable({
+  subsubtotal <- kde()$u %>% group_by(JEV) %>% select(DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE) %>% replace(is.na(.), 0) %>% summarise_all(funs(sum))})
 ```
 
 ### Jednotlivý bod
 
 ```{r}
 renderTable({
-  unit <- kde()$u %>% filter(NAZICO == default.circle()) %>%  select(NAZICO, DTM, DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE)})
+  unit <- kde()$u %>% filter(kde()$u$NAZICO == default.circle()) %>%  select(NAZICO, DTM, DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE)})
 ```
 
 
-Pokus {data-orientation=rows}
-=====================================
-
-### Vlastní funkce
-
-Column {.sidebar}
------------------------------------------------------------------------
+Row
+-------------------------------------
 
 ```{r}
-textAreaInput("script",label="Napište funkci", value = "plot(povodi); summary(BM)")
-
-actionButton("go2", "Start", icon("check"),
-    style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
+# Pokus {data-orientation=rows}
+# =====================================
+# 
+# ### Vlastní funkce
+# 
+# Column {.sidebar}
+# -----------------------------------------------------------------------
+# textAreaInput("script",label="Napište funkci", value = "plot(povodi); summary(BM)")
+# 
+# actionButton("go2", "Spustit", icon("check"),
+#     style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
 ```
 
-Column
------------------------------------------------------------------------
-
-### Výstup
 
 ```{r}
-
-reac3 <- eventReactive(input$go2,{
-                          text = input$script
-                          return(text)})
-
-renderText({
-
-  eval(parse(text=reac3()))
-
-})
+# Column
+# -----------------------------------------------------------------------
+# 
+# ### Výstup
+# 
+# reac3 <- eventReactive(input$go2,{
+#                           text = input$script
+#                           return(text)})
+# 
+# renderText({
+# 
+#   eval(parse(text=reac3()))
+# 
+# })
 ```
 
-### Graf
 
 ```{r}
-
-renderPlot({
-
-  eval(parse(text=reac3()))
-
-})
+# ### Graf
+# 
+# renderPlot({
+# 
+#   eval(parse(text=reac3()))
+# 
+# })
 
 ```
 
-Denní průtoky {data-orientation=rows}
+Denní průtoky {data-icon="fa-columns"}
 =====================================
 
 ### Mapa denních průtoků
@@ -562,7 +596,7 @@ leafletOutput("rozvodnice")
 output$rozvodnice <- renderLeaflet({
   
   labels.lines <- sprintf(
-      "<strong>%s</strong><br/> DBCN:%s <br/> Plocha [ha]: %s",
+      "<strong>%s</strong><br/> DBCN:%s <br/> Plocha [km^2]: %s",
       stanice$NAZEV_TOK, stanice$DBCN, round(stanice$AREA,2)) %>% 
       lapply(htmltools::HTML)
   
@@ -597,10 +631,11 @@ renderDygraph({
   ts.QD <- QD %>% filter(DBCN == default.line()) %>% select(value)
   ts.QD <- ts(ts.QD, start = decimal_date(as.Date("1980-11-02")), frequency = 1)
   
-  dygraph(ts.QD, main = "Časová řada", 
+  dygraph(ts.QD, main = paste(as.character(title.f2())), 
           xlab = "Čas", ylab = "Průtok") %>% 
   dySeries('value', label="Denní průtok") %>%
   dyRoller(showRoller = TRUE, rollPeriod = 1)%>% 
   dyRangeSelector()
 })
 
+```
