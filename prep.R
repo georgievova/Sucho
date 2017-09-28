@@ -87,17 +87,17 @@ saveRDS(u, 'data/uzivani2.rds')
 #--------------------
 setwd("..")
 
-#--------------------
 #Loading
+#--------------------
 stanice_0 <- readOGR("data/chmu/156_stanic.shp")
 seznam.st <- read.csv('data/chmu/156_stanic_seznam.csv',encoding = 'UTF-8', header = TRUE, sep = ";", 
                       colClasses = c("factor", "character", "character", "character", "character"))
 QD <- read.table('data/chmu/QD_156_stanic.txt',encoding = 'UTF-8', header = TRUE, sep=',', 
                  colClasses = c("factor", "character", "numeric"), col.names = c("DBCN", "DTM", "value"))
 
-
 #Preparation of data
 #--------------------
+
 stanice <- spTransform(stanice_0, CRS("+init=epsg:4326"))
 QD <- merge(seznam.st,QD, by="DBCN")
 
@@ -107,3 +107,25 @@ saveRDS(QD, "QD.rds")
 writeOGR(stanice, "data/prep", "stanice", driver="ESRI Shapefile", encoding  = "UTF-8")
 
 
+#4
+#Loading
+#--------------------
+u <- read.csv('data/vuv/uzivani_utvary_06_16.csv',encoding = 'UTF-8', header = TRUE, sep = ";")
+
+#Preparation of data
+#--------------------
+
+colnames(u)[1] <- "ICOC"
+u = melt(u, id.vars = c("ICOC", "JEV", "CZ_NACE", "POVODI", "NAZEV", "ROCNI.MNOZSTVI.tis.m3", "POVOLENE.MNOZSTVI.ROK.tis.m3", "SOUR_X",	"SOUR_Y",	"UPOV_ID",	"HEIS_POZN", "ROK"
+))
+library(stringr)
+u$variable <- gsub("MVM*", "", u$variable)
+u$DTM <- paste("01",str_sub(paste0("00",u$variable),-2,-1), u$ROK, sep="-")
+u$DTM <- as.Date(u$DTM, format = "%d-%m-%Y")
+colnames(u)[13] <- "MESIC"
+colnames(u)[c(8,9)] <- c("X", "Y")
+
+#Saving
+#--------------------
+setwd("C:/Users/Irina/Disk Google/1_ČZU/Sucho")
+saveRDS(u, "data/uzivani_ocistene.rds")

@@ -68,6 +68,16 @@ names(choices) <- c(
 'H - vlhkost vzduchu [%]',
 'WEI - váhy pro kalibraci odtoku [-]')
 
+choices2 <- c("P", "RM", "BF", "DS", "PET", "ET","SW")
+names(choices2) <- c(
+'P - srážky na povodí [mm]',
+'RM - celkovy odtok (simulovaný) [mm]',
+'BF - základní odtok (simulovaný) [mm]',
+'DS - zásoba pro přímý odtok [mm]',
+'PET - potenciální evapotranspirace [mm]',
+'ET - územní výpar [mm]',
+'SW - půdní vlhkost (zásoba vody v nenasycené zóně) [mm]')
+
 mesice <- c("Leden","Únor","Březen","Duben","Květen","Červen",
             "Červenec","Srpen","Září","Říjen","Listopad","Prosinec")
 
@@ -104,7 +114,7 @@ wellPanel(HTML('<button data-toggle="collapse" data-target="#box1" class="btn-bl
                  
 helpText("Po nastavení vstupu spuste aplikaci tlačitkem:")
 
-actionButton("go", "Spustit", icon("check"), 
+actionButton("go1", "Spustit", icon("check"), 
     style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
 
 hr()
@@ -131,14 +141,14 @@ observe({
 
   })
 
-reac<- eventReactive(input$go,{ 
+reac<- eventReactive(input$go1,{ 
   bilance <-  BM %>% filter(variable == input$entry.variable) 
   bilance_filtr <- bilance %>% filter(year==input$entry.year & month==input$entry.month)
   dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
   return(list(bilance=bilance,dta=dta))
 })
 
-reac1 <- eventReactive(input$go,{
+reac1 <- eventReactive(input$go1,{
   dta1 <- base::subset(reac()$dta,value >= input$entry.number)
   dta2 <- base::subset(reac()$dta,value < input$entry.number)
   return(list(dta1=dta1, dta2=dta2))
@@ -303,18 +313,25 @@ Row {.tabset}
 ### Časová řada
 
 ```{r}
+
 renderDygraph({
-  ts.bilance <- reac()$bilance %>% filter(UPOV_ID == default.shape()) %>% group_by(year) %>% mutate(mean = mean(value)) %>%
-    ungroup %>% select(value, mean)
+  # ts.bilance <- BM.long %>%  filter(UPOV_ID == default.shape()) %>% group_by(year) %>% 
+  #   mutate(mean = mean(input$entry.value2)) %>% ungroup %>% select(input$entry.variable2, mean)
+  ts.bilance <- BM.long %>% filter(UPOV_ID == default.shape()) %>%  select(input$entry.variable2)
   ts.bilance <- ts(ts.bilance, frequency = 12, start=c(1961,1))
 
   dygraph(ts.bilance, main = paste(as.character(title.f())),
-          xlab = "Čas", ylab = paste(names(choices[choices == input$entry.variable]))) %>%
-  dySeries('value', label=input$entry.variable) %>%
-  dySeries('mean', label="Roční průměr") %>%
+          xlab = "Čas") %>%
   dyRoller(showRoller = TRUE, rollPeriod = 1)%>%
   dyRangeSelector()
 })
+
+absolutePanel(bottom = 0, right = 20, width = 350, draggable = FALSE,
+  wellPanel(
+    HTML('<button data-toggle="collapse" data-target="#box4" class="btn-block btn-primary">Výběr časových řad</button>'),
+        tags$div(id = 'box4', class="collapse in",
+                 checkboxGroupInput("entry.variable2", "Zvolte:", choices = choices2, selected = c("PET", "ET")))))
+
 ```
 
 ### Čára překročení
@@ -322,38 +339,27 @@ renderDygraph({
 ```{r}
 
 renderDygraph({
-  ts.bilance <- reac()$bilance %>% filter(UPOV_ID == default.shape()) %>% group_by(year) %>% arrange(desc(value)) %>% select(value)
+  ts.bilance <- reac()$bilance %>% filter(UPOV_ID == default.shape()) %>% arrange(year, desc(value)) %>% select(value)
   ts.bilance <- ts(ts.bilance, frequency = 12, start=c(1961,1))
 
   dygraph(ts.bilance, main = paste(as.character(title.f())),
           xlab = "Čas", ylab = paste(names(choices[choices == input$entry.variable]))) %>%
   dySeries('value', label=input$entry.variable) %>%
-  dySeries('year', label="Rok") %>%
   dyRoller(showRoller = TRUE, rollPeriod = 1)%>%
   dyRangeSelector()
 })
 
 ```
 
+
+
+
+
 Tabulky {data-icon="fa-table"}
 ===================================== 
 
 Column {.tabset}
 -------------------------------------
-
-```{r}
-# ### Tabulka rocnich průmeru
-# DT::renderDataTable({
-#   table_0 <- round(BM.long %>% filter(UPOV_ID == default.shape()) %>% group_by(year) %>% summarise(mean(P), mean(R), mean(RM), mean(BF), mean(B), mean(DS), mean(PET), mean(ET),mean(SW), mean(SS), mean(GS), mean(INF), mean(PERC), mean(RC), mean(T), mean(H), mean(WEI)),2)
-#   colnames(table_0) <- c("Roky", "P", "R", "RM", "BF", "B", "DS", "PET", "ET","SW",
-#                          "SS", "GS", "INF", "PERC", "RC", "T", "H", "WEI")
-#   table_0
-# }, filter = "top",
-#    options = list(scrollY = "200px"))
-#
-#
-# #, language = list(search = 'Hledat:')
-```
 
 ### Tabulka: celé období
 
@@ -366,6 +372,20 @@ table_1
 }, filter = "top",
    options = list(pageLength = 18,
   lengthMenu = c(6, 12, 18)))
+```
+
+### Tabulka: roky
+
+```{r}
+DT::renderDataTable({
+  table_0 <- round(BM.long %>% filter(UPOV_ID == default.shape()) %>% group_by(year) %>% summarise(mean(P), mean(R), mean(RM), mean(BF), mean(B), mean(DS), mean(PET), mean(ET),mean(SW), mean(SS), mean(GS), mean(INF), mean(PERC), mean(RC), mean(T), mean(H), mean(WEI)),2)
+  colnames(table_0) <- c("Roky", "P", "R", "RM", "BF", "B", "DS", "PET", "ET","SW",
+                         "SS", "GS", "INF", "PERC", "RC", "T", "H", "WEI")
+  table_0
+}, filter = "top")
+
+
+#, language = list(search = 'Hledat:')
 ```
 
 ### Tabulka: roční období
@@ -430,16 +450,16 @@ absolutePanel(bottom = 20, right = 20, width = 420,
     draggable = FALSE,
   wellPanel(
   tags$div(class = "row",
-    checkboxGroupInput("entry2.variables", "Zvolte:", choices = choices, selected = c("P", "PET", "T")),
-    actionButton("go1", "Spustit", icon("check"), 
+    checkboxGroupInput("entry.variable3", "Zvolte:", choices = choices, selected = c("P", "PET", "T")),
+    actionButton("go3", "Spustit", icon("check"), 
     style="color: #fff; background-color: #337ab7; border-color: #2e6da4")),
     style = "padding: 28px;"),
     style = "opacity: 0.7")
 
 
-reac2 <- eventReactive(input$go1,{ggpairs(BM.long[BM.long$UPOV_ID == default.shape(),], columns = input$entry2.variables, mapping=aes(color=m, alpha = 0.2))})
+reac3 <- eventReactive(input$go3,{ggpairs(BM.long[BM.long$UPOV_ID == default.shape(),], columns = input$entry.variable3, mapping=aes(color=m, alpha = 0.2))})
 
-renderPlot({reac2()})
+renderPlot({reac3()})
 ```
 
 
@@ -566,7 +586,7 @@ renderTable({
 # -----------------------------------------------------------------------
 # textAreaInput("script",label="Napište funkci", value = "plot(povodi); summary(BM)")
 # 
-# actionButton("go2", "Spustit", icon("check"),
+# actionButton("go4", "Spustit", icon("check"),
 #     style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
 ```
 
@@ -577,13 +597,13 @@ renderTable({
 # 
 # ### Výstup
 # 
-# reac3 <- eventReactive(input$go2,{
+# reac4 <- eventReactive(input$go4,{
 #                           text = input$script
 #                           return(text)})
 # 
 # renderText({
 # 
-#   eval(parse(text=reac3()))
+#   eval(parse(text=reac4()))
 # 
 # })
 ```
@@ -594,7 +614,7 @@ renderTable({
 # 
 # renderPlot({
 # 
-#   eval(parse(text=reac3()))
+#   eval(parse(text=reac4()))
 # 
 # })
 
