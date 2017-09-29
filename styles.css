@@ -1,0 +1,8 @@
+.dygraph-legend {
+  left: 80px !important;
+  background-color: transparent !important;
+}
+
+.dygraph-label { font-size: 16px}
+
+.dygraph-title { font-size: 18px}

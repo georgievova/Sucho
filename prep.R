@@ -2,8 +2,9 @@ require(rgdal)
 require(rmapshaper)
 require(maptools)
 require(data.table)
+require(stringr)
 
-#1
+#1 Prostorová data
 setwd()
 #Loading
 #--------------------
@@ -35,7 +36,7 @@ writeOGR(reky, "data/prep", "reky", driver="ESRI Shapefile", encoding  = "UTF-8"
 writeOGR(jezera, "data/prep", "jezera", driver="ESRI Shapefile", encoding  = "UTF-8")
 
 
-#2
+#2 Měsiční bilance
 
 #Loading
 #--------------------
@@ -74,6 +75,7 @@ levels(BM$month2) <- mesice
 
 BM.long <- dcast(BM, month+year+UPOV_ID~variable)
 BM.long$m <- as.factor(BM.long$month)
+levels(BM.long$m) <- mesice
 
 u <- readRDS('data/uzivani.rds')
 u <- u[complete.cases(X, Y)]
@@ -83,22 +85,34 @@ saveRDS(BM, 'data/mbil/bilan_month.rds')
 saveRDS(BM.long, 'data/mbil/bilan_month_long.rds')
 saveRDS(u, 'data/uzivani2.rds')
 
-#3
+#3 Denní průtoky
 #--------------------
 setwd("..")
 
 #Loading
 #--------------------
+
+# getCPLConfigOption("data/chmu/156_stanic.shp")
+# setCPLConfigOption("data/chmu/156_stanic.shp", NULL)
+# 
+# a <- stanice_0$NAZEV_TOK
+# write.csv(a, "a.csv")
+
 stanice_0 <- readOGR("data/chmu/156_stanic.shp")
 seznam.st <- read.csv('data/chmu/156_stanic_seznam.csv',encoding = 'UTF-8', header = TRUE, sep = ";", 
                       colClasses = c("factor", "character", "character", "character", "character"))
+
 QD <- read.table('data/chmu/QD_156_stanic.txt',encoding = 'UTF-8', header = TRUE, sep=',', 
                  colClasses = c("factor", "character", "numeric"), col.names = c("DBCN", "DTM", "value"))
 
 #Preparation of data
 #--------------------
+colnames(seznam.st)[2] <- "NAZEV.STANICE"
+colnames(seznam.st)[4] <- "OBDOBI.S.DATY.DENNICH.PRUTOKU"
 
 stanice <- spTransform(stanice_0, CRS("+init=epsg:4326"))
+
+QD$DTM <- as.Date(QD$DTM, format = "%d.%m.%Y")
 QD <- merge(seznam.st,QD, by="DBCN")
 
 #Saving
@@ -107,7 +121,7 @@ saveRDS(QD, "QD.rds")
 writeOGR(stanice, "data/prep", "stanice", driver="ESRI Shapefile", encoding  = "UTF-8")
 
 
-#4
+#4 uzivani_ocistene
 #Loading
 #--------------------
 u <- read.csv('data/vuv/uzivani_utvary_06_16.csv',encoding = 'UTF-8', header = TRUE, sep = ";")
@@ -118,9 +132,9 @@ u <- read.csv('data/vuv/uzivani_utvary_06_16.csv',encoding = 'UTF-8', header = T
 colnames(u)[1] <- "ICOC"
 u = melt(u, id.vars = c("ICOC", "JEV", "CZ_NACE", "POVODI", "NAZEV", "ROCNI.MNOZSTVI.tis.m3", "POVOLENE.MNOZSTVI.ROK.tis.m3", "SOUR_X",	"SOUR_Y",	"UPOV_ID",	"HEIS_POZN", "ROK"
 ))
-library(stringr)
+
 u$variable <- gsub("MVM*", "", u$variable)
-u$DTM <- paste("01",str_sub(paste0("00",u$variable),-2,-1), u$ROK, sep="-")
+u$DTM <- paste0("01",str_sub(paste0("00",u$variable),-2,-1), u$ROK, sep="-")
 u$DTM <- as.Date(u$DTM, format = "%d-%m-%Y")
 colnames(u)[13] <- "MESIC"
 colnames(u)[c(8,9)] <- c("X", "Y")
@@ -129,3 +143,24 @@ colnames(u)[c(8,9)] <- c("X", "Y")
 #--------------------
 setwd("C:/Users/Irina/Disk Google/1_ČZU/Sucho")
 saveRDS(u, "data/uzivani_ocistene.rds")
+
+
+# #5 Denni data
+# #--------------------
+# 
+# setwd("C:/Users/Irina/Disk Google/1_ČZU/Sucho/data/bilan")
+# 
+# d = dir()
+# 
+# R = list()
+# for (i in d){
+#   cat(i, '\n')
+#   R[[i]] = readRDS(i)
+# }
+# 
+# names(R) = gsub('\\.rds', '', names(R))  
+# RR = rbindlist(R, idcol = 'UPOV_ID')
+# 
+# #Saving
+# #--------------------
+# saveRDS(RR, "C:/Users/Irina/Disk Google/1_ČZU/Sucho/data/bilan_day.rds")
