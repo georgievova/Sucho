@@ -6,3 +6,24 @@
 .dygraph-label { font-size: 16px}
 
 .dygraph-title { font-size: 18px}
+
+.btn-primary {
+  border-radius: 4px;
+}
+
+.choose {
+	background-color:#00ccff;
+	border-radius:4px;
+	border:2px solid #00ccff;
+	width: 100%;
+	cursor:pointer;
+	box-shadow: 0px 10px 14px -7px #f0f7fa;
+	color:#ffffff;
+	font-family:Arial;
+	font-size:14px;
+	text-decoration:none;
+}
+.choose:hover {
+	background-color:#019ad2;
+	border:2px solid #019ad2;
+}
