@@ -164,3 +164,4 @@ saveRDS(u, "data/uzivani_ocistene.rds")
 # #Saving
 # #--------------------
 # saveRDS(RR, "C:/Users/Irina/Disk Google/1_ČZU/Sucho/data/bilan_day.rds")
+
