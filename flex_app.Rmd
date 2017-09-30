@@ -82,7 +82,6 @@ names(choices2) <- c(
 mesice <- c("Leden","Únor","Březen","Duben","Květen","Červen",
             "Červenec","Srpen","Září","Říjen","Listopad","Prosinec")
 
-
 ```
 
 Základní mapa {data-icon="fa-map-o"}
@@ -95,7 +94,8 @@ Column {.sidebar data-width=400}
 #Inputs
 #--------------------
 
-wellPanel(selectInput("entry.variable", label="Prvky hydrologické bilance", choices = choices, selected = "P"))
+wellPanel(
+  selectInput("entry.variable", label="Prvky hydrologické bilance", choices = choices, selected = "P"))
 
 
 wellPanel(HTML('<button data-toggle="collapse" data-target="#box1" class="btn-block btn-primary">Dlouhodobé průměry</button>'),
@@ -161,12 +161,13 @@ povodi.ds <- reactive({
 })
 
 kde <- reactive({
-xy <- SpatialPoints(u[, c("X", "Y")], proj4string = CRS("+init=epsg:2065"))
+u_leaflet <- u %>% group_by(NAZICO, POVODI, JEV, X, Y) %>% summarise(mean=mean(value))
+xy <- SpatialPoints(u_leaflet[, c("X", "Y")], proj4string = CRS("+init=epsg:2065"))
 xy <- spTransform(xy, CRS("+init=epsg:4326") )
 kde <- gIntersects(povodi.ds(), xy, byid = TRUE)
   xy <- xy[kde[,1],]
-  u <- u[kde[,1],]
-  return(list(u = u, xy=xy))
+  u_leaflet <- u_leaflet[kde[,1],]
+  return(list(u_leaflet = u_leaflet, xy=xy))
   })
 
 ```
@@ -264,7 +265,7 @@ output$map<-renderLeaflet({
   if (input$filtr == "A") {
   map <- map %>% addPolygons(data=dta, layerId = dta$UPOV_ID, color = "burlywood4", weight = 1.3, opacity = 0.3,
                  fillColor = ~pal(value), fillOpacity = 0.8, group = "Povodí",
-                 highlightOptions = highlightOptions(color = "#000000", opacity = 1, fillOpacity = 0, weight = 2.3,
+                 highlightOptions = highlightOptions(color = "#a53333", opacity = 1, fillOpacity = 0, weight = 2.3,
                                                      bringToFront = TRUE, sendToBack=TRUE),
                  label = labels,
                  labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
@@ -521,24 +522,27 @@ leafletOutput("uzivani")
 
 output$uzivani <- renderLeaflet({
 
+u_leaflet <- kde()$u_leaflet   
+   
 labels.points <- sprintf(
-      "<strong>%s</strong><br/>Povodí: %s<br/>Název toku: %s <br/> Jev: %s",
-      kde()$u$NAZICO, kde()$u$POVODI, kde()$u$NAZTOK, kde()$u$JEV) %>% 
+      "<strong>%s</strong><br/>Povodí: %s<br/>Jev: %s",
+      u_leaflet$NAZICO, u_leaflet$POVODI, u_leaflet$JEV) %>%
       lapply(htmltools::HTML)
 
 label.polygon <- sprintf(
       "<strong>%s</strong>",
       povodi.ds()$NAZ_UTVAR) %>% lapply(htmltools::HTML)
 
-pal_2 <- colorFactor("Paired", domain = kde()$u$JEV, na.color = "gray50")
+pal_2 <- colorFactor("Paired", domain = u_leaflet$JEV, na.color = "gray50")
 
 centr <- getSpPPolygonsLabptSlots(povodi.ds())
 
 uzivani <- leaflet() %>%
-    setView(lng=centr[,1], lat = centr[,2], zoom=12) %>% 
+    setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
     addTiles(group = "Mapový podklad", options = tileOptions(minZoom=10, maxZoom=13)) %>% 
-    #addProviderTiles(providers$Esri.WorldTopoMap, group = "Mapový podklad", options = tileOptions(minZoom=11, maxZoom=13)) %>% 
-    addPolygons(data=povodi.ds(), 
+    addProviderTiles(providers$Esri.WorldTopoMap, group = "Mapový podklad", 
+                     options = tileOptions(minZoom=11, maxZoom=13)) %>%
+    addPolygons(data=povodi.ds(),
                 color = "black", fillColor = "whitesmoke", weight = 2, opacity = 0.4, fillOpacity = 0.7,
                 label = label.polygon,
                 labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
@@ -546,8 +550,8 @@ uzivani <- leaflet() %>%
                                              keepInView = TRUE,
                                              "border-color" = "rgb(255, 255, 255)"),
                                              textsize = "15px", direction = "auto")) %>% 
-    addCircleMarkers(data=kde()$xy, radius = 5, color = "black", fillColor = pal_2(kde()$u$JEV),
-                 weight = 0.5, opacity = 0.7, fillOpacity = 1, layerId = kde()$u$NAZICO,
+    addCircleMarkers(data=kde()$xy, radius = 5, color = "black", fillColor = pal_2(u_leaflet$JEV),
+                 weight = 0.5, opacity = 0.7, fillOpacity = 1, layerId = u_leaflet$NAZICO,
                  label = labels.points,
                  labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
                                              "font-family" = "sans-serif", padding = "3px 8px",
@@ -556,12 +560,12 @@ uzivani <- leaflet() %>%
                                              textsize = "15px", direction = "auto")) %>%
     addPolylines(data=reky[reky$UPOV_ID==default.shape(), ], color="#007C8C", weight = 1.5,
                  opacity = 1, stroke= TRUE, group = "Řeky") %>%
-    addPolygons(data=jezera[jezera$UPOV_ID==default.shape(), ], color="#007C8C", fillColor = "#0099ff", 
-                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera") %>% 
+    addPolygons(data=jezera[jezera$UPOV_ID==default.shape(), ], color="#007C8C", fillColor = "#0099ff",
+                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera") %>%
     addLayersControl(overlayGroups = c("Mapový podklad", "Řeky", "Jezera"),
                      position = "bottomleft",
-                     options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>% 
-    addLegend(pal = pal_2, values =kde()$u$JEV, opacity = 0.7, title = "Legenda",
+                     options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>%
+    addLegend(pal = pal_2, values = u_leaflet$JEV, opacity = 0.7, title = "Legenda",
               position = "bottomright")
 })
 
@@ -570,16 +574,16 @@ uzivani <- leaflet() %>%
 ### Časová řada
 
 ```{r}
-renderDygraph({
-  ts.QD <-  kde()$u %>% filter(kde()$u$NAZICO == default.circle()) %>%  select(value)
-  ts.QD <- ts(ts.QD, start = decimal_date(as.Date("1980-11-02")), frequency = 1)
-
-  dygraph(ts.QD, main = "Časová řada",
-          xlab = "Čas", ylab = "Průtok") %>%
-  dySeries('value', label="Denní průtok") %>%
-  dyRoller(showRoller = TRUE, rollPeriod = 1)%>%
-  dyRangeSelector()
-})
+# renderDygraph({
+#   ts.QD <-  kde()$u %>% filter(kde()$u$NAZICO == default.circle()) %>%  select(value)
+#   ts.QD <- ts(ts.QD, start = decimal_date(as.Date("1980-11-02")), frequency = 1)
+# 
+#   dygraph(ts.QD, main = "Časová řada",
+#           xlab = "Čas", ylab = "Průtok") %>%
+#   dySeries('value', label="Denní průtok") %>%
+#   dyRoller(showRoller = TRUE, rollPeriod = 1)%>%
+#   dyRangeSelector()
+# })
 ```
 
 Row {.tabset .tabset-fade data-heigth=400}
@@ -588,30 +592,30 @@ Row {.tabset .tabset-fade data-heigth=400}
 ### Suma za celé povodí
 
 ```{r}
-renderTable({
-  total <- kde()$u %>% select(DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE) %>% replace(is.na(.), 0) %>% summarise_all(funs(sum))
-  total <- cbind("NAZICO" = "Suma", total)})
+# renderTable({
+#   total <- kde()$u %>% select(DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE) %>% replace(is.na(.), 0) %>% summarise_all(funs(sum))
+#   total <- cbind("NAZICO" = "Suma", total)})
 ```
 
 ### Suma za odběratele
 
 ```{r}
-renderTable({
-  subtotal <- kde()$u %>% group_by(NAZICO) %>% select(DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE) %>% replace(is.na(.), 0) %>% summarise_all(funs(sum))})
+# renderTable({
+#   subtotal <- kde()$u %>% group_by(NAZICO) %>% select(DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE) %>% replace(is.na(.), 0) %>% summarise_all(funs(sum))})
 ```
 
 ### Suma dle jevu
 
 ```{r}  
-renderTable({
-  subsubtotal <- kde()$u %>% group_by(JEV) %>% select(DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE) %>% replace(is.na(.), 0) %>% summarise_all(funs(sum))})
+# renderTable({
+#   subsubtotal <- kde()$u %>% group_by(JEV) %>% select(DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE) %>% replace(is.na(.), 0) %>% summarise_all(funs(sum))})
 ```
 
 ### Jednotlivý bod
 
 ```{r}
-renderTable({
-  unit <- kde()$u %>% filter(kde()$u$NAZICO == default.circle()) %>%  select(NAZICO, DTM, DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE)})
+# renderTable({
+#   unit <- kde()$u %>% filter(kde()$u$NAZICO == default.circle()) %>%  select(NAZICO, DTM, DEL, RKM, RKMO, RM, RH, PMM3_ROK, PMM3_MES, Q_MZP, OD_ZAVL, OD_VER_V, MN_DODANE)})
 ```
 
 ```{r}
