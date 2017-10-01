@@ -135,9 +135,11 @@ u = melt(u, id.vars = c("ICOC", "JEV", "CZ_NACE", "POVODI", "NAZEV", "ROCNI.MNOZ
 
 u$variable <- gsub("MVM*", "", u$variable)
 u$value <- gsub(",", ".", u$value)
+
 u$DTM <- paste0("01",str_sub(paste0("00",u$variable),-2,-1), u$ROK, sep="-")
-u$DTM <- as.Date(u$DTM, format = "%d-%m-%Y")
+u$DTM <- as.Date(u$DTM, format = "%d%m%Y")
 u$value <- as.numeric(u$value)
+
 colnames(u)[13] <- "MESIC"
 colnames(u)[c(8,9)] <- c("X", "Y")
 colnames(u)[5] <- "NAZICO"
