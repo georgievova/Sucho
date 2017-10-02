@@ -103,14 +103,18 @@ wellPanel(
   selectInput("entry.variable", label="Prvky hydrologické bilance", choices = choices, selected = "P"))
 
 
-wellPanel(HTML('<button data-toggle="collapse" data-target="#box1" class="btn-block btn-primary">Dlouhodobé průměry</button>'),
-        tags$div(id = 'box1', class="collapse in"),
-
-        HTML('<button data-toggle="collapse" data-target="#box2" class="btn-block btn-primary">Měsíční průměry</button>'),
+wellPanel(
+        HTML('<button data-toggle="collapse" data-target="#box2" class="btn-block btn-primary">Kartogram</button>'),
         tags$div(id = 'box2', class="collapse in", 
+                 radioButtons("kartogram", label=NULL, 
+                              choices = c("Měsíční průměry" = "A", "Čtvrtletní průměry" = "B", "Roční průměry" = "C"),
+                              selected = "A"),
                  selectInput("entry.year", label = "Zvolte rok:", choices = seq(1961,2015,1), selected = 2015),
-                 sliderInput("entry.month", "Zvolte měsíc:", 1,12, value = 1)),
-        
+                 
+                 conditionalPanel(condition = "input.kartogram == 'A'", 
+                                  sliderInput("entry.month", "Zvolte měsíc:", 1,12, value = 1)),
+                 conditionalPanel(condition ="input.kartogram == 'B'", 
+                                  sliderInput("entry.quarter", label = "Zvolte čtvrtletí:", 1,4, value = 1))),
         HTML('<button data-toggle="collapse" data-target="#box3" class="btn-block btn-primary">Filtování dle hodnoty</button>'),
         tags$div(id = 'box3', class="collapse",
                  radioButtons("filtr", "Filtr", 
@@ -150,7 +154,19 @@ observe({
 
 reac<- eventReactive(input$go1,{ 
   bilance <-  BM %>% filter(variable == input$entry.variable) 
-  bilance_filtr <- bilance %>% filter(year==input$entry.year & month==input$entry.month)
+  
+  if(input$kartogram == "A"){
+    bilance_filtr <- bilance %>% filter(year==input$entry.year & month==input$entry.month)
+  }else if(input$kartogram == "B"){
+    quarter.selector <- data.frame(qrt=c(1,2,3,4),m=c(1,4,7,10)) 
+    
+    bilance_filtr <- bilance %>% filter(year==input$entry.year & quarter==input$entry.quarter & month==quarter.selector[quarter.selector$qrt==input$entry.quarter,"m"])
+     colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
+      colnames(bilance_filtr)[colnames(bilance_filtr)=="quarterly.avg"] <- "value"
+  }else{bilance_filtr <- bilance %>% filter(year==input$entry.year & month==input$entry.month)
+      colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
+        colnames(bilance_filtr)[colnames(bilance_filtr)=="annual.avg"] <- "value"}
+  
   dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
   return(list(bilance=bilance,dta=dta))
 })
@@ -162,7 +178,7 @@ reac1 <- eventReactive(input$go1,{
 })
 
 povodi.ds <- reactive({
-  povodi[povodi$UPOV_ID==default.shape(), ]
+  povodi[povodi$UPOV_ID==input$search.id.u, ]
 })
 
 kde <- reactive({
@@ -508,7 +524,7 @@ renderUI({
     absolutePanel(class = "panel panel-default", fixed = TRUE,
                 draggable = FALSE, top = 30, left = 20, right = "auto", bottom = "auto",
                 width = '30%', style = "opacity: 1; style = z-index: 400",
-          selectizeInput(inputId = "search.id","Vyhledávání útvaru",
+          selectizeInput(inputId = "search.id.u","Vyhledávání útvaru",
                              selected=input$map_shape_click$id, choices = search.choices))
   })
 # absolutePanel(wellPanel(HTML(paste("POD - odběr z podzemních vod",
@@ -553,9 +569,9 @@ uzivani <- leaflet() %>%
                                              keepInView = TRUE,
                                              "border-color" = "rgb(255, 255, 255)"),
                                              textsize = "15px", direction = "auto")) %>%
-    addPolylines(data=reky[reky$UPOV_ID==default.shape(), ], color="#007C8C", weight = 1.5,
+    addPolylines(data=reky[reky$UPOV_ID==input$search.id.u, ], color="#007C8C", weight = 1.5,
                  opacity = 1, stroke= TRUE, group = "Řeky") %>%
-    addPolygons(data=jezera[jezera$UPOV_ID==default.shape(), ], color="#007C8C", fillColor = "#0099ff",
+    addPolygons(data=jezera[jezera$UPOV_ID==input$search.id.u, ], color="#007C8C", fillColor = "#0099ff",
                 weight = 1, opacity = 1, stroke= TRUE, group = "Jezera") %>%
     addLayersControl(overlayGroups = c("Mapový podklad", "Řeky", "Jezera"),
                      position = "topright",
