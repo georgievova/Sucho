@@ -3,6 +3,7 @@ require(rmapshaper)
 require(maptools)
 require(data.table)
 require(stringr)
+require(dplyr)
 
 #1 Prostorová data
 setwd()
@@ -61,7 +62,8 @@ BM = rbindlist(M, idcol = 'UPOV_ID')
 
 #Saving
 #--------------------
-setwd("./data")
+# setwd("./data")
+# BM <- readRDS('data/mbil/bilan_month - kopie.rds')
 
 mesice <- c("Leden","Únor","Březen","Duben","Květen","Červen",
             "Červenec","Srpen","Září","Říjen","Listopad","Prosinec")
@@ -72,6 +74,13 @@ seasons <- data.frame(month = c(1:12), seasons = c("Zíma", "Zíma", "Jaro", "Ja
 BM <- BM %>% left_join(seasons, by="month") 
 BM$month2 <- as.factor(BM$month)
 levels(BM$month2) <- mesice
+
+BM <- BM %>% group_by(UPOV_ID, year, variable) %>% mutate(annual.avg = mean(value)) %>% ungroup
+
+quarter <- data.frame(month=c(1:12), quarter = rep(1:4, each=3)) 
+BM <- BM %>% left_join(quarter, by="month")
+
+BM <- BM %>% group_by(UPOV_ID, year, quarter, variable) %>% mutate(quarterly.avg = mean(value)) %>% ungroup
 
 BM.long <- dcast(BM, month+year+UPOV_ID~variable)
 BM.long$m <- as.factor(BM.long$month)
