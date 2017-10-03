@@ -735,9 +735,9 @@ choices3 <- c("value", "mean_month", "mean_year")
 names(choices3) <- c("Denní průtok", "Měsiční průměr", "Roční průměr")
 
 absolutePanel(class = "panel panel-default", fixed = TRUE,
-                  draggable = FALSE, top = 55, left = "auto", right = 10, bottom = "auto",
-                  width = '20%',
-                  style = "opacity: 0.9; style = z-index: 400",
+                  draggable = FALSE, top = 80, left = "auto", right = 10, bottom = "auto",
+                  width = '10%',
+                  style = "opacity: 1; style = z-index: 400",
     HTML('<button data-toggle="collapse" data-target="#box7" class="choose">Výběr časových řad</button>'),
         tags$div(id = 'box7', class="collapse", style = "max-height: 250px; overflow-y:scroll",
                  checkboxGroupInput("entry.variable4", "Zvolte:", choices = choices3, selected = c("value", "mean_month"))))
