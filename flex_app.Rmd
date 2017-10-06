@@ -337,13 +337,19 @@ Row {.tabset}
 ```{r}
 
 renderDygraph({
-  ts.bilance <- BM.long %>% filter(UPOV_ID == default.shape()) %>%  select(input$entry.variable2)
-  ts.bilance <- ts(ts.bilance, frequency = 12, start=c(1961,1))
+  
+  ts.bilance <- BM.long %>% filter(UPOV_ID == default.shape()) %>% select(input$entry.variable2, DTM) 
+  
+  RangeMin <- min(ts.bilance[, input$entry.variable2])-0.5
+  RangeMax <- max(ts.bilance[, input$entry.variable2])+0.5
+  
+  ts.bilance <- xts::xts(ts.bilance, order.by = ts.bilance$DTM)
+  # ts.bilance <- ts(ts.bilance, frequency = 12, start=c(1961,1))
 
-  dygraph(ts.bilance, main = paste(as.character(title.f())),
-          xlab = "Čas") %>%
+  dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas") %>%
+  dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>% 
   dyRoller(showRoller = TRUE, rollPeriod = 1)%>%
-  dyRangeSelector() %>% 
+  dyRangeSelector() %>%
   dyCrosshair(direction = "vertical")
 })
 
@@ -362,6 +368,7 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
 ```{r}
 
 renderDygraph({
+  
   ts.bilance <- reac()$bilance %>% filter(UPOV_ID == default.shape()) %>% arrange(year, desc(value)) %>% select(value)
   ts.bilance <- ts(ts.bilance, frequency = 12, start=c(1961,1))
 
@@ -384,11 +391,14 @@ renderDygraph({
   dta_bd <- readRDS(file.path("data","bilan", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
   
   ts.bilance <- dta_bd %>%  select(input$entry.variable_d, DTM)
+  
+  RangeMin <- min(ts.bilance %>% select(c(input$entry.variable_d)))-0.5
+  RangeMax <- max(ts.bilance %>% select(c(input$entry.variable_d)))+0.5
+  
   ts.bilance <- xts::xts(ts.bilance, order.by = ts.bilance$DTM)
 
-  dygraph(ts.bilance, main = paste(as.character(title.f())),
-          xlab = "Čas") %>%
-  dyRoller(showRoller = TRUE, rollPeriod = 1)%>%
+  dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas") %>%
+  dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>%  
   dyRangeSelector() %>% 
   dyCrosshair(direction = "vertical")
 })
