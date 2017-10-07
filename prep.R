@@ -129,7 +129,7 @@ writeOGR(stanice, "data/prep", "stanice", driver="ESRI Shapefile", encoding  = "
 #Loading
 #--------------------
 u <- read.csv('data/vuv/uzivani_utvary_06_16.csv',encoding = 'UTF-8', header = TRUE, sep = ";")
-u <- readRDS('data/uzivani.rds')
+u <- readRDS('data/uzivani/79_15/uzivani.rds')
 #Preparation of data
 #--------------------
 
@@ -151,14 +151,26 @@ colnames(u)[13] <- "MESIC"
 colnames(u)[c(8,9)] <- c("X", "Y")
 colnames(u)[5] <- "NAZICO"
 
-u <- u[!is.na(u$X)|!is.na(u$Y),]
-
+u <- u[!is.na(u$X)|!is.na(u$Y),] #vynechani bodu s neznamymi souradnicemi 
 
 #Saving
 #--------------------
 setwd("C:/Users/Irina/Disk Google/1_ČZU/Sucho")
-saveRDS(u, "data/uzivani_ocistene.rds") #obsahuje NA
-saveRDS(u, 'data/uzivani_ocistene2.rds') #neobsahuje NA
+saveRDS(u, "data/uzivani/06_16/uzivani_NA.rds") #obsahuje NA
+saveRDS(u, 'data/uzivani/06_16/uzivani_na_rm.rds') #vynechane NA
+
+### doplneni zaznamu od bodu se stejnym ICOC
+u <- readRDS('data/uzivani/06_16/uzivani_NA.rds')
+
+u$na <- as.numeric(is.na(u$X))
+# u <- u %>% group_by(ICOC, JEV) %>% mutate(mean.na = mean(na))
+u <- u %>% group_by(ICOC) %>% mutate(mean.X = mean(X, na.rm = T), mean.Y = mean(Y, na.rm = T)) %>% ungroup
+u$X[is.na(u$X)] <- u$mean.X[is.na(u$X)]
+u$Y[is.na(u$Y)] <- u$mean.Y[is.na(u$Y)]
+
+u <- u[!is.na(u$X)|!is.na(u$Y),]
+
+saveRDS(u, 'data/uzivani/06_16/uzivani_na_nahraz.rds') # NA nahrazene průměrem za ICOC
 
 # #5 Denni data
 # #--------------------
@@ -189,7 +201,7 @@ povodi <- readOGR("data/prep/povodi.shp")
 popis <- read.table('data/E_ISVS$UTV_POV.txt',encoding = 'UTF-8', header = TRUE, sep=';')
 povodi <- sp::merge(povodi, popis, by='UPOV_ID')
 
-u <- readRDS('data/uzivani.rds')
+u <- readRDS('data/uzivani/79_15/uzivani.rds')
 
 u <- u[complete.cases(X, Y)]
 xy <- SpatialPoints(u[, c("X", "Y")], proj4string = CRS("+init=epsg:2065"))
@@ -214,4 +226,4 @@ for (i in povodi$UPOV_ID) {
   print(paste(i, (pocitadlo/1121)*100, '%'))
 }
 
- saveRDS(u, 'data/uzivani_upovid.rds')
+ saveRDS(u, 'data/uzivani/79_15/uzivani_upovid.rds')
