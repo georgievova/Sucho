@@ -37,13 +37,13 @@ require(lubridate)
 povodi <- readOGR("data/prep/povodi.shp")
 reky <- readOGR("data/prep/reky.shp")
 jezera <- readOGR("data/prep/jezera.shp")
-stanice <- readOGR("data/prep/stanice.shp")
+stanice <- readOGR("data/chmu/stanice.shp")
 
 popis <- read.table('data/E_ISVS$UTV_POV.txt',encoding = 'UTF-8', header = TRUE, sep=';')
-QD <- readRDS('data/QD.rds')
+QD <- readRDS('data/chmu/QD.rds')
 BM <- readRDS('data/mbil/bilan_month.rds')
 BM.long <- readRDS('data/mbil/bilan_month_long.rds')
-u <- readRDS('data/uzivani_ocistene2.rds')
+u <- readRDS('data/uzivani/06_16/uzivani_na_nahraz.rds')
 
 # Merging data
 #--------------------
@@ -616,21 +616,23 @@ Row {.tabset .tabset-fade data-heigth=400}
 
 ```{r}
 renderDataTable({
-  unit <- u %>% filter(NAZICO == default.circle()) %>% mutate(DTM = as.character(DTM)) %>% select(-c(X,Y, ROK, MESIC))}, options = list(scrollY = "400px", scrollX = "10px", class = 'cell-border stripe'))
+  unit <- u %>% filter(NAZICO == default.circle()) %>% mutate(DTM = as.character(DTM)) %>% select(-c(X,Y, ROK, MESIC))}, options = list(scrollY = "400px", scrollX = "10px", class = 'cell-border stripe', lengthMenu = c(10,30,50,100)))
 ```
 
 ### Suma dle jevu
 
 ```{r}  
 renderDataTable({
-  subsubtotal <- u %>% filter(NAZICO %in% kde()$u_leaflet$NAZICO) %>% group_by(JEV) %>% replace(is.na(.), 0) %>% summarise(suma = sum(value))}, width='50%')
+  subsubtotal <- u %>% filter(NAZICO %in% kde()$u_leaflet$NAZICO) %>% group_by(JEV) %>% replace(is.na(.), 0) %>% summarise(suma = sum(value))}, width='50%', options = list(scrollY = "400px", scrollX = "10px", 
+                                                      lengthMenu = c(10,30,50,100)))
 ```
 
 ### Suma za odběratele
 
 ```{r}
 renderDataTable({
-  subtotal <- u %>% filter(NAZICO %in% kde()$u_leaflet$NAZICO) %>% replace(is.na(.), 0) %>% group_by(NAZICO) %>% summarise(suma = sum(value))}, width='50%')
+  subtotal <- u %>% filter(NAZICO %in% kde()$u_leaflet$NAZICO) %>% replace(is.na(.), 0) %>% group_by(NAZICO) %>% summarise(suma = sum(value))}, width='50%', options = list(scrollY = "400px", scrollX = "10px", 
+                                                      lengthMenu = c(10,30,50,100)))
 ```
 
 ### Suma za celé povodí
@@ -638,7 +640,8 @@ renderDataTable({
 ```{r}
 renderDataTable({
   total <- u %>% filter(NAZICO %in% kde()$u_leaflet$NAZICO) %>% replace(is.na(.), 0) %>% summarise(suma = sum(value))
-  total <- cbind("NAZICO" = "Suma", total)}, width='50%')
+  total <- cbind("NAZICO" = "Suma", total)}, width='50%', options = list(scrollY = "400px", scrollX = "10px",
+                                                                         lengthMenu = c(10,30,50,100)))
 ```
 
 
