@@ -367,17 +367,32 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
 
 ```{r}
 
-renderDygraph({
+
+cp <- eventReactive(input$go_cp,{
   
-  ts.bilance <- reac()$bilance %>% filter(UPOV_ID == default.shape()) %>% arrange(year, desc(value)) %>% select(value)
+  ts.bilance <- BM %>% filter(UPOV_ID == default.shape(), year == input$year_cp, variable == input$variable_cp) %>%
+                       arrange(desc(value)) %>% select(value)
   ts.bilance <- ts(ts.bilance, frequency = 12, start=c(1961,1))
 
   dygraph(ts.bilance, main = paste(as.character(title.f())),
-          xlab = "Čas", ylab = paste(names(choices[choices == input$entry.variable]))) %>%
-  dySeries('value', label=input$entry.variable) %>%
-  dyRoller(showRoller = TRUE, rollPeriod = 1)%>%
-  dyRangeSelector()
+          xlab = "Čas", ylab = paste(names(choices[choices == input$variable_cp]))) %>%
+  dySeries('value', label=input$variable_cp) %>%
+  dyRangeSelector() %>% 
+  dyCrosshair(direction = "vertical")
 })
+
+renderDygraph({cp()}) 
+
+absolutePanel(class = "panel panel-default", fixed = TRUE,
+                  draggable = FALSE, top = 515, left = "auto", right = 10, bottom = "auto",
+                  width = '20%',
+                  style = "opacity: 1; style = z-index: 400",
+    HTML('<button data-toggle="collapse" data-target="#box5" class="choose">Výběr pro čáru překročení</button>'),
+        tags$div(id = 'box5', class="collapse in", style = "max-height: 420px; overflow-y:scroll",
+                 sliderInput("year_cp", "Zvolte:", 1961, 2015, step = 1, value = 2015, format="####"),
+                 checkboxGroupInput("variable_cp", "Zvolte:", choices = choices, selected = c("P")),
+                 actionButton("go_cp", "Spustit", icon("check"), style="color: #fff; background-color: #337ab7;
+                                      border-color: #2e6da4")))
 
 ```
 
@@ -407,8 +422,8 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
                   draggable = FALSE, top = 515, left = "auto", right = 10, bottom = "auto",
                   width = '15%',
                   style = "opacity: 0.9; style = z-index: 400",
-    HTML('<button data-toggle="collapse" data-target="#box5" class="choose">Výběr časových řad</button>'),
-        tags$div(id = 'box5', class="collapse", style = "max-height: 250px; overflow-y:scroll",
+    HTML('<button data-toggle="collapse" data-target="#box6" class="choose">Výběr časových řad</button>'),
+        tags$div(id = 'box6', class="collapse", style = "max-height: 250px; overflow-y:scroll",
                  checkboxGroupInput("entry.variable_d", "Zvolte:", choices = choices, selected = c("ET"))))
 ```
 
@@ -513,8 +528,8 @@ absolutePanel(class = "panel panel-default", fixed = TRUE,
                   draggable = FALSE, top = 55, left = "auto", right = 10, bottom = "auto",
                   width = '25%',
                   style = "opacity: 0.9; style = z-index: 400",
-    HTML('<button data-toggle="collapse" data-target="#box6" class="choose">Výběr časových                           řad</button>'),
-        tags$div(id = 'box6', class="collapse in", style = "max-height: 550px; overflow-y:scroll",
+    HTML('<button data-toggle="collapse" data-target="#box7" class="choose">Výběr časových                           řad</button>'),
+        tags$div(id = 'box7', class="collapse in", style = "max-height: 550px; overflow-y:scroll",
                  checkboxGroupInput("entry.variable3", "Zvolte:", choices = choices, selected = c("PET", "T")),
                  actionButton("go3", "Spustit", icon("check"), 
                       style="color: #fff; background-color: #337ab7; border-color: #2e6da4",
@@ -751,8 +766,8 @@ absolutePanel(class = "panel panel-default", fixed = TRUE,
                   draggable = FALSE, top = 80, left = "auto", right = 10, bottom = "auto",
                   width = '10%',
                   style = "opacity: 1; style = z-index: 400",
-    HTML('<button data-toggle="collapse" data-target="#box7" class="choose">Výběr časových řad</button>'),
-        tags$div(id = 'box7', class="collapse", style = "max-height: 250px; overflow-y:scroll",
+    HTML('<button data-toggle="collapse" data-target="#box8" class="choose">Výběr časových řad</button>'),
+        tags$div(id = 'box8', class="collapse", style = "max-height: 250px; overflow-y:scroll",
                  checkboxGroupInput("entry.variable4", "Zvolte:", choices = choices3, selected = c("value", "mean_month"))))
 
 ```
