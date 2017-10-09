@@ -368,8 +368,7 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
 ```{r}
 
 
-cp <- eventReactive(input$go_cp,{
-  
+renderDygraph({  
   ts.bilance <- BM %>% filter(UPOV_ID == default.shape(), year == input$year_cp, variable == input$variable_cp) %>%
                        arrange(desc(value)) %>% select(value)
   ts.bilance <- ts(ts.bilance, frequency = 12, start=c(1961,1))
@@ -378,21 +377,16 @@ cp <- eventReactive(input$go_cp,{
           xlab = "Čas", ylab = paste(names(choices[choices == input$variable_cp]))) %>%
   dySeries('value', label=input$variable_cp) %>%
   dyRangeSelector() %>% 
-  dyCrosshair(direction = "vertical")
-})
-
-renderDygraph({cp()}) 
+  dyCrosshair(direction = "vertical")}) 
 
 absolutePanel(class = "panel panel-default", fixed = TRUE,
                   draggable = FALSE, top = 515, left = "auto", right = 10, bottom = "auto",
                   width = '20%',
                   style = "opacity: 1; style = z-index: 400",
     HTML('<button data-toggle="collapse" data-target="#box5" class="choose">Výběr pro čáru překročení</button>'),
-        tags$div(id = 'box5', class="collapse in", style = "max-height: 420px; overflow-y:scroll",
+        tags$div(id = 'box5', class="collapse in", style = "max-height: 420px",
                  sliderInput("year_cp", "Zvolte:", 1961, 2015, step = 1, value = 2015, format="####"),
-                 checkboxGroupInput("variable_cp", "Zvolte:", choices = choices, selected = c("P")),
-                 actionButton("go_cp", "Spustit", icon("check"), style="color: #fff; background-color: #337ab7;
-                                      border-color: #2e6da4")))
+                 selectInput("variable_cp", label=NULL , choices = choices, selected = c("P"))))
 
 ```
 
