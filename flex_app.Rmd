@@ -625,15 +625,16 @@ Row {.tabset .tabset-fade data-heigth=400}
 
 ```{r}
 renderDataTable({
-  unit <- u %>% filter(NAZICO == default.circle()) %>% mutate(DTM = as.character(DTM)) %>% select(-c(X,Y, ROK, MESIC))}, options = list(scrollY = "400px", scrollX = "10px", class = 'cell-border stripe', lengthMenu = c(10,30,50,100)))
+  unit <- u %>% filter(NAZICO == default.circle()) %>% mutate(DTM = as.character(DTM)) %>% 
+    select(-c(X,Y, ROK, MESIC, mean.X, mean.Y, na))}, 
+  options = list(scrollY = "400px", scrollX = "10px", class = 'cell-border stripe', lengthMenu = c(100,200)))
 ```
 
 ### Suma dle jevu
 
 ```{r}  
 renderDataTable({
-  subsubtotal <- u %>% filter(NAZICO %in% kde()$u_leaflet$NAZICO) %>% group_by(JEV) %>% replace(is.na(.), 0) %>% summarise(suma = sum(value))}, width='50%', options = list(scrollY = "400px", scrollX = "10px", 
-                                                      lengthMenu = c(10,30,50,100)))
+  subsubtotal <- u %>% filter(NAZICO %in% kde()$u_leaflet$NAZICO) %>% group_by(JEV) %>% replace(is.na(.), 0) %>% summarise(suma = sum(value))}, width='50%', options = list(scrollY = "400px", scrollX = "10px"))
 ```
 
 ### Suma za odběratele
@@ -641,7 +642,7 @@ renderDataTable({
 ```{r}
 renderDataTable({
   subtotal <- u %>% filter(NAZICO %in% kde()$u_leaflet$NAZICO) %>% replace(is.na(.), 0) %>% group_by(NAZICO) %>% summarise(suma = sum(value))}, width='50%', options = list(scrollY = "400px", scrollX = "10px", 
-                                                      lengthMenu = c(10,30,50,100)))
+                                                      lengthMenu = c(100,200)))
 ```
 
 ### Suma za celé povodí
@@ -649,8 +650,7 @@ renderDataTable({
 ```{r}
 renderDataTable({
   total <- u %>% filter(NAZICO %in% kde()$u_leaflet$NAZICO) %>% replace(is.na(.), 0) %>% summarise(suma = sum(value))
-  total <- cbind("NAZICO" = "Suma", total)}, width='50%', options = list(scrollY = "400px", scrollX = "10px",
-                                                                         lengthMenu = c(10,30,50,100)))
+  total <- cbind("NAZICO" = "Suma", total)}, width='50%', options = list(scrollY = "400px", scrollX = "10px"))
 ```
 
 
