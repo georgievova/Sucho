@@ -23,10 +23,10 @@ require(dbplyr)
 require(dygraphs)
 require(sp)
 require(shiny)
-require(berryFunctions)
 require(DT)
 require(rgeos)
 require(datasets)
+#require(berryFunctions)
 #require(lubridate)
 #require(xts)
 
@@ -564,13 +564,15 @@ Row {data-height=600}
 leafletOutput("uzivani")
 
 output$uzivani <- renderLeaflet({
+
+povodif <- base::subset(povodi,UPOV_ID != input$search.id.u)  
   
 u_leaflet <- kde()$u_leaflet
 xy <- kde()$xy
 
   labels <- sprintf(
       "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s",
-      povodi$NAZ_UTVAR, povodi$KTG_UPOV, povodi$U_PMU, povodi$UPOV_ID) %>% lapply(htmltools::HTML)
+      povodif$NAZ_UTVAR, povodif$KTG_UPOV, povodif$U_PMU, povodif$UPOV_ID) %>% lapply(htmltools::HTML)
 
   if(length(labels)==0){labels <- c(" ")}
 
@@ -585,25 +587,21 @@ centr <- getSpPPolygonsLabptSlots(povodi.ds())
 uzivani <- leaflet() %>%setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
     addProviderTiles(providers$Esri.WorldTopoMap, group = "Mapový podklad",
                                                   options = tileOptions(minZoom=7, maxZoom=13)) %>%
-    addPolygons(data=povodi, color = "#2F4F4F", fillColor = "#F5F5F5", weight = 2, opacity = 0.4,
-                          fillOpacity = 0.7, layerId = povodi$UPOV_ID,
+    addPolygons(data=povodif, color = "#000000", fillColor = "#708090", weight = 2, opacity = 0.4,
+                          fillOpacity = 0.7, layerId = povodif$UPOV_ID,
                           highlightOptions = highlightOptions(color = "	#DC143C", opacity = 1, 
                                                               fillOpacity = 0, weight = 2.3,
                                                      bringToFront = TRUE, sendToBack = TRUE),
                 label = labels,
-                labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
-                                             "font-family" = "sans-serif", padding = "3px 8px",
-                                             keepInView = TRUE,
-                                             "border-color" = "rgb(255, 255, 255)"),
-                                             textsize = "15px", direction = "auto")) %>%
-    addCircleMarkers(data=xy, radius = 5, color = "black", fillColor = pal_2(u_leaflet$JEV),
+                labelOptions = labelOptions(clickable = TRUE, noHide = TRUE,
+                                            style = list("font-weight" = "normal",
+                                              "font-family" = "sans-serif", padding = "3px 8px",
+                                              keepInView = TRUE,
+                                              "border-color" = "#F5F5F5"),
+                                              textsize = "15px", direction = "auto")) %>%
+    addCircleMarkers(data=xy, radius = 6.5, color = "black", fillColor = pal_2(u_leaflet$JEV),
                  weight = 0.5, opacity = 0.7, fillOpacity = 1, layerId = u_leaflet$NAZICO,
-                 label = labels.points,
-                 labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
-                                             "font-family" = "sans-serif", padding = "3px 8px",
-                                             keepInView = TRUE,
-                                             "border-color" = "rgb(255, 255, 255)"),
-                                             textsize = "15px", direction = "auto"))%>%
+                 popup = labels.points) %>%
     addPolylines(data=reky, color="#007C8C", weight = 1.5,
                  opacity = 1, stroke= TRUE, group = "Řeky") %>%
     addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff",
