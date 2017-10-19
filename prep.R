@@ -82,17 +82,12 @@ BM <- BM %>% left_join(quarter, by="month")
 
 BM <- BM %>% group_by(UPOV_ID, year, quarter, variable) %>% mutate(quarterly.avg = mean(value)) %>% ungroup
 
-BM.long <- dcast(BM, month+year+UPOV_ID~variable)
+BM.long <- dcast(BM, month+year+UPOV_ID+DTM~variable)
 BM.long$m <- as.factor(BM.long$month)
 levels(BM.long$m) <- mesice
 
-u <- readRDS('data/uzivani.rds')
-u <- u[complete.cases(X, Y)]
-u$DTM <- as.character(u$DTM)
-
 saveRDS(BM, 'data/mbil/bilan_month.rds')
 saveRDS(BM.long, 'data/mbil/bilan_month_long.rds')
-saveRDS(u, 'data/uzivani2.rds')
 
 #3 Denní průtoky
 #--------------------
@@ -134,9 +129,12 @@ writeOGR(stanice, "data/prep", "stanice", driver="ESRI Shapefile", encoding  = "
 #Loading
 #--------------------
 u <- read.csv('data/vuv/uzivani_utvary_06_16.csv',encoding = 'UTF-8', header = TRUE, sep = ";")
-
+u <- readRDS('data/uzivani/79_15/uzivani.rds')
 #Preparation of data
 #--------------------
+
+u <- u[complete.cases(X, Y)]
+u$DTM <- as.character(u$DTM)
 
 colnames(u)[1] <- "ICOC"
 u = melt(u, id.vars = c("ICOC", "JEV", "CZ_NACE", "POVODI", "NAZEV", "ROCNI.MNOZSTVI.tis.m3", "POVOLENE.MNOZSTVI.ROK.tis.m3", "SOUR_X",	"SOUR_Y",	"UPOV_ID",	"HEIS_POZN", "ROK"
@@ -153,14 +151,26 @@ colnames(u)[13] <- "MESIC"
 colnames(u)[c(8,9)] <- c("X", "Y")
 colnames(u)[5] <- "NAZICO"
 
-u <- u[!is.na(u$X)|!is.na(u$Y),]
-
+u <- u[!is.na(u$X)|!is.na(u$Y),] #vynechani bodu s neznamymi souradnicemi 
 
 #Saving
 #--------------------
 setwd("C:/Users/Irina/Disk Google/1_ČZU/Sucho")
-saveRDS(u, "data/uzivani_ocistene.rds")
+saveRDS(u, "data/uzivani/06_16/uzivani_NA.rds") #obsahuje NA
+saveRDS(u, 'data/uzivani/06_16/uzivani_na_rm.rds') #vynechane NA
 
+### doplneni zaznamu od bodu se stejnym ICOC
+u <- readRDS('data/uzivani/06_16/uzivani_NA.rds')
+
+u$na <- as.numeric(is.na(u$X))
+# u <- u %>% group_by(ICOC, JEV) %>% mutate(mean.na = mean(na))
+u <- u %>% group_by(ICOC) %>% mutate(mean.X = mean(X, na.rm = T), mean.Y = mean(Y, na.rm = T)) %>% ungroup
+u$X[is.na(u$X)] <- u$mean.X[is.na(u$X)]
+u$Y[is.na(u$Y)] <- u$mean.Y[is.na(u$Y)]
+
+u <- u[!is.na(u$X)|!is.na(u$Y),]
+
+saveRDS(u, 'data/uzivani/06_16/uzivani_na_nahraz.rds') # NA nahrazene průměrem za ICOC
 
 # #5 Denni data
 # #--------------------
@@ -182,3 +192,38 @@ saveRDS(u, "data/uzivani_ocistene.rds")
 # #--------------------
 # saveRDS(RR, "C:/Users/Irina/Disk Google/1_ČZU/Sucho/data/bilan_day.rds")
 
+
+#6 uzivani / UPOV_ID
+#--------------------
+require(rgeos)
+
+povodi <- readOGR("data/prep/povodi.shp")
+popis <- read.table('data/E_ISVS$UTV_POV.txt',encoding = 'UTF-8', header = TRUE, sep=';')
+povodi <- sp::merge(povodi, popis, by='UPOV_ID')
+
+u <- readRDS('data/uzivani/79_15/uzivani.rds')
+
+u <- u[complete.cases(X, Y)]
+xy <- SpatialPoints(u[, c("X", "Y")], proj4string = CRS("+init=epsg:2065"))
+xy <- spTransform(xy, CRS("+init=epsg:4326") )
+
+### 524, 525, 751, 752 - CHYBA 
+# Error in createPolygonsComment(p) : 
+# rgeos_PolyCreateComment: orphaned hole, cannot find containing polygon for hole at index 2
+# In addition: Warning message:
+#   In RGEOSBinPredFunc(spgeom1, spgeom2, byid, func) :
+#   spgeom1 and spgeom2 have different proj4 strings
+### 1112 1113 1114 1115 1116 1117 1118 1119 1120 1121
+# Error in povodi[povodi$UPOV_ID == i, ] : NAs not permitted in row index
+# In addition: There were 50 or more warnings (use warnings() to see the first 50)
+
+pocitadlo <- 0
+
+for (i in povodi$UPOV_ID) {
+  kde <- gIntersects(povodi[povodi$UPOV_ID==i,], xy, byid = TRUE)
+  u$UPOV_ID[kde[,1]] <- i
+  pocitadlo <- pocitadlo+1
+  print(paste(i, (pocitadlo/1121)*100, '%'))
+}
+
+ saveRDS(u, 'data/uzivani/79_15/uzivani_upovid.rds')
