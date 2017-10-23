@@ -35,7 +35,10 @@ require(datasets)
 povodi <- readOGR("data/prep/povodi.shp")
 reky <- readOGR("data/prep/reky.shp")
 jezera <- readOGR("data/prep/jezera.shp")
+nadrze <- readOGR('data/prep/nadrze.shp')
 stanice <- readOGR("data/chmu/stanice.shp")
+kraje <- readOGR("data/prep/kraje.shp")
+okresy <- readOGR("data/prep/okresy.shp")
 
 popis <- read.table('data/E_ISVS$UTV_POV.txt',encoding = 'UTF-8', header = TRUE, sep=';')
 QD <- readRDS('data/chmu/QD.rds')
@@ -238,7 +241,7 @@ output$map<-renderLeaflet({
    if(length(labels2)==0){labels2 <- c(" ")}
    
   pal <- colorBin("YlOrRd", domain = dta$value, pretty = TRUE) 
-  pal_1 <- colorNumeric("#870000", domain = NULL, na.color = "gray50") 
+  pal_1 <- colorNumeric("#000066", domain = NULL, na.color = "gray50") 
   
    #Creating leaflet--------------------
   
@@ -256,17 +259,19 @@ output$map<-renderLeaflet({
                  label = labels,
                  labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
                                              "font-family" = "sans-serif", padding = "3px 8px",
-                                             keepInView = TRUE,
+                                             keepInView = TRUE, noHide = TRUE,
                                              "border-color" = "rgb(255, 255, 255)"),
                                              textsize = "15px", direction = "auto")) %>% 
-    addLayersControl(overlayGroups = c("Povodí","Mapový podklad", "Řeky", "Jezera"),
+    addLayersControl(overlayGroups = c("Povodí","Mapový podklad", "Řeky", "Jezera", "Nádrže", "Kraje", "Okresy"),
                      position = "bottomleft",
                      options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>% 
+    hideGroup(c("Kraje", "Okresy"))%>%
     addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
               position = "bottomright")}
   
   else{
-  map <- map %>% addPolygons(data=dta1, layerId = dta1$UPOV_ID, color = "burlywood4", fillColor = ~pal_1(dta1$value), 
+  map <- map %>% addPolygons(data=dta1, layerId = dta1$UPOV_ID, color = "#000066", 
+                             fillColor = ~pal_1(dta1$value), 
                  weight = 1.3, opacity = 0.4, fillOpacity = 0.5, group = "Vetsi nebo rovno",
                  label = labels1,
                  labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
@@ -274,24 +279,32 @@ output$map<-renderLeaflet({
                                              keepInView = TRUE,
                                              "border-color" = "rgb(255, 255, 255)"),
                                              textsize = "15px", direction = "auto")) %>%
-          addPolygons(data=dta2, layerId = dta2$UPOV_ID, color = "burlywood4", fillColor = ~pal_1(dta2$value), 
+          addPolygons(data=dta2, layerId = dta2$UPOV_ID, color = "#000066", fillColor = ~pal_1(dta2$value), 
                  weight = 1.3, opacity = 0.4, fillOpacity = 0.5, group = "Mensi nez",
                  label = labels2,
                  labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
                                              "font-family" = "sans-serif", padding = "3px 8px",
-                                             keepInView = TRUE,
+                                             keepInView = TRUE, noHide = TRUE,
                                              "border-color" = "rgb(255, 255, 255)"),
                                              textsize = "15px", direction = "auto")) %>%
           addLayersControl(baseGroups = c("Vetsi nebo rovno", "Mensi nez"),
-                     overlayGroups = c("Mapový podklad", "Řeky", "Jezera"),
+                     overlayGroups = c("Mapový podklad", "Řeky", "Jezera", "Nádrže", "Kraje", "Okresy"),
                      position = "bottomleft",
                      options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>%   
-          hideGroup(c("Řeky", "Jezera"))}
+          hideGroup(c("Řeky", "Jezera", "Nádrže", "Kraje", "Okresy"))}
     
     map <- map %>% addPolylines(data=reky, color="#007C8C", weight = 1.5,
                  opacity = 1, stroke= TRUE, group = "Řeky") %>%
           addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff", 
-                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera")
+                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera")%>%
+          addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
+                weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže")%>%
+          addPolygons(data=kraje, color="#000000", fillColor = "#595959", 
+                weight = 2, opacity = 1, stroke= TRUE, group = "Kraje",
+                popup = kraje$NAZEV) %>%
+          addPolygons(data=okresy, color="#000000", fillColor = "#595959", 
+                weight = 1, opacity = 1, stroke= TRUE, group = "Okresy",
+                popup = okresy$NAZEV)
 })
 
 ```
@@ -842,7 +855,7 @@ rozvodnice <- leaflet() %>%
 
 renderDygraph({
   ts.QD <- QD %>% filter(DBCN == default.line()) %>% mutate(month = format(DTM, "%m"), year = format(DTM, "%Y")) %>% 
-  group_by(year) %>% mutate(mean_year = mean(value, na.rm = TRUE)) %>% ungroup %>% group_by(month, year) %>% mutate(mean_month = mean(value, na.rm=TRUE)) %>% ungroup %>% select(input$entry.variable4)
+  group_by(year) %>% mutate(mean_year = mean(value, na.rm = TRUE)) %>% ungroup %>% group_by(month, year) %>% mutate(mean_month = mean(value, na.rm=TRUE)) %>% ungroup %>% select(input$entry.variable4, DTM)
   ts.QD <- xts::xts(ts.QD, order.by = ts.QD$DTM)
   dygraph(ts.QD, main = paste(as.character(title.f3())), 
           xlab = "Čas", ylab = "Průtok") %>% 
