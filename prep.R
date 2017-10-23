@@ -82,7 +82,7 @@ BM = rbindlist(M, idcol = 'UPOV_ID')
 #Saving
 #--------------------
 # setwd("./data")
-# BM <- readRDS('data/mbil/bilan_month - kopie.rds')
+# BM <- readRDS('data/mbilan/bilan_month - puvodni.rds')
 
 mesice <- c("Leden","Únor","Březen","Duben","Květen","Červen",
             "Červenec","Srpen","Září","Říjen","Listopad","Prosinec")
@@ -105,8 +105,14 @@ BM.long <- dcast(BM, month+year+UPOV_ID+DTM~variable)
 BM.long$m <- as.factor(BM.long$month)
 levels(BM.long$m) <- mesice
 
-saveRDS(BM, 'data/mbil/bilan_month.rds')
-saveRDS(BM.long, 'data/mbil/bilan_month_long.rds')
+saveRDS(BM, 'data/mbilan/bilan_month.rds')
+saveRDS(BM.long, 'data/mbilan/bilan_month_long.rds')
+
+BM2 <- readRDS('data/mbilan/bilan_month - puvodni.rds')
+
+BM2 <- BM2 %>% group_by(UPOV_ID, variable) %>% mutate(mean = mean(value)) %>%  ungroup
+
+saveRDS(BM2, 'data/mbilan/bilan_month_co.rds')
 
 #3 Denní průtoky
 #--------------------

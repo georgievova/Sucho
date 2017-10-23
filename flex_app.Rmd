@@ -42,7 +42,7 @@ okresy <- readOGR("data/prep/okresy.shp")
 
 popis <- read.table('data/E_ISVS$UTV_POV.txt',encoding = 'UTF-8', header = TRUE, sep=';')
 QD <- readRDS('data/chmu/QD.rds')
-BM <- readRDS('data/mbilan/bilan_month.rds')
+BM <- readRDS('data/mbilan/bilan_month_co.rds')
 BM.long <- readRDS('data/mbilan/bilan_month_long.rds')
 u <- readRDS('data/uzivani/06_16/uzivani_na_nahraz.rds')
 
