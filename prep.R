@@ -9,9 +9,10 @@ require(dplyr)
 setwd()
 #Loading
 #--------------------
-povodi_0 <- readOGR('data/E_HEIS$UPV_HLGP#P2$wm.shp', 'E_HEIS$UPV_HLGP#P2$wm')
-reky_0 <- readOGR('data/E_ISVS$UPOV_R.shp', 'E_ISVS$UPOV_R')
-jezera_0 <- readOGR('data/E_ISVS$UPOV_J.shp', 'E_ISVS$UPOV_J')
+povodi_0 <- readOGR('data/geo/E_HEIS$UPV_HLGP#P2$wm.shp', 'E_HEIS$UPV_HLGP#P2$wm')
+reky_0 <- readOGR('data/geo/E_ISVS$UPOV_R.shp', 'E_ISVS$UPOV_R')
+jezera_0 <- readOGR('data/geo/E_ISVS$UPOV_J.shp', 'E_ISVS$UPOV_J')
+nadrze <- readOGR('data/geo/nadrze.shp')
 
 #Preparation of data
 #--------------------
@@ -26,6 +27,21 @@ proj4string(jezera_0) <- CRS("+proj=krovak +lat_0=49.4 +lon_0=24.833 +k=0.9999 +
 jezera_0 <- spTransform(jezera_0, CRS("+init=epsg:4326"))
 jezera <- ms_simplify(jezera_0, keep_shapes = TRUE, keep = 0.05)
 
+nadrze <- spTransform(nadrze, CRS("+init=epsg:4326"))
+
+kraje_0 <- readOGR('data/geo/admin/kraje.shp')
+kraje <- spTransform(kraje_0, CRS("+init=epsg:4326"))
+#kraje <- ms_simplify(kraje_0, keep_shapes = TRUE, keep = 0.10)
+
+a <- kraje$NAZEV
+a[1] <- "Ústecký"
+kraje$NAZEV <- kraje$NK
+kraje$NAZEV <- a
+
+okresy_0 <- readOGR('data/geo/admin/okresy.shp')
+okresy_0 <- spTransform(okresy_0, CRS("+init=epsg:4326"))
+okresy <- ms_simplify(okresy_0, keep_shapes = TRUE, keep = 0.10)
+
 #Saving
 #--------------------
 #writeSpatialShape(povodi,"data/prep/povodi")
@@ -35,7 +51,10 @@ jezera <- ms_simplify(jezera_0, keep_shapes = TRUE, keep = 0.05)
 writeOGR(povodi, "data/prep", "povodi", driver="ESRI Shapefile", encoding  = "UTF-8")
 writeOGR(reky, "data/prep", "reky", driver="ESRI Shapefile", encoding  = "UTF-8")
 writeOGR(jezera, "data/prep", "jezera", driver="ESRI Shapefile", encoding  = "UTF-8")
-
+writeOGR(nadrze, "data/prep", "nadrze", driver="ESRI Shapefile", encoding  = "UTF-8")
+#writeOGR(kraje, "data/prep", "kraje", driver="ESRI Shapefile", encoding  = "UTF-8")
+writeSpatialShape(kraje,"data/prep/kraje")
+writeOGR(okresy, "data/prep", "okresy", driver="ESRI Shapefile", encoding  = "UTF-8")
 
 #2 Měsiční bilance
 
@@ -63,7 +82,7 @@ BM = rbindlist(M, idcol = 'UPOV_ID')
 #Saving
 #--------------------
 # setwd("./data")
-# BM <- readRDS('data/mbil/bilan_month - kopie.rds')
+# BM <- readRDS('data/mbilan/bilan_month - puvodni.rds')
 
 mesice <- c("Leden","Únor","Březen","Duben","Květen","Červen",
             "Červenec","Srpen","Září","Říjen","Listopad","Prosinec")
@@ -86,8 +105,14 @@ BM.long <- dcast(BM, month+year+UPOV_ID+DTM~variable)
 BM.long$m <- as.factor(BM.long$month)
 levels(BM.long$m) <- mesice
 
-saveRDS(BM, 'data/mbil/bilan_month.rds')
-saveRDS(BM.long, 'data/mbil/bilan_month_long.rds')
+saveRDS(BM, 'data/mbilan/bilan_month.rds')
+saveRDS(BM.long, 'data/mbilan/bilan_month_long.rds')
+
+BM2 <- readRDS('data/mbilan/bilan_month - puvodni.rds')
+
+BM2 <- BM2 %>% group_by(UPOV_ID, variable) %>% mutate(mean = mean(value)) %>%  ungroup
+
+saveRDS(BM2, 'data/mbilan/bilan_month_co.rds')
 
 #3 Denní průtoky
 #--------------------
