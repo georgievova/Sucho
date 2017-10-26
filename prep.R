@@ -110,9 +110,9 @@ saveRDS(BM.long, 'data/mbilan/bilan_month_long.rds')
 
 BM2 <- readRDS('data/mbilan/bilan_month - puvodni.rds')
 
-BM2 <- BM2 %>% group_by(UPOV_ID, variable) %>% mutate(mean = mean(value)) %>%  ungroup
+BM2 <- BM2 %>% group_by(UPOV_ID, variable) %>% mutate(mean_ep = mean(value)) %>%  ungroup
 
-saveRDS(BM2, 'data/mbilan/bilan_month_co.rds')
+saveRDS(BM2, 'data/mbilan/bilan_month_ep.rds')
 
 #3 Denní průtoky
 #--------------------
