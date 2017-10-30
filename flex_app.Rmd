@@ -162,18 +162,25 @@ observe({
 reac<- eventReactive(input$go1,{ 
   bilance <-  BM %>% filter(variable == input$entry.variable) 
   
+  bilance_filtr <- c()
+  dta <- c()
+  
   if(input$kartogram == "A"){
     bilance_filtr <- bilance %>% filter(year==input$entry.year & month==input$entry.month)
+    dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
   }else if(input$kartogram == "B"){
     bilance_filtr <- bilance %>% filter(year==input$entry.year & month==input$entry.month)
         colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
         colnames(bilance_filtr)[colnames(bilance_filtr)=="mean_ep"] <- "value"
-  }else{pars_filtr <- pars %>% filter(name == input$entry.pars)}
+    dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
+  }else if(input$kartogram == "C"){pars_filtr <- pars %>% filter(name == input$entry.pars)
+        colnames(pars_filtr)[colnames(pars_filtr) == "current"] <- "value"
+  dta <- (sp::merge(povodi,pars_filtr, by="UPOV_ID"))}
   
-  dta.pars <- (sp::merge(povodi,pars_filtr, by="UPOV_ID"))
-  dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
   
-  return(list(bilance=bilance_filtr,dta=dta, dta.pars=dta.pars))
+  
+  
+  return(list(bilance=bilance_filtr,dta=dta))
 }, ignoreNULL = FALSE, ignoreInit = FALSE)
 
 reac1 <- eventReactive(input$go1,{
@@ -220,7 +227,11 @@ output$map<-renderLeaflet({
   dta <- reac()$dta
   dta1 <- reac1()$dta1
   dta2 <- reac1()$dta2
-  dta.pars <- reac()$pars
+
+  # Creating palettes--------------------
+  
+  pal <- colorBin("YlOrRd", domain = dta$value, pretty = TRUE) 
+  pal_1 <- colorNumeric("#000066", domain = NULL, na.color = "gray50") 
   
   # Creating labels--------------------
   
@@ -237,20 +248,19 @@ output$map<-renderLeaflet({
       "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s <br/> Hodnota: %s",
       dta2$NAZ_UTVAR, dta2$KTG_UPOV, dta2$U_PMU, dta2$UPOV_ID, round(dta2$value,2)
       ) %>% lapply(htmltools::HTML)
-  
-  labels.pars <- sprintf(
-    "<strong>%s</strong><br/>current: %s <br/> lower: %s <br/> upper: %s <br/> initial: %s",
-      pars$UPOV_ID, pars$current, pars$lower, pars$upper, pars$initial
+
+  if(input$kartogram == "C"){
+     labels <- sprintf(
+     "<strong>%s</strong><br/>current: %s <br/> lower: %s <br/> upper: %s <br/> initial: %s",
+      dta$UPOV_ID, dta$value, dta$lower, dta$upper, dta$initial
       ) %>% lapply(htmltools::HTML)
+     pal <- colorBin("YlGnBu", domain = dta$value, pretty = TRUE) 
+     }  
   
    if(length(labels)==0){labels <- c(" ")}
    if(length(labels1)==0){labels1 <- c(" ")}
    if(length(labels2)==0){labels2 <- c(" ")}
-   if(length(labels.pars)==0){labels.pars <- c(" ")}
    
-  pal <- colorBin("YlOrRd", domain = dta$value, pretty = TRUE) 
-  pal_1 <- colorNumeric("#000066", domain = NULL, na.color = "gray50") 
-  pal.pars <- colorBin("YlGnBu", domain = pars$current, pretty = TRUE) 
   
    #Creating leaflet--------------------
   
@@ -300,25 +310,6 @@ output$map<-renderLeaflet({
                      position = "bottomleft",
                      options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>%   
           hideGroup(c("Řeky", "Jezera", "Nádrže", "Kraje", "Okresy"))
-  }else{
-    map <- map %>% addPolygons(data=dta.pars, layerId = dta.pars$UPOV_ID, color = "#ffffff", 
-                             fillColor = ~pal.pars(current), fillOpacity = 0.8, group = "Povodí",
-                 highlightOptions = highlightOptions(color = "#a53333", opacity = 1, fillOpacity = 0,
-                                                     weight = 2.3,
-                                                     bringToFront = TRUE, sendToBack = TRUE),
-                 label = labels.pars,
-                 labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
-                                             "font-family" = "sans-serif", padding = "3px 8px",
-                                             keepInView = TRUE, noHide = TRUE,
-                                             "border-color" = "rgb(255, 255, 255)"),
-                                             textsize = "15px", direction = "auto")) %>% 
-    addLayersControl(overlayGroups = c("Povodí","Mapový podklad", "Řeky", "Jezera", "Nádrže", "Kraje", "Okresy"),
-                     position = "bottomleft",
-                     options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>% 
-    hideGroup(c("Kraje", "Okresy"))%>%
-    addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
-              position = "bottomright")
-    
   }
     
     map <- map %>% addPolylines(data=reky, color="#007C8C", weight = 1.5,
