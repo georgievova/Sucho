@@ -5,7 +5,7 @@ output:
     orientation: rows
     vertical_layout: fill
     runtime: shiny
-    css: styles.css
+    css: ['styles.css', 'tables.css']
 ---
 
 ```{r global, include=FALSE}
@@ -553,15 +553,15 @@ xy <- spTransform(xy, CRS("+init=epsg:4326") )
 
 #Functions--------------------
 
-title.f2 <- reactive({
-  title<- popis$NAZ_UTVAR[popis$UPOV_ID == default.shape2()]
-  return(title)
-  })
-
 default.shape2 <- reactive({
   UPOV_ID.sel <- input$search.id.u
   #print(input$uzivani_shape_click$id)
   return(UPOV_ID.sel)})
+
+title.f2 <- reactive({
+  title<- popis$NAZ_UTVAR[popis$UPOV_ID == default.shape2()]
+  return(title)
+  })
 
 default.circle <- reactive({
   if(is.null(input$uzivani_marker_click$id)){
@@ -614,8 +614,10 @@ labels.points <- sprintf(
     u_leaflet$NAZICO, u_leaflet$POVODI, u_leaflet$JEV, u_leaflet$ICOC) %>%
     lapply(htmltools::HTML)
 
-  pal_2 <- colorFactor("Paired", domain = u_leaflet$JEV, na.color = "gray50")
-centr <- getSpPPolygonsLabptSlots(povodi.ds())
+  if(is.null(u_leaflet$JEV)){pal_2 <- NULL
+  }else{pal_2 <- colorFactor("Paired", domain = u_leaflet$JEV, na.color = "gray50")}
+  
+  centr <- getSpPPolygonsLabptSlots(povodi.ds())
 
 uzivani <- leaflet() %>%setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
     addProviderTiles(providers$Esri.WorldTopoMap, group = "Mapový podklad",
@@ -639,15 +641,14 @@ uzivani <- leaflet() %>%setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
                  opacity = 1, stroke= TRUE, group = "Řeky") %>%
     addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff",
                 weight = 1, opacity = 1, stroke= TRUE, group = "Jezera") %>%
-    addLayersControl(overlayGroups = c("Mapový podklad", "Řeky", "Jezera"),
+    addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
+                weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže") %>% 
+    addLayersControl(overlayGroups = c("Mapový podklad", "Řeky", "Jezera", "Nádrže"),
                      position = "topright",
                      options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE))%>%   
-    hideGroup(c("Řeky", "Jezera"))
-
-# %>%
-#     addLegend(pal = pal_2, values = u_leaflet$JEV, opacity = 0.7, title = "Legenda",
-#               position = "bottomright")
-
+    hideGroup(c("Řeky", "Jezera", "Nádrže")) %>%
+    addLegend(pal = pal_2, values = u_leaflet$JEV, opacity = 0.7, title = "Legenda",
+              position = "bottomright")
 })
 
 
@@ -742,28 +743,24 @@ renderDygraph({
 Row {.tabset .tabset-fade data-heigth=400}
 -------------------------------------
 
+```{r uzivani: tab.bod/tab.jev}
 ### Jednotlivý bod
-
-```{r uzivani: tab.bod}
-renderDataTable({
-  unit <- u %>% filter(NAZICO == default.circle()) %>% mutate(DTM = as.character(DTM)) %>% 
-    select(-c(X,Y, ROK, MESIC, mean.X, mean.Y, na))}, 
-  options = list(scrollY = "400px", scrollX = "10px", class = 'cell-border stripe', lengthMenu = c(100,200)))
-```
-
 ### Suma dle jevu
-
-```{r uzivani: tab.jev}  
-renderDataTable({
-  subsubtotal <- u %>% filter(UPOV_ID == default.shape2())%>% group_by(JEV) %>% replace(is.na(.), 0) %>% summarise(suma = sum(value))}, width='50%', options = list(scrollY = "400px", scrollX = "10px"))
+# 
+# renderDataTable({
+#   unit <- u %>% filter(NAZICO == default.circle()) %>% mutate(DTM = as.character(DTM)) %>% 
+#     select(-c(X,Y, ROK, MESIC, mean.X, mean.Y, na))}, 
+#   options = list(scrollY = "400px", scrollX = "10px", class = 'cell-border stripe', lengthMenu = c(100,200)))
+# 
+# renderDataTable({
+#   subsubtotal <- u %>% filter(UPOV_ID == default.shape2())%>% group_by(JEV) %>% replace(is.na(.), 0) %>% summarise(suma = sum(value))}, width='50%', options = list(scrollY = "400px", scrollX = "10px"))
 ```
 
-### Suma za odběratele
+### Suma dle odběratele
 
 ```{r uzivani: tab:odberatel}
 renderDataTable({
-  subtotal <- u %>% filter(UPOV_ID == default.shape2()) %>% replace(is.na(.), 0) %>% group_by(NAZICO) %>% summarise(suma = sum(value))}, width='50%', options = list(scrollY = "400px", scrollX = "10px", 
-                                                      lengthMenu = c(100,200)))
+  subtotal <- u %>% filter(UPOV_ID == default.shape2()) %>% replace(is.na(.), 0) %>% group_by(NAZICO, JEV) %>% summarise(suma = sum(value)) %>% select(NAZICO, JEV, suma)}, class = 'compact cell-border', colnames = c("Odběratel", "Jev", "Suma"), options = list(scrollY = "300px", lengthMenu = c(100,200)))
 ```
 
 
@@ -861,8 +858,10 @@ rozvodnice <- leaflet() %>%
     addPolylines(data=reky, color="#007C8C", weight = 1,
                  opacity = 1, stroke= TRUE, group = "Řeky") %>% 
     addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff", 
-                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera") %>% 
-    addLayersControl(overlayGroups = c("Mapový podklad", "Řeky", "Jezera"),
+                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera") %>%
+    addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
+                weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže") %>% 
+    addLayersControl(overlayGroups = c("Mapový podklad", "Řeky", "Jezera", "Nádrže"),
                      position = "bottomleft",
                      options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE))%>%   
     hideGroup("Mapový podklad")
