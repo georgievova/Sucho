@@ -1,0 +1,898 @@
+---
+title: "`r HTML('<div style=width:370px;text-align:center>Demo</div>')`"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    runtime: shiny_prerendered
+    css: ['styles.css', 'tables.css']
+---
+
+```{r global, context = "setup", include=FALSE}
+
+require(flexdashboard)
+require(leaflet)
+require(rgdal)
+require(data.table)
+require(ggplot2)
+require(GGally)
+require(DBI)
+require(odbc)
+require(dplyr)
+require(dbplyr)
+require(dygraphs)
+require(sp)
+require(shiny)
+require(DT)
+require(rgeos)
+require(datasets)
+#require(berryFunctions)
+#require(lubridate)
+#require(xts)
+
+
+#Load data--------------------
+povodi <- readOGR("data/prep/povodi.shp")
+reky <- readOGR("data/prep/reky.shp")
+jezera <- readOGR("data/prep/jezera.shp")
+nadrze <- readOGR('data/prep/nadrze.shp')
+stanice <- readOGR("data/chmu/stanice.shp")
+kraje <- readOGR("data/prep/kraje.shp")
+okresy <- readOGR("data/prep/okresy.shp")
+
+popis <- read.table('data/E_ISVS$UTV_POV.txt',encoding = 'UTF-8', header = TRUE, sep=';')
+BM <- readRDS('data/mbilan/bilan_month_ep.rds')
+BM.long <- readRDS('data/mbilan/bilan_month_long.rds')
+pars <- readRDS('data/pars/pars.rds')
+u <- readRDS('data/uzivani/06_16/uzivani_na_nahraz.rds')
+QD <- readRDS('data/chmu/QD.rds')
+
+# Merging data----------------
+povodi <- sp::merge(povodi, popis, by='UPOV_ID')
+
+search.choices <- as.character(povodi$UPOV_ID)
+names(search.choices) <- povodi$NAZ_UTVAR
+
+choices <- c("P", "R", "RM", "BF", "B", "DS", "PET", "ET","SW", "SS", "GS", "INF", "PERC", "RC", "T", "H", "WEI")
+names(choices) <- c(
+'P - srážky na povodí [mm]',
+'R - odtok (pozorovaný) [mm]',
+'RM - celkovy odtok (simulovaný) [mm]',
+'BF - základní odtok (simulovaný) [mm]',
+'B - základní odtok (odvozený) [mm]',
+'DS - zásoba pro přímý odtok [mm]',
+'PET - potenciální evapotranspirace [mm]',
+'ET - územní výpar [mm]',
+'SW - půdní vlhkost (zásoba vody v nenasycené zóně) [mm]',
+'SS - zásoba vody ve sněhu [mm]',
+'GS - zásoba podzemní vody [mm]',
+'INF - infiltrace do půdy [mm]',
+'PERC - perkolace z půdní vrstvy [mm]',
+'RC - dotace zásoby podzemní vody [mm]',
+'T - teplota vzduchu [°C]',
+'H - vlhkost vzduchu [%]',
+'WEI - váhy pro kalibraci odtoku [-]')
+
+choices2 <- c("P", "RM", "BF", "DS", "PET", "ET","SW")
+names(choices2) <- c(
+'P - srážky na povodí [mm]',
+'RM - celkovy odtok (simulovaný) [mm]',
+'BF - základní odtok (simulovaný) [mm]',
+'DS - zásoba pro přímý odtok [mm]',
+'PET - potenciální evapotranspirace [mm]',
+'ET - územní výpar [mm]',
+'SW - půdní vlhkost (zásoba vody v nenasycené zóně) [mm]')
+
+mesice <- c("Leden","Únor","Březen","Duben","Květen","Červen",
+            "Červenec","Srpen","Září","Říjen","Listopad","Prosinec")
+
+```
+
+Základní mapa {data-icon="fa-map-o"}
+===================================== 
+
+Column {.sidebar data-width=400}
+-----------------------------------------------------------------------
+
+```{r ZM sidebar, context="server"}
+
+#Inputs--------------------
+
+renderUI({
+  wellPanel(selectizeInput(inputId = "search.id","Vyhledávání útvaru",selected=input$map_shape_click$id,
+                           choices = search.choices))})
+
+wellPanel(
+        HTML('<button data-toggle="collapse" data-target="#box2" class="btn-block btn-primary">Kartogram</button>'),
+        tags$div(id = 'box2', class="collapse in", 
+                 radioButtons("kartogram", label=NULL, 
+                    choices = c("Přepinání parametrů" = "C", "Měsíční průměry" = "A", "Celé období" = "B"),
+                    selected = "B"),
+                 
+                 conditionalPanel(condition = "input.kartogram == 'A'", 
+                                  selectInput("entry.variable", label="Prvky hydrologické bilance", 
+                                              choices = choices, selected = "P"),
+                                  selectInput("entry.year", label = "Zvolte rok:", 
+                                              choices = seq(1961,2015,1), selected = 2015),
+                                  sliderInput("entry.month", "Zvolte měsíc:", 1,12, value = 1)),
+                 conditionalPanel(condition = "input.kartogram == 'B'",
+                                  selectInput("entry.variable", label="Prvky hydrologické bilance", 
+                                              choices = choices, selected = "P")),
+                conditionalPanel(condition = "input.kartogram == 'C'",
+                                  selectInput("entry.pars", label=NULL, 
+                                              choices = pars$name, selected = "Spa"))),
+                
+        HTML('<button data-toggle="collapse" data-target="#box3" class="btn-block btn-primary">Filtování dle hodnoty</button>'),
+        tags$div(id = 'box3', class="collapse",
+                 radioButtons("filtr", "Filtr", 
+                              choices = c("Kartogram" = "A", "Filtrovat podle hodnoty" = "B")),
+                 helpText("Sem zadejte číslo, podle něhož proběhne filtrace povodí. Filtrování probíhá dle hodnot zvoleného prvku hydrologické bilance v každém povodí ve zvoleném měsíci a roce. Zobrazené mohou být polygony s hodnotou větší nebo rovnající se vepsané hodnotě a s hodnotou menší."),
+                 numericInput("entry.number",  "Zadejte číslo:", value = 50)))
+
+                 
+helpText("Po nastavení vstupu spuste aplikaci tlačitkem:")
+
+actionButton("go1", "Spustit", icon("check"), 
+    style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
+
+hr()
+
+helpText("Pro vracení mapového pole na původní pozici použijte tlačitko:")
+
+actionButton("reset_button", "Reset", icon("arrows"), 
+    style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
+
+```
+
+```{r ZM}
+#Reactions--------------------
+
+#input<-c()
+#input$entry.variable = "P"
+#input$entry.year = 1968
+#input$entry.month = 2
+#input$entry.number = 15
+
+observe({
+    input$reset_button
+    leafletProxy("map") %>% setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom)
+
+  })
+
+reac<- eventReactive(input$go1,{ 
+  bilance <-  BM %>% filter(variable == input$entry.variable) 
+  
+  bilance_filtr <- c()
+  dta <- c()
+  
+  if(input$kartogram == "A"){
+    bilance_filtr <- bilance %>% filter(year==input$entry.year & month==input$entry.month)
+    dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
+  }else if(input$kartogram == "B"){
+    bilance_filtr <- bilance %>% filter(year==input$entry.year & month==input$entry.month)
+        colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
+        colnames(bilance_filtr)[colnames(bilance_filtr)=="mean_ep"] <- "value"
+    dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
+  }else if(input$kartogram == "C"){pars_filtr <- pars %>% filter(name == input$entry.pars)
+        colnames(pars_filtr)[colnames(pars_filtr) == "current"] <- "value"
+  dta <- (sp::merge(povodi,pars_filtr, by="UPOV_ID"))}
+  
+  
+  
+  
+  return(list(bilance=bilance_filtr,dta=dta))
+}, ignoreNULL = FALSE, ignoreInit = FALSE)
+
+reac1 <- eventReactive(input$go1,{
+  dta1 <- base::subset(reac()$dta,value >= input$entry.number)
+  dta2 <- base::subset(reac()$dta,value < input$entry.number)
+  return(list(dta1=dta1, dta2=dta2))
+}, ignoreNULL = FALSE, ignoreInit = FALSE) 
+
+
+
+```
+
+Row 
+-------------------------------------
+
+
+```{r ZM mapa, context="server"}
+#Functions--------------------
+
+title.f <- reactive({
+  title<- popis$NAZ_UTVAR[popis$UPOV_ID == default.shape()]
+  return(title)
+  })
+
+default.shape <- reactive({
+  UPOV_ID.sel <- input$search.id
+  return(UPOV_ID.sel)})
+
+
+leafletOutput("map")
+
+initial_lat = 49.7437572
+initial_lng = 15.3386383
+initial_zoom = 7
+
+#Outputs
+
+#Leaflet--------------------
+
+output$map<-renderLeaflet({
+  
+  #Select subset based on input--------------------
+  
+  dta <- reac()$dta
+  dta1 <- reac1()$dta1
+  dta2 <- reac1()$dta2
+
+  # Creating palettes--------------------
+  
+  pal <- colorBin("YlOrRd", domain = dta$value, pretty = TRUE) 
+  pal_1 <- colorNumeric("#000066", domain = NULL, na.color = "gray50") 
+  
+  # Creating labels--------------------
+  
+  labels <- sprintf(
+      "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s <br/> Hodnota: %s",
+      dta$NAZ_UTVAR, dta$KTG_UPOV, dta$U_PMU, dta$UPOV_ID, round(dta$value,2)
+      ) %>% lapply(htmltools::HTML)
+  
+  labels1 <- sprintf(
+      "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s <br/> Hodnota: %s",
+      dta1$NAZ_UTVAR, dta1$KTG_UPOV, dta1$U_PMU, dta1$UPOV_ID, round(dta1$value,2)
+      ) %>% lapply(htmltools::HTML)
+  labels2 <- sprintf(
+      "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s <br/> Hodnota: %s",
+      dta2$NAZ_UTVAR, dta2$KTG_UPOV, dta2$U_PMU, dta2$UPOV_ID, round(dta2$value,2)
+      ) %>% lapply(htmltools::HTML)
+
+  if(input$kartogram == "C"){
+     labels <- sprintf(
+     "<strong>%s</strong><br/>current: %s <br/> lower: %s <br/> upper: %s <br/> initial: %s",
+      dta$UPOV_ID, dta$value, dta$lower, dta$upper, dta$initial
+      ) %>% lapply(htmltools::HTML)
+     pal <- colorBin("YlGnBu", domain = dta$value, pretty = TRUE) 
+     }  
+  
+   if(length(labels)==0){labels <- c(" ")}
+   if(length(labels1)==0){labels1 <- c(" ")}
+   if(length(labels2)==0){labels2 <- c(" ")}
+   
+  
+   #Creating leaflet--------------------
+  
+  map <- leaflet() %>% 
+     setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom) %>%
+     addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13) )
+  
+  if (input$filtr == "A") {
+  map <- map %>% addPolygons(data=dta, layerId = dta$UPOV_ID, color = "burlywood4", weight = 1.3,
+                                                                                    opacity = 0.3,
+                 fillColor = ~pal(value), fillOpacity = 0.8, group = "Povodí",
+                 highlightOptions = highlightOptions(color = "#a53333", opacity = 1, fillOpacity = 0,
+                                                     weight = 2.3,
+                                                     bringToFront = TRUE, sendToBack = TRUE),
+                 label = labels,
+                 labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
+                                             "font-family" = "sans-serif", padding = "3px 8px",
+                                             keepInView = TRUE, noHide = TRUE,
+                                             "border-color" = "rgb(255, 255, 255)"),
+                                             textsize = "15px", direction = "auto")) %>% 
+    addLayersControl(overlayGroups = c("Povodí","Mapový podklad", "Řeky", "Jezera", "Nádrže", "Kraje", "Okresy"),
+                     position = "bottomleft",
+                     options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>% 
+    hideGroup(c("Kraje", "Okresy"))%>%
+    addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
+              position = "bottomright")
+  }else if (input$filtr == "B") {
+  map <- map %>% addPolygons(data=dta1, layerId = dta1$UPOV_ID, color = "#ffffff", 
+                             fillColor = ~pal_1(dta1$value), 
+                 weight = 1.3, opacity = 0.4, fillOpacity = 0.5, group = "Vetsi nebo rovno",
+                 label = labels1,
+                 labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
+                                             "font-family" = "sans-serif", padding = "3px 8px",
+                                             keepInView = TRUE,
+                                             "border-color" = "rgb(255, 255, 255)"),
+                                             textsize = "15px", direction = "auto")) %>%
+          addPolygons(data=dta2, layerId = dta2$UPOV_ID, color = "#ffffff", fillColor = ~pal_1(dta2$value), 
+                 weight = 1.3, opacity = 0.4, fillOpacity = 0.5, group = "Mensi nez",
+                 label = labels2,
+                 labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
+                                             "font-family" = "sans-serif", padding = "3px 8px",
+                                             keepInView = TRUE, noHide = TRUE,
+                                             "border-color" = "rgb(255, 255, 255)"),
+                                             textsize = "15px", direction = "auto")) %>%
+          addLayersControl(baseGroups = c("Vetsi nebo rovno", "Mensi nez"),
+                     overlayGroups = c("Mapový podklad", "Řeky", "Jezera", "Nádrže", "Kraje", "Okresy"),
+                     position = "bottomleft",
+                     options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>%   
+          hideGroup(c("Řeky", "Jezera", "Nádrže", "Kraje", "Okresy"))
+  }
+    
+    map <- map %>% addPolylines(data=reky, color="#007C8C", weight = 1.5,
+                 opacity = 1, stroke= TRUE, group = "Řeky") %>%
+          addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff", 
+                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera")%>%
+          addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
+                weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže")%>%
+          addPolygons(data=kraje, color="#000000", fillColor = "#595959", 
+                weight = 2, opacity = 1, stroke= TRUE, group = "Kraje",
+                popup = kraje$NAZEV) %>%
+          addPolygons(data=okresy, color="#000000", fillColor = "#595959", 
+                weight = 1, opacity = 1, stroke= TRUE, group = "Okresy",
+                popup = okresy$NAZEV)
+})
+
+```
+
+Row {.tabset}
+-------------------------------------
+
+### ČŘ měsíční data
+
+```{r cr mesicni data, context="server"}
+
+renderDygraph({
+  
+  ts.bilance <- BM.long %>% filter(UPOV_ID == default.shape()) %>% select(input$entry.variable2, DTM) 
+  
+  RangeMin <- min(ts.bilance[, input$entry.variable2])-0.5
+  RangeMax <- max(ts.bilance[, input$entry.variable2])+0.5
+  
+  ts.bilance <- xts::xts(ts.bilance, order.by = ts.bilance$DTM)
+
+  dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas") %>%
+  dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>%  
+  dyRangeSelector() %>% 
+  dyRoller(showRoller = TRUE, rollPeriod = 1)%>%
+  dyCrosshair(direction = "vertical")
+})
+
+absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
+                  draggable = FALSE, top = 515, left = "auto", right = 10, bottom = "auto",
+                  width = '15%',
+                  style = "opacity: 0.9; style = z-index: 400",
+    HTML('<button data-toggle="collapse" data-target="#box4" class="choose">Výběr časových řad</button>'),
+        tags$div(id = 'box4', class="collapse", style = "max-height: 250px; overflow-y:scroll",
+                 checkboxGroupInput("entry.variable2", "Zvolte:", choices = choices, selected = c("PET", "ET"))))
+
+```
+
+### ČŘ denní data
+
+```{r cr denni data, context="server"}
+renderDygraph({
+  
+  d <- dir("data/bilan")
+  bilan_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
+  dta_bd <- readRDS(file.path("data","bilan", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
+  
+  ts.bilance <- dta_bd %>%  select(input$entry.variable_d, DTM)
+  
+  RangeMin <- min(ts.bilance %>% select(c(input$entry.variable_d)))-0.5
+  RangeMax <- max(ts.bilance %>% select(c(input$entry.variable_d)))+0.5
+  
+  ts.bilance <- xts::xts(ts.bilance, order.by = ts.bilance$DTM)
+
+  dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas") %>%
+  dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>%  
+  dyRangeSelector() %>% 
+  dyCrosshair(direction = "vertical")
+})
+
+absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
+                  draggable = FALSE, top = 515, left = "auto", right = 10, bottom = "auto",
+                  width = '15%',
+                  style = "opacity: 0.9; style = z-index: 400",
+    HTML('<button data-toggle="collapse" data-target="#box6" class="choose">Výběr časových řad</button>'),
+        tags$div(id = 'box6', class="collapse", style = "max-height: 250px; overflow-y:scroll",
+                 checkboxGroupInput("entry.variable_d", "Zvolte:", choices = choices, selected = c("ET"))))
+```
+
+### Čára překročení
+
+```{r cara prekroceni, context="server"}
+
+
+renderDygraph({  
+  ts.bilance <- BM %>% filter(UPOV_ID == default.shape(), variable == input$variable_cp) %>%
+                       arrange(desc(value)) %>% select(value)
+  ts.bilance <- ts(ts.bilance, frequency = 12, start=c(1961,1))
+
+  dygraph(ts.bilance, main = paste(as.character(title.f())),
+          xlab = "Čas", ylab = paste(names(choices[choices == input$variable_cp]))) %>%
+  dySeries('value', label=input$variable_cp) %>%
+  dyRangeSelector() %>% 
+  dyCrosshair(direction = "vertical")}) 
+
+absolutePanel(class = "panel panel-default", fixed = TRUE,
+                  draggable = FALSE, top = 515, left = "auto", right = 10, bottom = "auto",
+                  width = '20%',
+                  style = "opacity: 1; style = z-index: 400",
+    HTML('<button data-toggle="collapse" data-target="#box5" class="choose">Výběr pro čáru překročení</button>'),
+        tags$div(id = 'box5', class="collapse in", style = "max-height: 420px",
+                 selectInput("variable_cp", label=NULL , choices = choices, selected = c("P"))))
+
+```
+
+
+
+Tabulky {data-icon="fa-table"}
+===================================== 
+
+Column {.tabset}
+-------------------------------------
+
+### Tabulka: celé období
+
+```{r tab:cele, context="server"}
+#, language = list(search = 'Hledat:')
+#scrollY = "200px", width = '100px'
+
+DT::renderDataTable({
+table_1 <- BM %>% filter(UPOV_ID==default.shape()) %>% group_by(variable) %>% summarise(mean(value, na.rm = TRUE), sd(value, na.rm = TRUE), quantile(value,probs = 0.25,na.rm = TRUE), quantile(value,probs = 0.5,na.rm = TRUE), quantile(value,probs = 0.75,na.rm = TRUE))
+colnames(table_1) <- c("proměnná", "průměr", "směrodata odchylka", "kvantil 25%", "kvantil 50%", "kvantil 75%")
+table_1[,2:dim(table_1)[2]] <- round(table_1[,2:dim(table_1)[2]],2)
+table_1
+}, filter = "top", 
+   options = list(pageLength = 18,
+  lengthMenu = c(6, 12, 18)))
+```
+
+### Tabulka: roky
+
+```{r tab:roky, context="server"}
+DT::renderDataTable({
+  table_0 <- round(BM.long %>% filter(UPOV_ID == default.shape()) %>% group_by(year) %>% summarise(mean(P), mean(R), mean(RM), mean(BF), mean(B), mean(DS), mean(PET), mean(ET),mean(SW), mean(SS), mean(GS), mean(INF), mean(PERC), mean(RC), mean(T), mean(H), mean(WEI)),2)
+  colnames(table_0) <- c("Roky", "P", "R", "RM", "BF", "B", "DS", "PET", "ET","SW",
+                         "SS", "GS", "INF", "PERC", "RC", "T", "H", "WEI")
+  table_0
+}, filter = "top",
+   options = list(pageLength = 55, scrollY = "700px", scrollX = "10px",
+  lengthMenu = c(20, 35,55)))
+
+
+```
+
+### Tabulka: roční období
+
+```{r tab:r.obdobi, context="server"}
+DT::renderDataTable({
+table_2 <- BM %>% filter(UPOV_ID==default.shape()) %>% group_by(variable, seasons) %>% summarise(mean(value, na.rm = TRUE), sd(value, na.rm = TRUE), quantile(value,probs = 0.25,na.rm = TRUE), quantile(value,probs = 0.5,na.rm = TRUE), quantile(value,probs = 0.75,na.rm = TRUE))
+colnames(table_2) <- c("proměnná", "roční období", "průměr", "směrodata odchylka", "kvantil 25%", "kvantil 50%", "kvantil 75%")
+table_2[,3:dim(table_2)[2]] <- round(table_2[,3:dim(table_2)[2]],2)
+table_2
+}, filter = "top",
+   options = list(lengthMenu = c(4, 72)))
+```
+
+
+### Tabulka: měsíce
+
+```{r tab:mesice, context="server"}
+
+DT::renderDataTable({
+table_3 <- BM %>% filter(UPOV_ID==default.shape()) %>% group_by(variable, month2) %>% summarise(mean(value, na.rm = TRUE), sd(value, na.rm = TRUE), quantile(value,probs = 0.25,na.rm = TRUE), quantile(value,probs = 0.5,na.rm = TRUE), quantile(value,probs = 0.75,na.rm = TRUE))
+colnames(table_3) <- c("proměnná", "měsíc", "průměr", "směrodata odchylka", "kvantil 25%", "kvantil 50%", "kvantil 75%")
+table_3[,3:dim(table_3)[2]] <- round(table_3[,3:dim(table_3)[2]],2)
+table_3
+}, filter = "top",
+   options = list(pageLength = 12, lengthMenu = c(12, 216)))
+
+```
+
+
+
+Grafy {data-icon="fa-bar-chart"}
+=====================================    
+
+Column {.tabset}
+-------------------------------------
+
+### Sloupcový graf
+
+```{r sloup.graf, context="server"}
+renderPlot({
+  bilance <- reac()$bilance %>% filter(UPOV_ID == default.shape())
+  bilance$month <- as.factor(bilance$month)
+  levels(bilance$month) <- mesice
+    ggplot(bilance)+
+      geom_bar(aes(year, value, fill = month), colour = "black", stat="identity")+
+      labs(title = paste(as.character(title.f())), x= "Roky" ,y = paste(names(choices[choices == input$entry.variable])))+
+      scale_fill_brewer(palette="Set3")+
+      scale_fill_discrete(name = "Měsíc:")+
+      theme(legend.key.size = unit(1, "cm"), plot.title = element_text(size=18), axis.title = element_text(size=15), legend.title = element_text(size=15),
+          legend.text = element_text(size=12))+
+      facet_wrap(~month)
+})
+
+```
+
+### GGally
+
+
+```{r ggally}
+absolutePanel(class = "panel panel-default", fixed = TRUE,
+                  draggable = FALSE, top = 55, left = "auto", right = 10, bottom = "auto",
+                  width = '25%',
+                  style = "opacity: 0.9; style = z-index: 400",
+    HTML('<button data-toggle="collapse" data-target="#box7" class="choose">Výběr časových                           řad</button>'),
+        tags$div(id = 'box7', class="collapse in", style = "max-height: 550px; overflow-y:scroll",
+                 checkboxGroupInput("entry.variable3", "Zvolte:", choices = choices, selected = c("PET", "T")),
+                 actionButton("go3", "Spustit", icon("check"), 
+                      style="color: #fff; background-color: #337ab7; border-color: #2e6da4",
+                      style = "padding: 28px;",
+                      style = "opacity: 0.7")))
+
+reac3 <- eventReactive(input$go3,{ggpairs(BM.long[BM.long$UPOV_ID == default.shape(),], columns = input$entry.variable3, mapping=aes(color=m, alpha = 0.02))})
+
+renderPlot({reac3()})
+```
+
+
+Uživání {data-icon="fa-circle-o"}
+===================================== 
+
+```{r uzivani}
+
+#Reactions--------------------
+
+povodi.ds <- reactive({
+  povodi[povodi$UPOV_ID==input$search.id.u, ]
+})
+
+kde <- reactive({
+u_leaflet <- u %>% filter(UPOV_ID == default.shape2()) %>% group_by(UPOV_ID, NAZICO, POVODI, JEV, X, Y, ICOC) %>% summarise(mean=mean(value))
+xy <- SpatialPoints(u_leaflet[, c("X", "Y")], proj4string = CRS("+init=epsg:2065"))
+xy <- spTransform(xy, CRS("+init=epsg:4326") )
+  return(list(u_leaflet = u_leaflet, xy=xy))
+  })
+
+#Functions--------------------
+
+default.shape2 <- reactive({
+  UPOV_ID.sel <- input$search.id.u
+  #print(input$uzivani_shape_click$id)
+  return(UPOV_ID.sel)})
+
+title.f2 <- reactive({
+  title<- popis$NAZ_UTVAR[popis$UPOV_ID == default.shape2()]
+  return(title)
+  })
+
+default.circle <- reactive({
+  if(is.null(input$uzivani_marker_click$id)){
+  NAZICO.sel <- kde()$u_leaflet$NAZICO[1]}
+  else{NAZICO.sel<-input$uzivani_marker_click$id}
+  return(NAZICO.sel)})
+
+```
+
+
+```{r uzivani: abs.panel, context="server"}
+
+renderUI({
+    absolutePanel(class = "panel panel-default", fixed = TRUE,
+                draggable = FALSE, top = 30, left = 15, right = "auto", bottom = "auto",
+                width = '15%', height = '4.5%', style = "opacity: 1; style = z-index: 400",
+          selectizeInput(inputId = "search.id.u","Vyhledávání útvaru",
+                             selected=input$uzivani_shape_click$id, choices = search.choices))
+  })
+
+# absolutePanel(wellPanel(HTML(paste("POD - odběr z podzemních vod",
+#          "POV - evidované odběry z povrchových vod",
+#          "VYP - vypouštění", sep="<br/>"))))
+```
+
+Row {data-height=600}
+-------------------------------------
+
+### Mapa
+
+```{r uzivani: mapa, context="server"}
+
+leafletOutput("uzivani")
+
+output$uzivani <- renderLeaflet({
+
+povodif <- base::subset(povodi,UPOV_ID != input$search.id.u)  
+  
+u_leaflet <- kde()$u_leaflet
+xy <- kde()$xy
+
+  labels <- sprintf(
+      "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s",
+      povodif$NAZ_UTVAR, povodif$KTG_UPOV, povodif$U_PMU, povodif$UPOV_ID) %>% lapply(htmltools::HTML)
+
+  if(length(labels)==0){labels <- c(" ")}
+
+labels.points <- sprintf(
+    "<strong>%s</strong><br/>Povodí: %s<br/>Jev: %s<br/>ICOC: %s",
+    u_leaflet$NAZICO, u_leaflet$POVODI, u_leaflet$JEV, u_leaflet$ICOC) %>%
+    lapply(htmltools::HTML)
+
+  if(is.null(u_leaflet$JEV)){pal_2 <- NULL
+  }else{pal_2 <- colorFactor("Paired", domain = u_leaflet$JEV, na.color = "gray50")}
+  
+  centr <- getSpPPolygonsLabptSlots(povodi.ds())
+
+uzivani <- leaflet() %>%setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
+    addProviderTiles(providers$Esri.WorldTopoMap, group = "Mapový podklad",
+                                                  options = tileOptions(minZoom=7, maxZoom=13)) %>%
+    addPolygons(data=povodif, color = "#000000", fillColor = "#708090", weight = 2, opacity = 0.4,
+                          fillOpacity = 0.7, layerId = povodif$UPOV_ID,
+                          highlightOptions = highlightOptions(color = "	#DC143C", opacity = 1, 
+                                                              fillOpacity = 0, weight = 2.3,
+                                                     bringToFront = TRUE, sendToBack = TRUE),
+                label = labels,
+                labelOptions = labelOptions(clickable = TRUE, noHide = TRUE,
+                                            style = list("font-weight" = "normal",
+                                              "font-family" = "sans-serif", padding = "3px 8px",
+                                              keepInView = TRUE,
+                                              "border-color" = "#F5F5F5"),
+                                              textsize = "15px", direction = "auto")) %>%
+    addCircleMarkers(data=xy, radius = 6.5, color = "black", fillColor = pal_2(u_leaflet$JEV),
+                 weight = 0.5, opacity = 0.7, fillOpacity = 1, layerId = u_leaflet$NAZICO,
+                 popup = labels.points) %>%
+    addPolylines(data=reky, color="#007C8C", weight = 1.5,
+                 opacity = 1, stroke= TRUE, group = "Řeky") %>%
+    addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff",
+                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera") %>%
+    addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
+                weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže") %>% 
+    addLayersControl(overlayGroups = c("Mapový podklad", "Řeky", "Jezera", "Nádrže"),
+                     position = "topright",
+                     options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE))%>%   
+    hideGroup(c("Řeky", "Jezera", "Nádrže")) %>%
+    addLegend(pal = pal_2, values = u_leaflet$JEV, opacity = 0.7, title = "Legenda",
+              position = "bottomright")
+})
+
+
+
+
+#default.shape <- function(){return("DUN_0010")}
+# leafletOutput("uzivani")
+# 
+# output$uzivani <- renderLeaflet({
+# 
+# u_leaflet <- kde()$u_leaflet
+# 
+# dta <- reac()$dta
+# 
+#   labels <- sprintf(
+#       "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s",
+#       dta$NAZ_UTVAR, dta$KTG_UPOV, dta$U_PMU, dta$UPOV_ID) %>% lapply(htmltools::HTML)
+# 
+# labels.points <- sprintf(
+#       "<strong>%s</strong><br/>Povodí: %s<br/>Jev: %s<br/>ICOC: %s",
+#       u_leaflet$NAZICO, u_leaflet$POVODI, u_leaflet$JEV, u_leaflet$ICOC) %>%
+#       lapply(htmltools::HTML)
+# 
+# pal_2 <- colorFactor("Paired", domain = u_leaflet$JEV, na.color = "gray50")
+# 
+# centr <- getSpPPolygonsLabptSlots(povodi.ds())
+# 
+# uzivani <- leaflet() %>%
+#     setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
+#     addTiles(group = "Mapový podklad", options = tileOptions(minZoom=10, maxZoom=13)) %>%
+#     addProviderTiles(providers$Esri.WorldTopoMap, group = "Mapový podklad",
+#                      options = tileOptions(minZoom=11, maxZoom=13))    %>%
+#   addPolygons(
+#     data = dta,
+#     color = "black",
+#     fillColor = "whitesmoke",
+#     weight = 2,
+#     opacity = 0.4,
+#     fillOpacity = 0.7,
+#     layerId = dta$UPOV_ID,
+#     label= labels,
+#     labelOptions = labelOptions(
+#     clickable = TRUE,
+#     style = list(
+#     "font-weight" = "normal",
+#     "font-family" = "sans-serif",
+#     padding = "3px 8px",
+#     keepInView = TRUE,
+#     "border-color" = "rgb(255, 255, 255)"
+#     ),
+#     textsize = "15px",
+#     direction = "auto"
+#     )
+#     ) %>% 
+#    
+#     addPolygons(data=povodi.ds(),
+#                 color = "black", fillColor = "whitesmoke", weight = 2, opacity = 0.4, fillOpacity = 0.7)%>%
+#     addCircleMarkers(data=kde()$xy, radius = 5, color = "black", fillColor = pal_2(u_leaflet$JEV),
+#                  weight = 0.5, opacity = 0.7, fillOpacity = 1, layerId = u_leaflet$NAZICO,
+#                  label = labels.points,
+#                  labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
+#                                              "font-family" = "sans-serif", padding = "3px 8px",
+#                                              keepInView = TRUE,
+#                                              "border-color" = "rgb(255, 255, 255)"),
+#                                              textsize = "15px", direction = "auto")) %>%
+#     addPolylines(data=reky[reky$UPOV_ID==input$search.id.u, ], color="#007C8C", weight = 1.5,
+#                  opacity = 1, stroke= TRUE, group = "Řeky") %>%
+#     addPolygons(data=jezera[jezera$UPOV_ID==input$search.id.u, ], color="#007C8C", fillColor = "#0099ff",
+#                 weight = 1, opacity = 1, stroke= TRUE, group = "Jezera") %>%
+#     addLayersControl(overlayGroups = c("Mapový podklad", "Řeky", "Jezera"),
+#                      position = "topright",
+#                      options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>%
+#     addLegend(pal = pal_2, values = u_leaflet$JEV, opacity = 0.7, title = "Legenda",
+#               position = "bottomright")
+# })
+
+```
+
+### Časová řada
+
+```{r uzivani: casova rada, context="server"}
+renderDygraph({
+  ts.uzivani <-  u %>% filter(UPOV_ID == input$search.id.u) %>% group_by(JEV, DTM) %>%
+                       summarise(sum = sum(value)) %>% ungroup %>% dcast(DTM~JEV)
+  ts.uzivani <- xts::xts(ts.uzivani, order.by = ts.uzivani$DTM)
+  #ts.uzivani <- ts(ts.uzivani, start = decimal_date(as.Date("2006-12-01")), frequency = 1)
+
+  dygraph(ts.uzivani, main = paste(as.character(title.f())))
+})
+```
+
+Row {.tabset .tabset-fade data-heigth=400}
+-------------------------------------
+
+```{r uzivani: tab.bod/tab.jev}
+### Jednotlivý bod
+### Suma dle jevu
+# 
+# renderDataTable({
+#   unit <- u %>% filter(NAZICO == default.circle()) %>% mutate(DTM = as.character(DTM)) %>% 
+#     select(-c(X,Y, ROK, MESIC, mean.X, mean.Y, na))}, 
+#   options = list(scrollY = "400px", scrollX = "10px", class = 'cell-border stripe', lengthMenu = c(100,200)))
+# 
+# renderDataTable({
+#   subsubtotal <- u %>% filter(UPOV_ID == default.shape2())%>% group_by(JEV) %>% replace(is.na(.), 0) %>% summarise(suma = sum(value))}, width='50%', options = list(scrollY = "400px", scrollX = "10px"))
+```
+
+### Suma dle odběratele
+
+```{r uzivani: tab:odberatel, context="server"}
+renderDataTable({
+  subtotal <- u %>% filter(UPOV_ID == default.shape2()) %>% replace(is.na(.), 0) %>% group_by(NAZICO, JEV) %>% summarise(suma = sum(value)) %>% select(NAZICO, JEV, suma)}, class = 'compact cell-border', colnames = c("Odběratel", "Jev", "Suma"), options = list(scrollY = "300px", lengthMenu = c(100,200)))
+```
+
+
+```{r vlast.funkce: sidebar}
+# Pokus {data-orientation=rows}
+# NEAKTIVNI =====================================
+# 
+# ### Vlastní funkce
+# 
+# Column {.sidebar}
+# NEAKTIVNI -----------------------------------------------------------------------
+# textAreaInput("script",label="Napište funkci", value = "plot(povodi); summary(BM)")
+# 
+# actionButton("go4", "Spustit", icon("check"),
+#     style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
+```
+
+
+```{r vlast.funkce: text}
+# Column
+# NEAKTIVNI -----------------------------------------------------------------------
+# 
+# ### Výstup
+# 
+# reac4 <- eventReactive(input$go4,{
+#                           text = input$script
+#                           return(text)})
+# 
+# renderText({
+# 
+#   eval(parse(text=reac4()))
+# 
+# })
+```
+
+
+```{r vlast.funkce: graf}
+# ### Graf
+# 
+# renderPlot({
+# 
+#   eval(parse(text=reac4()))
+# 
+# })
+
+```
+
+Denní průtoky {data-icon="fa-columns"}
+=====================================
+
+
+```{r QD}
+
+#Functions--------------------
+default.line <- reactive({
+  if(is.null(input$rozvodnice_shape_click$id)){
+  DBCN.sel <- QD$DBCN[1]}
+  else{DBCN.sel <- input$rozvodnice_shape_click$id}
+  return(DBCN.sel)})
+
+title.f3 <- reactive({
+  if(is.null(input$rozvodnice_shape_click$id)){
+     title <- stanice$NAZEV_TOK[stanice$DBCN == "003000"]}else{
+     title <- stanice$NAZEV_TOK[stanice$DBCN==input$rozvodnice_shape_click$id]}
+  return(title)
+  })
+
+```
+
+
+### Mapa denních průtoků
+
+```{r QD: mapa, context="server"}
+leafletOutput("rozvodnice")
+
+output$rozvodnice <- renderLeaflet({
+  
+  labels.lines <- sprintf(
+      "<strong>%s</strong><br/> DBCN:%s <br/> Plocha [km2]: %s",
+      stanice$NAZEV_TOK, stanice$DBCN, round(stanice$AREA,2)) %>% 
+      lapply(htmltools::HTML)
+  
+rozvodnice <- leaflet() %>%
+    addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13)) %>% 
+    addPolylines(data=stanice, color="#CA5557", weight = 2.3, dashArray = "3",  fill = TRUE,
+                 opacity = 1, stroke= TRUE, group = "Rozvodnice", layerId = stanice$DBCN,
+                 highlightOptions = highlightOptions(color = "red", opacity = 1, fillOpacity = 1, weight = 2.3,
+                                                     bringToFront = TRUE, sendToBack=TRUE),
+                 label = labels.lines,
+                 labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
+                                             "font-family" = "sans-serif", padding = "3px 8px",
+                                             keepInView = TRUE,
+                                             "border-color" = "rgb(255, 255, 255)"),
+                                             textsize = "15px", direction = "auto")) %>% 
+    addPolylines(data=reky, color="#007C8C", weight = 1,
+                 opacity = 1, stroke= TRUE, group = "Řeky") %>% 
+    addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff", 
+                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera") %>%
+    addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
+                weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže") %>% 
+    addLayersControl(overlayGroups = c("Mapový podklad", "Řeky", "Jezera", "Nádrže"),
+                     position = "bottomleft",
+                     options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE))%>%   
+    hideGroup("Mapový podklad")
+})
+```
+
+### Časová řada
+
+```{r QD: casova rada, context="server"}
+
+renderDygraph({
+  ts.QD <- QD %>% filter(DBCN == default.line()) %>% mutate(month = format(DTM, "%m"), year = format(DTM, "%Y")) %>% 
+  group_by(year) %>% mutate(mean_year = mean(value, na.rm = TRUE)) %>% ungroup %>% group_by(month, year) %>% mutate(mean_month = mean(value, na.rm=TRUE)) %>% ungroup %>% select(input$entry.variable4, DTM)
+  ts.QD <- xts::xts(ts.QD, order.by = ts.QD$DTM)
+  dygraph(ts.QD, main = paste(as.character(title.f3())), 
+          xlab = "Čas", ylab = "Průtok") %>% 
+  dyRoller(showRoller = TRUE, rollPeriod = 1)%>%
+  dyCSS("styles.css") %>% 
+  dyRangeSelector() %>% 
+  dyCrosshair(direction = "vertical")
+})
+
+choices3 <- c("value", "mean_month", "mean_year")
+names(choices3) <- c("Denní průtok", "Měsiční průměr", "Roční průměr")
+
+absolutePanel(class = "panel panel-default", fixed = TRUE,
+                  draggable = FALSE, top = 80, left = "auto", right = 10, bottom = "auto",
+                  width = '10%',
+                  style = "opacity: 1; style = z-index: 400",
+    HTML('<button data-toggle="collapse" data-target="#box8" class="choose">Výběr časových řad</button>'),
+        tags$div(id = 'box8', class="collapse", style = "max-height: 250px; overflow-y:scroll",
+                 checkboxGroupInput("entry.variable4", "Zvolte:", choices = choices3, selected = c("value", "mean_month"))))
+
+```
