@@ -32,20 +32,8 @@ require(datasets)
 
 
 #Load data--------------------
-povodi <- readOGR("data/prep/povodi.shp")
-reky <- readOGR("data/prep/reky.shp")
-jezera <- readOGR("data/prep/jezera.shp")
-nadrze <- readOGR('data/prep/nadrze.shp')
-stanice <- readOGR("data/chmu/stanice.shp")
-kraje <- readOGR("data/prep/kraje.shp")
-okresy <- readOGR("data/prep/okresy.shp")
-
-popis <- read.table('data/E_ISVS$UTV_POV.txt',encoding = 'UTF-8', header = TRUE, sep=';')
-BM <- readRDS('data/mbilan/bilan_month_ep.rds')
-BM.long <- readRDS('data/mbilan/bilan_month_long.rds')
-pars <- readRDS('data/pars/pars.rds')
-u <- readRDS('data/uzivani/06_16/uzivani_na_nahraz.rds')
-QD <- readRDS('data/chmu/QD.rds')
+#webapp_data -> geo
+CatCa::Data("webapp_data")
 
 # Merging data----------------
 povodi <- sp::merge(povodi, popis, by='UPOV_ID')
