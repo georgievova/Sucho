@@ -12,22 +12,23 @@ setwd()
 povodi_0 <- readOGR('data/geo/E_HEIS$UPV_HLGP#P2$wm.shp', 'E_HEIS$UPV_HLGP#P2$wm')
 reky_0 <- readOGR('data/geo/E_ISVS$UPOV_R.shp', 'E_ISVS$UPOV_R')
 jezera_0 <- readOGR('data/geo/E_ISVS$UPOV_J.shp', 'E_ISVS$UPOV_J')
-nadrze <- readOGR('data/geo/nadrze.shp')
+nadrze_0 <- readOGR('data/geo/nadrze.shp')
 
 #Preparation of data
 #--------------------
 povodi_0 <- spTransform(povodi_0, CRS("+init=epsg:4326"))
 povodi <- ms_simplify(povodi_0, keep_shapes = TRUE, keep = 0.05)
 #--------------------
-proj4string(reky_0) <- CRS("+proj=krovak +lat_0=49.4 +lon_0=24.833 +k=0.9999 +x_0=0 +y_0=0 +ellps=bessel +units=m +no_defs")
+proj4string(reky_0) <- CRS("+title=Krovak JTSK +proj=krovak +lat_0=49.5 +lon_0=24.83333333333333 +alpha=30.28813975277778 +k=0.9999 +x_0=0 +y_0=0 +ellps=bessel +units=m +towgs84=570.8,85.7,462.8,4.998,1.587,5.261,3.56 +no_defs <>")
 reky_0 <- spTransform(reky_0, CRS("+init=epsg:4326"))
 reky <- ms_simplify(reky_0, keep_shapes = TRUE, keep = 0.10)
 #--------------------
-proj4string(jezera_0) <- CRS("+proj=krovak +lat_0=49.4 +lon_0=24.833 +k=0.9999 +x_0=0 +y_0=0 +ellps=bessel +units=m +no_defs")
+proj4string(jezera_0) <- CRS("+title=Krovak JTSK +proj=krovak +lat_0=49.5 +lon_0=24.83333333333333 +alpha=30.28813975277778 +k=0.9999 +x_0=0 +y_0=0 +ellps=bessel +units=m +towgs84=570.8,85.7,462.8,4.998,1.587,5.261,3.56 +no_defs <>")
 jezera_0 <- spTransform(jezera_0, CRS("+init=epsg:4326"))
 jezera <- ms_simplify(jezera_0, keep_shapes = TRUE, keep = 0.05)
 
-nadrze <- spTransform(nadrze, CRS("+init=epsg:4326"))
+proj4string(nadrze_0) <- CRS("+title=Krovak JTSK +proj=krovak +lat_0=49.5 +lon_0=24.83333333333333 +alpha=30.28813975277778 +k=0.9999 +x_0=0 +y_0=0 +ellps=bessel +units=m +towgs84=570.8,85.7,462.8,4.998,1.587,5.261,3.56 +no_defs <>")
+nadrze <- spTransform(nadrze_0, CRS("+init=epsg:4326"))
 
 kraje_0 <- readOGR('data/geo/admin/kraje.shp')
 kraje <- spTransform(kraje_0, CRS("+init=epsg:4326"))
@@ -110,9 +111,9 @@ saveRDS(BM.long, 'data/mbilan/bilan_month_long.rds')
 
 BM2 <- readRDS('data/mbilan/bilan_month - puvodni.rds')
 
-BM2 <- BM2 %>% group_by(UPOV_ID, variable) %>% mutate(mean = mean(value)) %>%  ungroup
+BM2 <- BM2 %>% group_by(UPOV_ID, variable) %>% mutate(mean_ep = mean(value)) %>%  ungroup
 
-saveRDS(BM2, 'data/mbilan/bilan_month_co.rds')
+saveRDS(BM2, 'data/mbilan/bilan_month_ep.rds')
 
 #3 Denní průtoky
 #--------------------
