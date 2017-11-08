@@ -10,25 +10,25 @@ output:
 
 ```{r global, include=FALSE}
 
-require(flexdashboard)
-require(leaflet)
-require(rgdal)
-require(data.table)
-require(ggplot2)
-require(GGally)
-require(DBI)
-require(odbc)
-require(dplyr)
-require(dbplyr)
-require(dygraphs)
-require(sp)
-require(shiny)
-require(DT)
-require(rgeos)
-require(datasets)
-#require(berryFunctions)
-#require(lubridate)
-#require(xts)
+library(flexdashboard)
+library(leaflet)
+library(rgdal)
+library(data.table)
+library(ggplot2)
+library(GGally)
+library(DBI)
+library(odbc)
+library(dplyr)
+library(dbplyr)
+library(dygraphs)
+library(sp)
+library(shiny)
+library(DT)
+library(rgeos)
+library(datasets)
+#library(berryFunctions)
+#library(lubridate)
+#library(xts)
 
 
 #Load data--------------------
@@ -41,7 +41,7 @@ povodi <- sp::merge(povodi, popis, by='UPOV_ID')
 search.choices <- as.character(povodi$UPOV_ID)
 names(search.choices) <- povodi$NAZ_UTVAR
 
-choices <- c("P", "R", "RM", "BF", "B", "DS", "PET", "ET","SW", "SS", "GS", "INF", "PERC", "RC", "T", "H", "WEI")
+choices <- c("P" , "R", "RM", "BF", "B", "DS", "PET", "ET","SW", "SS", "GS", "INF", "PERC", "RC", "T", "H", "WEI")
 names(choices) <- c(
 'P - srážky na povodí [mm]',
 'R - odtok (pozorovaný) [mm]',
@@ -74,6 +74,7 @@ names(choices2) <- c(
 mesice <- c("Leden","Únor","Březen","Duben","Květen","Červen",
             "Červenec","Srpen","Září","Říjen","Listopad","Prosinec")
 
+#knitr::opts_chunk(cache.path='/home/owc/-hanel/KVHEM/-projekty/2017 SUCHO/Sucho/.ch/')
 ```
 
 Základní mapa {data-icon="fa-map-o"}
@@ -354,9 +355,9 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
 ```{r cr denni data}
 renderDygraph({
   
-  d <- dir("data/bilan")
+  d <- dir(file.path(.datadir, "bilan"))
   bilan_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
-  dta_bd <- readRDS(file.path("data","bilan", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
+  dta_bd <- readRDS(file.path(.datadir,"bilan", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
   
   ts.bilance <- dta_bd %>%  select(input$entry.variable_d, DTM)
   
