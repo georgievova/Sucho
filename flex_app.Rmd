@@ -39,7 +39,7 @@ CatCa::Data("webapp_data")
 povodi <- sp::merge(povodi, popis, by='UPOV_ID')
 
 search.choices <- as.character(povodi$UPOV_ID)
-names(search.choices) <- povodi$NAZ_UTVAR
+names(search.choices) <- paste(povodi$NAZ_UTVAR, search.choices, sep = ": ")
 
 choices <- c("P", "R", "RM", "BF", "B", "DS", "PET", "ET","SW", "SS", "GS", "INF", "PERC", "RC", "T", "H", "WEI")
 names(choices) <- c(
@@ -87,45 +87,70 @@ Column {.sidebar data-width=400}
 #Inputs--------------------
 
 renderUI({
-  wellPanel(selectizeInput(inputId = "search.id","Vyhledávání útvaru",selected=input$map_shape_click$id,
+  wellPanel(selectizeInput(inputId = "search.id","Vyhledávání útvaru",
+                           selected=input$map_shape_click$id,
                            choices = search.choices))})
 
 wellPanel(
-        HTML('<button data-toggle="collapse" data-target="#box2" class="btn-block btn-primary">Kartogram</button>'),
-        tags$div(id = 'box2', class="collapse in", 
-                 radioButtons("kartogram", label=NULL, 
-                    choices = c("Přepinání parametrů" = "C", "Měsíční průměry" = "A", "Celé období" = "B"),
-                    selected = "B"),
-                 
-                 conditionalPanel(condition = "input.kartogram == 'A'", 
-                                  selectInput("entry.variable", label="Prvky hydrologické bilance", 
-                                              choices = choices, selected = "P"),
-                                  selectInput("entry.year", label = "Zvolte rok:", 
-                                              choices = seq(1961,2015,1), selected = 2015),
-                                  sliderInput("entry.month", "Zvolte měsíc:", 1,12, value = 1)),
-                 conditionalPanel(condition = "input.kartogram == 'B'",
-                                  selectInput("entry.variable", label="Prvky hydrologické bilance", 
-                                              choices = choices, selected = "P")),
-                conditionalPanel(condition = "input.kartogram == 'C'",
-                                  selectInput("entry.pars", label=NULL, 
-                                              choices = pars$name, selected = "Spa"))),
-                
-        HTML('<button data-toggle="collapse" data-target="#box3" class="btn-block btn-primary">Filtování dle hodnoty</button>'),
-        tags$div(id = 'box3', class="collapse",
-                 radioButtons("filtr", "Filtr", 
-                              choices = c("Kartogram" = "A", "Filtrovat podle hodnoty" = "B")),
-                 helpText("Sem zadejte číslo, podle něhož proběhne filtrace povodí. Filtrování probíhá dle hodnot zvoleného prvku hydrologické bilance v každém povodí ve zvoleném měsíci a roce. Zobrazené mohou být polygony s hodnotou větší nebo rovnající se vepsané hodnotě a s hodnotou menší."),
-                 numericInput("entry.number",  "Zadejte číslo:", value = 50)))
+  selectInput("entry.variable", label="Prvky hydrologické bilance",
+              choices = choices, selected = "P"),
+            radioButtons("kartogram", label=NULL, choices = c("Dlouhodobé průměry" = "A", 
+             "Měsíční průměry" = "B", "Roční průměry" = "C"), selected = "A"),
 
-                 
-helpText("Po nastavení vstupu spuste aplikaci tlačitkem:")
+            conditionalPanel(condition = "input.kartogram == 'A'",
+               radioButtons("DP", label=NULL, selected = "DP1",
+                                      choices = c("Celé období" = "DP1", "Volba období" = "DP2")),
+                      conditionalPanel(condition = "input.DP == 'DP1'"),
+                      conditionalPanel(condition = "input.DP == 'DP2'",
+                                  selectInput("entry.period", label = NULL,
+                                              choices = list("1961-1990" = "1", "1971-2000" = "2",
+                                                            "1981 - 2010" = "3"), selected = "1")
+               )
+               ),
+            conditionalPanel(condition = "input.kartogram == 'B'",
+                 # 
+                 dateInput("entry.date", label = NULL, "yyyy-mm-dd", language = "cs",
+                           value = as.Date("1961-01-01"),
+                           min = as.Date("1961-01-01"), max = as.Date("2015-12-01"))
+                 # selectInput("entry.year", label = "Zvolte rok:",
+                 #             choices = seq(1961,2015,1)),
+                 # sliderInput("entry.month", "Zvolte měsíc:", 1,12)
+                 ),
+            conditionalPanel(condition = "input.kartogram == 'C'",
+            
+                 selectInput("entry.year", label = "Zvolte rok:",
+                             choices = seq(1961,2015,1))
+                 )
+)
 
-actionButton("go1", "Spustit", icon("check"), 
+# wellPanel(
+#         HTML('<button data-toggle="collapse" data-target="#box2" class="btn-block btn-primary">Kartogram</button>'),
+#         tags$div(id = 'box2', class="collapse in", 
+#                  radioButtons("kartogram", label=NULL, 
+#                     choices = c("Přepinání parametrů" = "C", "Měsíční průměry" = "A", "Celé období" = "B"),
+#                     selected = "B"),
+#                  
+#                  conditionalPanel(condition = "input.kartogram == 'A'", 
+#                                   selectInput("entry.variable", 
+#                                               label="Prvky hydrologické bilance", 
+#                                               choices = choices, selected = "P"),
+#                                   selectInput("entry.year", label = "Zvolte rok:", 
+#                                               choices = seq(1961,2015,1), selected = 2015),
+#                                   sliderInput("entry.month", "Zvolte měsíc:", 1,12, value = 1)),
+#                  conditionalPanel(condition = "input.kartogram == 'B'",
+#                                   selectInput("entry.variable", label="Prvky hydrologické bilance", 
+#                                               choices = choices, selected = "P")),
+
+#         HTML('<button data-toggle="collapse" data-target="#box3" class="btn-block btn-primary">Filtování dle hodnoty</button>'),
+#         tags$div(id = 'box3', class="collapse",
+#                  radioButtons("filtr", "Filtr", 
+#                               choices = c("Kartogram" = "A", "Filtrovat podle hodnoty" = "B")),
+#                  numericInput("entry.number",  "Zadejte číslo:", value = 50)))
+
+actionButton("go1", "Zobrazit", icon("check"), 
     style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
 
 hr()
-
-helpText("Pro vracení mapového pole na původní pozici použijte tlačitko:")
 
 actionButton("reset_button", "Reset", icon("arrows"), 
     style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
@@ -152,30 +177,43 @@ reac<- eventReactive(input$go1,{
   
   bilance_filtr <- c()
   dta <- c()
+  if(is.null(input$entry.year)){entry.year = 2015}else{entry.year=input$entry.year}
+  if(is.null(input$entry.month)){entry.month = 01}else{entry.month=input$entry.month}
   
-  if(input$kartogram == "A"){
-    bilance_filtr <- bilance %>% filter(year==input$entry.year & month==input$entry.month)
-    dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
-  }else if(input$kartogram == "B"){
-    bilance_filtr <- bilance %>% filter(year==input$entry.year & month==input$entry.month)
-        colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
+  if(input$DP == "DP1"){
+    bilance_filtr <- bilance %>% filter(year==entry.year & month==entry.month)
+    colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
         colnames(bilance_filtr)[colnames(bilance_filtr)=="mean_ep"] <- "value"
     dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
-  }else if(input$kartogram == "C"){pars_filtr <- pars %>% filter(name == input$entry.pars)
-        colnames(pars_filtr)[colnames(pars_filtr) == "current"] <- "value"
-  dta <- (sp::merge(povodi,pars_filtr, by="UPOV_ID"))}
+  }else if(input$DP == "DP2"){
+        if(input$entry.period == "1"){period=seq(1961,1990,1)
+        }else if(input$entry.period == "2"){period = seq(1971,2000,1) 
+        }else if(input$entry.period == "3"){period = seq(1981,2010,1)}
+    bilance_filtr <- bilance %>% group_by(UPOV_ID) %>% filter(year==period) %>%
+      summarise(mean.period = mean(value))
+       colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
+       colnames(bilance_filtr)[colnames(bilance_filtr)=="mean.period"] <- "value"
+    dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
+  }else if(input$kartogram == "B"){
+    bilance_filtr <- bilance %>% filter(year == year(as.Date(input$entry.date)) & month==month(as.Date(input$entry.date)))
+    dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
+  }else if(input$kartogram == "C"){
+    bilance_filtr <- bilance %>% filter(year==entry.year & month==entry.month)
+    colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
+    colnames(bilance_filtr)[colnames(bilance_filtr)=="annual.avg"] <- "value"
+    dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))}
   
-  
-  
+  print(entry.year)
+  print(input$entry.date)
   
   return(list(bilance=bilance_filtr,dta=dta))
 }, ignoreNULL = FALSE, ignoreInit = FALSE)
 
-reac1 <- eventReactive(input$go1,{
-  dta1 <- base::subset(reac()$dta,value >= input$entry.number)
-  dta2 <- base::subset(reac()$dta,value < input$entry.number)
-  return(list(dta1=dta1, dta2=dta2))
-}, ignoreNULL = FALSE, ignoreInit = FALSE) 
+# reac1 <- eventReactive(input$go1,{
+#   dta1 <- base::subset(reac()$dta,value >= input$entry.number)
+#   dta2 <- base::subset(reac()$dta,value < input$entry.number)
+#   return(list(dta1=dta1, dta2=dta2))
+# }, ignoreNULL = FALSE, ignoreInit = FALSE) 
 
 
 
@@ -213,8 +251,8 @@ output$map<-renderLeaflet({
   #Select subset based on input--------------------
   
   dta <- reac()$dta
-  dta1 <- reac1()$dta1
-  dta2 <- reac1()$dta2
+  # dta1 <- reac1()$dta1
+  # dta2 <- reac1()$dta2
 
   # Creating palettes--------------------
   
@@ -228,26 +266,19 @@ output$map<-renderLeaflet({
       dta$NAZ_UTVAR, dta$KTG_UPOV, dta$U_PMU, dta$UPOV_ID, round(dta$value,2)
       ) %>% lapply(htmltools::HTML)
   
-  labels1 <- sprintf(
-      "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s <br/> Hodnota: %s",
-      dta1$NAZ_UTVAR, dta1$KTG_UPOV, dta1$U_PMU, dta1$UPOV_ID, round(dta1$value,2)
-      ) %>% lapply(htmltools::HTML)
-  labels2 <- sprintf(
-      "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s <br/> Hodnota: %s",
-      dta2$NAZ_UTVAR, dta2$KTG_UPOV, dta2$U_PMU, dta2$UPOV_ID, round(dta2$value,2)
-      ) %>% lapply(htmltools::HTML)
+  # labels1 <- sprintf(
+  #     "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s <br/> Hodnota: %s",
+  #     dta1$NAZ_UTVAR, dta1$KTG_UPOV, dta1$U_PMU, dta1$UPOV_ID, round(dta1$value,2)
+  #     ) %>% lapply(htmltools::HTML)
+  # labels2 <- sprintf(
+  #     "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s <br/> Hodnota: %s",
+  #     dta2$NAZ_UTVAR, dta2$KTG_UPOV, dta2$U_PMU, dta2$UPOV_ID, round(dta2$value,2)
+  #     ) %>% lapply(htmltools::HTML)
 
-  if(input$kartogram == "C"){
-     labels <- sprintf(
-     "<strong>%s</strong><br/>current: %s <br/> lower: %s <br/> upper: %s <br/> initial: %s",
-      dta$UPOV_ID, dta$value, dta$lower, dta$upper, dta$initial
-      ) %>% lapply(htmltools::HTML)
-     pal <- colorBin("YlGnBu", domain = dta$value, pretty = TRUE) 
-     }  
   
    if(length(labels)==0){labels <- c(" ")}
-   if(length(labels1)==0){labels1 <- c(" ")}
-   if(length(labels2)==0){labels2 <- c(" ")}
+   # if(length(labels1)==0){labels1 <- c(" ")}
+   # if(length(labels2)==0){labels2 <- c(" ")}
    
   
    #Creating leaflet--------------------
@@ -256,7 +287,6 @@ output$map<-renderLeaflet({
      setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom) %>%
      addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13) )
   
-  if (input$filtr == "A") {
   map <- map %>% addPolygons(data=dta, layerId = dta$UPOV_ID, color = "burlywood4", weight = 1.3,
                                                                                     opacity = 0.3,
                  fillColor = ~pal(value), fillOpacity = 0.8, group = "Povodí",
@@ -268,37 +298,57 @@ output$map<-renderLeaflet({
                                              "font-family" = "sans-serif", padding = "3px 8px",
                                              keepInView = TRUE, noHide = TRUE,
                                              "border-color" = "rgb(255, 255, 255)"),
-                                             textsize = "15px", direction = "auto")) %>% 
+                                             textsize = "15px", direction = "auto")) %>%
     addLayersControl(overlayGroups = c("Povodí","Mapový podklad", "Řeky", "Jezera", "Nádrže", "Kraje", "Okresy"),
                      position = "bottomleft",
-                     options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>% 
+                     options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>%
     hideGroup(c("Kraje", "Okresy"))%>%
     addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
               position = "bottomright")
-  }else if (input$filtr == "B") {
-  map <- map %>% addPolygons(data=dta1, layerId = dta1$UPOV_ID, color = "#000066", 
-                             fillColor = ~pal_1(dta1$value), 
-                 weight = 1.3, opacity = 0.4, fillOpacity = 0.5, group = "Vetsi nebo rovno",
-                 label = labels1,
-                 labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
-                                             "font-family" = "sans-serif", padding = "3px 8px",
-                                             keepInView = TRUE,
-                                             "border-color" = "rgb(255, 255, 255)"),
-                                             textsize = "15px", direction = "auto")) %>%
-          addPolygons(data=dta2, layerId = dta2$UPOV_ID, color = "#000066", fillColor = ~pal_1(dta2$value), 
-                 weight = 1.3, opacity = 0.4, fillOpacity = 0.5, group = "Mensi nez",
-                 label = labels2,
-                 labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
-                                             "font-family" = "sans-serif", padding = "3px 8px",
-                                             keepInView = TRUE, noHide = TRUE,
-                                             "border-color" = "rgb(255, 255, 255)"),
-                                             textsize = "15px", direction = "auto")) %>%
-          addLayersControl(baseGroups = c("Vetsi nebo rovno", "Mensi nez"),
-                     overlayGroups = c("Mapový podklad", "Řeky", "Jezera", "Nádrže", "Kraje", "Okresy"),
-                     position = "bottomleft",
-                     options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>%   
-          hideGroup(c("Řeky", "Jezera", "Nádrže", "Kraje", "Okresy"))
-  }
+  
+  # if (input$filtr == "A") {
+  # map <- map %>% addPolygons(data=dta, layerId = dta$UPOV_ID, color = "burlywood4", weight = 1.3,
+  #                                                                                   opacity = 0.3,
+  #                fillColor = ~pal(value), fillOpacity = 0.8, group = "Povodí",
+  #                highlightOptions = highlightOptions(color = "#a53333", opacity = 1, fillOpacity = 0,
+  #                                                    weight = 2.3,
+  #                                                    bringToFront = TRUE, sendToBack = TRUE),
+  #                label = labels,
+  #                labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
+  #                                            "font-family" = "sans-serif", padding = "3px 8px",
+  #                                            keepInView = TRUE, noHide = TRUE,
+  #                                            "border-color" = "rgb(255, 255, 255)"),
+  #                                            textsize = "15px", direction = "auto")) %>% 
+  #   addLayersControl(overlayGroups = c("Povodí","Mapový podklad", "Řeky", "Jezera", "Nádrže", "Kraje", "Okresy"),
+  #                    position = "bottomleft",
+  #                    options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>% 
+  #   hideGroup(c("Kraje", "Okresy"))%>%
+  #   addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
+  #             position = "bottomright")
+  # }else if (input$filtr == "B") {
+  # map <- map %>% addPolygons(data=dta1, layerId = dta1$UPOV_ID, color = "#000066", 
+  #                            fillColor = ~pal_1(dta1$value), 
+  #                weight = 1.3, opacity = 0.4, fillOpacity = 0.5, group = "Vetsi nebo rovno",
+  #                label = labels1,
+  #                labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
+  #                                            "font-family" = "sans-serif", padding = "3px 8px",
+  #                                            keepInView = TRUE,
+  #                                            "border-color" = "rgb(255, 255, 255)"),
+  #                                            textsize = "15px", direction = "auto")) %>%
+  #         addPolygons(data=dta2, layerId = dta2$UPOV_ID, color = "#000066", fillColor = ~pal_1(dta2$value), 
+  #                weight = 1.3, opacity = 0.4, fillOpacity = 0.5, group = "Mensi nez",
+  #                label = labels2,
+  #                labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
+  #                                            "font-family" = "sans-serif", padding = "3px 8px",
+  #                                            keepInView = TRUE, noHide = TRUE,
+  #                                            "border-color" = "rgb(255, 255, 255)"),
+  #                                            textsize = "15px", direction = "auto")) %>%
+  #         addLayersControl(baseGroups = c("Vetsi nebo rovno", "Mensi nez"),
+  #                    overlayGroups = c("Mapový podklad", "Řeky", "Jezera", "Nádrže", "Kraje", "Okresy"),
+  #                    position = "bottomleft",
+  #                    options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>%   
+  #         hideGroup(c("Řeky", "Jezera", "Nádrže", "Kraje", "Okresy"))
+  # }
     
     map <- map %>% addPolylines(data=reky, color="#007C8C", weight = 1.5,
                  opacity = 1, stroke= TRUE, group = "Řeky") %>%
@@ -510,7 +560,7 @@ absolutePanel(class = "panel panel-default", fixed = TRUE,
     HTML('<button data-toggle="collapse" data-target="#box7" class="choose">Výběr časových                           řad</button>'),
         tags$div(id = 'box7', class="collapse in", style = "max-height: 550px; overflow-y:scroll",
                  checkboxGroupInput("entry.variable3", "Zvolte:", choices = choices, selected = c("PET", "T")),
-                 actionButton("go3", "Spustit", icon("check"), 
+                 actionButton("go3", "Zobrazit", icon("check"), 
                       style="color: #fff; background-color: #337ab7; border-color: #2e6da4",
                       style = "padding: 28px;",
                       style = "opacity: 0.7")))
@@ -762,7 +812,7 @@ renderDataTable({
 # NEAKTIVNI -----------------------------------------------------------------------
 # textAreaInput("script",label="Napište funkci", value = "plot(povodi); summary(BM)")
 # 
-# actionButton("go4", "Spustit", icon("check"),
+# actionButton("go4", "Zobrazit", icon("check"),
 #     style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
 ```
 
@@ -796,7 +846,7 @@ renderDataTable({
 
 ```
 
-Denní průtoky {data-icon="fa-columns"}
+Validace {data-icon="fa-columns"}
 =====================================
 
 
@@ -820,6 +870,37 @@ title.f3 <- reactive({
 
 
 ### Mapa denních průtoků
+
+```{r pars}
+
+# inputs -----------------------------------------------------------------------------------
+# conditionalPanel(condition = "input.kartogram == 'C'",
+#                                   selectInput("entry.pars", label=NULL,
+#                                               choices = pars$name, selected = "Spa")))
+# dta---------------------------------------------------------------------------------------
+#   if(input$kartogram == "A"){
+#     bilance_filtr <- bilance %>% filter(year==input$entry.year & month==input$entry.month)
+#     dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
+#   }else if(input$kartogram == "B"){
+#     bilance_filtr <- bilance %>% filter(year==input$entry.year & month==input$entry.month)
+#         colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
+#         colnames(bilance_filtr)[colnames(bilance_filtr)=="mean_ep"] <- "value"
+#     dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
+#   }else if(input$kartogram == "C"){pars_filtr <- pars %>% filter(name == input$entry.pars)
+#         colnames(pars_filtr)[colnames(pars_filtr) == "current"] <- "value"
+#    dta <- (sp::merge(povodi,pars_filtr, by="UPOV_ID"))}
+# labels -----------------------------------------------------------------------------------
+#   if(input$kartogram == "C"){
+#      labels <- sprintf(
+#      "<strong>%s</strong><br/>current: %s <br/> lower: %s <br/> upper: %s <br/> initial: %s",
+#       dta$UPOV_ID, dta$value, dta$lower, dta$upper, dta$initial
+#       ) %>% lapply(htmltools::HTML)
+#      pal <- colorBin("YlGnBu", domain = dta$value, pretty = TRUE)
+#      }
+
+
+```
+
 
 ```{r QD: mapa}
 leafletOutput("rozvodnice")
