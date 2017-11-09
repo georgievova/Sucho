@@ -88,8 +88,8 @@ BM = rbindlist(M, idcol = 'UPOV_ID')
 mesice <- c("Leden","Únor","Březen","Duben","Květen","Červen",
             "Červenec","Srpen","Září","Říjen","Listopad","Prosinec")
 
-seasons <- data.frame(month = c(1:12), seasons = c("Zíma", "Zíma", "Jaro", "Jaro", "Jaro", 
-                                                   "Léto", "Léto", "Léto","Podzim", "Podzim", "Podzim", "Zíma"))
+seasons <- data.frame(month = c(1:12), seasons = c("Zíma", "Zíma", "Jaro", "Jaro", "Jaro", "Léto", "Léto",
+                                                   "Léto","Podzim", "Podzim", "Podzim", "Zíma"))
 
 BM <- BM %>% left_join(seasons, by="month") 
 BM$month2 <- as.factor(BM$month)
@@ -97,10 +97,12 @@ levels(BM$month2) <- mesice
 
 BM <- BM %>% group_by(UPOV_ID, year, variable) %>% mutate(annual.avg = mean(value)) %>% ungroup
 
-quarter <- data.frame(month=c(1:12), quarter = rep(1:4, each=3)) 
-BM <- BM %>% left_join(quarter, by="month")
+BM <- BM %>% group_by(UPOV_ID, variable) %>% mutate(mean_ep = mean(value)) %>%  ungroup
 
-BM <- BM %>% group_by(UPOV_ID, year, quarter, variable) %>% mutate(quarterly.avg = mean(value)) %>% ungroup
+# quarter <- data.frame(month=c(1:12), quarter = rep(1:4, each=3)) 
+# BM <- BM %>% left_join(quarter, by="month")
+# 
+# BM <- BM %>% group_by(UPOV_ID, year, quarter, variable) %>% mutate(quarterly.avg = mean(value)) %>% ungroup
 
 BM.long <- dcast(BM, month+year+UPOV_ID+DTM~variable)
 BM.long$m <- as.factor(BM.long$month)
@@ -108,12 +110,6 @@ levels(BM.long$m) <- mesice
 
 saveRDS(BM, 'data/mbilan/bilan_month.rds')
 saveRDS(BM.long, 'data/mbilan/bilan_month_long.rds')
-
-BM2 <- readRDS('data/mbilan/bilan_month - puvodni.rds')
-
-BM2 <- BM2 %>% group_by(UPOV_ID, variable) %>% mutate(mean_ep = mean(value)) %>%  ungroup
-
-saveRDS(BM2, 'data/mbilan/bilan_month_ep.rds')
 
 #3 Denní průtoky
 #--------------------
