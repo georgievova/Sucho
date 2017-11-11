@@ -71,6 +71,8 @@ names(choices2) <- c(
 'ET - územní výpar [mm]',
 'SW - půdní vlhkost (zásoba vody v nenasycené zóně) [mm]')
 
+choices.pars <- as.character(unique(pars$name))
+
 mesice <- c("Leden","Únor","Březen","Duben","Květen","Červen",
             "Červenec","Srpen","Září","Říjen","Listopad","Prosinec")
 
@@ -351,7 +353,7 @@ output$map<-renderLeaflet({
 Row {.tabset}
 -------------------------------------
 
-### ČŘ měsíční data
+### Měsíční data
 
 ```{r cr mesicni data}
 
@@ -381,7 +383,7 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
 
 ```
 
-### ČŘ denní data
+### Denní data
 
 ```{r cr denni data}
 renderDygraph({
@@ -828,7 +830,8 @@ Validace {data-icon="fa-columns"}
 =====================================
 
 
-```{r QD}
+
+```{r validace: funkce}
 
 #Functions--------------------
 default.line <- reactive({
@@ -849,55 +852,29 @@ title.f3 <- reactive({
 
 ### Mapa denních průtoků
 
-```{r pars}
 
-# inputs -----------------------------------------------------------------------------------
-# conditionalPanel(condition = "input.kartogram == 'C'",
-#                                   selectInput("entry.pars", label=NULL,
-#                                               choices = pars$name, selected = "Spa")))
-# dta---------------------------------------------------------------------------------------
-#   if(input$kartogram == "A"){
-#     bilance_filtr <- bilance %>% filter(year==input$entry.year & month==input$entry.month)
-#     dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
-#   }else if(input$kartogram == "B"){
-#     bilance_filtr <- bilance %>% filter(year==input$entry.year & month==input$entry.month)
-#         colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
-#         colnames(bilance_filtr)[colnames(bilance_filtr)=="mean_ep"] <- "value"
-#     dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
-#   }else if(input$kartogram == "C"){pars_filtr <- pars %>% filter(name == input$entry.pars)
-#         colnames(pars_filtr)[colnames(pars_filtr) == "current"] <- "value"
-#    dta <- (sp::merge(povodi,pars_filtr, by="UPOV_ID"))}
-# labels -----------------------------------------------------------------------------------
-#   if(input$kartogram == "C"){
-#      labels <- sprintf(
-#      "<strong>%s</strong><br/>current: %s <br/> lower: %s <br/> upper: %s <br/> initial: %s",
-#       dta$UPOV_ID, dta$value, dta$lower, dta$upper, dta$initial
-#       ) %>% lapply(htmltools::HTML)
-#      pal <- colorBin("YlGnBu", domain = dta$value, pretty = TRUE)
-#      }
-
-
-```
-
-
-```{r QD: mapa}
+```{r validace: mapa}
 leafletOutput("rozvodnice")
 
 output$rozvodnice <- renderLeaflet({
   
+  if(input$validace == "A"){
   labels.lines <- sprintf(
       "<strong>%s</strong><br/> DBCN:%s <br/> Plocha [km2]: %s",
       stanice$NAZEV_TOK, stanice$DBCN, round(stanice$AREA,2)) %>% 
       lapply(htmltools::HTML)
   
-rozvodnice <- leaflet() %>%
+
+  rozvodnice <- leaflet() %>%
     addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13)) %>% 
     addPolylines(data=stanice, color="#CA5557", weight = 2.3, dashArray = "3",  fill = TRUE,
                  opacity = 1, stroke= TRUE, group = "Rozvodnice", layerId = stanice$DBCN,
-                 highlightOptions = highlightOptions(color = "red", opacity = 1, fillOpacity = 1, weight = 2.3,
+                 highlightOptions = highlightOptions(color = "red", opacity = 1, fillOpacity = 1,
+                                                     weight = 2.3,
                                                      bringToFront = TRUE, sendToBack=TRUE),
                  label = labels.lines,
-                 labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
+                 labelOptions = labelOptions(clickable = TRUE, 
+                                             style = list("font-weight" = "normal",
                                              "font-family" = "sans-serif", padding = "3px 8px",
                                              keepInView = TRUE,
                                              "border-color" = "rgb(255, 255, 255)"),
@@ -911,7 +888,46 @@ rozvodnice <- leaflet() %>%
     addLayersControl(overlayGroups = c("Mapový podklad", "Řeky", "Jezera", "Nádrže"),
                      position = "bottomleft",
                      options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE))%>%   
-    hideGroup("Mapový podklad")
+    hideGroup("Mapový podklad")}
+  
+    else if(input$validace == "B"){pars_filtr <- pars %>% filter(name == input$entry.pars)
+        colnames(pars_filtr)[colnames(pars_filtr) == "current"] <- "value"
+     dta <- (sp::merge(povodi,pars_filtr, by="UPOV_ID"))
+   
+     labels <- sprintf(
+     "<strong>%s</strong><br/>current: %s <br/> lower: %s <br/> upper: %s <br/> initial: %s",
+      dta$UPOV_ID, dta$value, dta$lower, dta$upper, dta$initial
+      ) %>% lapply(htmltools::HTML)
+     pal <- colorBin("YlGnBu", domain = dta$value, pretty = TRUE)
+     
+     rozvodnice <- leaflet() %>% 
+     setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom) %>%
+     addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13) )
+  
+    rozvodnice <- rozvodnice %>% addPolygons(data=dta, layerId = dta$UPOV_ID, 
+                                             color = "burlywood4", weight = 1.3,
+                                             opacity = 0.3, fillColor = ~pal(value), 
+                                             fillOpacity = 0.8, group = "Povodí",
+                                highlightOptions = highlightOptions(color = "#a53333", 
+                                                                    opacity = 1, 
+                                                                    fillOpacity = 0,
+                                                                    weight = 2.3,
+                                                                    bringToFront = TRUE,
+                                                                    sendToBack = TRUE),
+                                label = labels,
+                                labelOptions = labelOptions(clickable = TRUE, 
+                                             style = list("font-weight" = "normal",
+                                             "font-family" = "sans-serif", padding = "3px 8px",
+                                             keepInView = TRUE, noHide = TRUE,
+                                             "border-color" = "rgb(255, 255, 255)"),
+                                             textsize = "15px", direction = "auto")) %>%
+    addLayersControl(overlayGroups = c("Povodí","Mapový podklad", "Řeky", "Jezera", 
+                                       "Nádrže", "Kraje", "Okresy"),
+                     position = "bottomleft",
+                     options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>%
+    hideGroup(c("Kraje", "Okresy"))%>%
+    addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
+              position = "bottomright")}
 })
 ```
 
@@ -941,5 +957,20 @@ absolutePanel(class = "panel panel-default", fixed = TRUE,
     HTML('<button data-toggle="collapse" data-target="#box8" class="choose">Výběr časových řad</button>'),
         tags$div(id = 'box8', class="collapse", style = "max-height: 250px; overflow-y:scroll",
                  checkboxGroupInput("entry.variable4", "Zvolte:", choices = choices3, selected = c("value", "mean_month"))))
+
+```
+
+
+```{r validace.inputs}
+
+absolutePanel(class = "panel panel-default", fixed = TRUE,
+                draggable = FALSE, top = 100, left = 80, right = "auto", bottom = "auto",
+                width = '8%', height = '7.5%', style = "opacity: 1; style = z-index: 400",
+          radioButtons("validace", label = NULL, choices = c("Denní průtoky" = "A", 
+                                                     "Přepínání parametrů" = "B")),
+          conditionalPanel(condition = "input.validace == 'A'"),
+          conditionalPanel(condition = "input.validace == 'B'",
+                                  selectInput("entry.pars", label=NULL,
+                                              choices = choices.pars, selected = "Spa")))
 
 ```
