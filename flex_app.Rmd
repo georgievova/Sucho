@@ -99,7 +99,8 @@ wellPanel(
   selectInput("entry.variable", label="Prvky hydrologické bilance",
               choices = choices, selected = "P"),
             radioButtons("kartogram", label=NULL, choices = c("Dlouhodobé průměry" = "A", 
-             "Měsíční průměry" = "B", "Roční průměry" = "C"), selected = "A"),
+             "Měsíční průměry" = "B", "Roční průměry" = "C", "Filtrování dle hodnoty" = "D"),
+             selected = "A"),
 
             conditionalPanel(condition = "input.kartogram == 'A'",
                radioButtons("DP", label=NULL, selected = "DP1",
@@ -112,7 +113,7 @@ wellPanel(
                )
                ),
             conditionalPanel(condition = "input.kartogram == 'B'",
-                 # 
+                  
                  dateInput("entry.date", label = NULL, "yyyy-mm-dd", language = "cs",
                            value = as.Date("1961-01-01"), startview = "decade",
                            min = as.Date("1961-01-01"), max = as.Date("2015-12-01"))
@@ -121,13 +122,17 @@ wellPanel(
             
                  selectInput("entry.yearC", label = "Zvolte rok:",
                              choices = seq(1961,2015,1))
-                 )
-)
+                 ),
+    
+          renderUI({sliderInput("entry.range", label = "Filtrace dle hodnoty",
+                  min = reac()$entry_min, 
+                  max = reac()$entry_min,
+                  value = c(reac()$entry_min,
+                            reac()$entry_max)
+                  )
+            })
+  )
 
-# wellPanel(sliderInput("entry.range", "Filtruj:",
-#                 min = min(BM$value, na.rm = TRUE), max = max(BM$value, na.rm = TRUE),
-#                 value = c(10,20)))
-#
 #         HTML('<button data-toggle="collapse" data-target="#box3" class="btn-block btn-primary">Filtování dle hodnoty</button>'),
 #         tags$div(id = 'box3', class="collapse",
 #                  radioButtons("filtr", "Filtr", 
@@ -160,10 +165,14 @@ observe({
   })
 
 reac<- eventReactive(input$go1,{ 
+  
+  print(input$entry.range[1])
+  
   bilance <-  BM %>% filter(variable == input$entry.variable) 
   
   bilance_filtr <- c()
   dta <- c()
+  dta1 <- c()
 
   if(input$kartogram == "A"){
   if(input$DP == "DP1"){
@@ -189,17 +198,19 @@ reac<- eventReactive(input$go1,{
     colnames(bilance_filtr)[colnames(bilance_filtr)=="annual.avg"] <- "value"
     dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))}
   
-
-  return(list(bilance=bilance_filtr,dta=dta))
+  
+  entry_min = min(dta$value, na.rm = T)
+  entry_max = max(dta$value, na.rm = T)
+  
+  min = input$entry.range[1]
+  max = input$entry.range[2]
+  print(paste(min,max))
+  
+  dta <- base::subset(dta, value >= min & value <= max)
+  
+  return(list(bilance=bilance_filtr,dta=dta, entry_min=entry_min, entry_max=entry_max))
+  
 }, ignoreNULL = FALSE, ignoreInit = FALSE)
-
-# reac1 <- eventReactive(input$go1,{
-#   dta1 <- base::subset(reac()$dta,value >= input$entry.number)
-#   dta2 <- base::subset(reac()$dta,value < input$entry.number)
-#   return(list(dta1=dta1, dta2=dta2))
-# }, ignoreNULL = FALSE, ignoreInit = FALSE) 
-
-
 
 ```
 
