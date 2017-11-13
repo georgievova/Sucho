@@ -24,3 +24,5 @@ missing_packages <-
 if (length(missing_packages) > 0) {
   install.packages(missing_packages)
 }
+rm("missing_packages")
+rm("required_packages")
