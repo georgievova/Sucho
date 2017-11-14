@@ -201,7 +201,8 @@ reac<- eventReactive(input$go1,{
   
   dta <- base::subset(dta, value >= min & value <= max)
   
-  return(list(bilance=bilance_filtr,dta=dta, entry_min=entry_min, entry_max=entry_max))
+  return(list(bilance=bilance_filtr, dta=dta, 
+              entry_min=entry_min, entry_max=entry_max))
   
 }, ignoreNULL = FALSE, ignoreInit = FALSE)
 
@@ -232,6 +233,7 @@ initial_lat = 49.7437572
 initial_lng = 15.3386383
 initial_zoom = 7
 
+
 #Outputs
 
 #Leaflet--------------------
@@ -242,6 +244,8 @@ output$map<-renderLeaflet({
   
   dta <- reac()$dta
 
+ #clicked_polygon <- base::subset(dta,UPOV_ID == input$search.id.u)
+  
   # Creating palettes--------------------
   
   pal <- colorBin("YlOrRd", domain = dta$value, pretty = TRUE) 
@@ -267,13 +271,15 @@ output$map<-renderLeaflet({
   map <- map %>% addPolygons(data=dta, layerId = dta$UPOV_ID, color = "burlywood4", weight = 1.3,
                                                                                     opacity = 0.3,
                  fillColor = ~pal(value), fillOpacity = 0.8, group = "Povodí",
-                 highlightOptions = highlightOptions(color = "#a53333", opacity = 1, fillOpacity = 0,
+                 highlightOptions = highlightOptions(color = "#a53333", opacity = 1, 
+                                                     fillOpacity = 0,
                                                      weight = 2.3,
                                                      bringToFront = TRUE, sendToBack = TRUE),
                  label = labels,
-                 labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
+                 labelOptions = labelOptions(clickable = TRUE, 
+                                             style = list("font-weight" = "normal",
                                              "font-family" = "sans-serif", padding = "3px 8px",
-                                             keepInView = TRUE, noHide = TRUE,
+                                             keepInView = TRUE, noHide = FALSE,
                                              "border-color" = "rgb(255, 255, 255)"),
                                              textsize = "15px", direction = "auto")) %>%
     addLayersControl(overlayGroups = c("Povodí","Mapový podklad", "Řeky", "Jezera", "Nádrže", "Kraje", "Okresy"),
@@ -295,9 +301,32 @@ output$map<-renderLeaflet({
           addPolygons(data=okresy, color="#000000", fillColor = "#595959", 
                 weight = 1, opacity = 1, stroke= TRUE, group = "Okresy",
                 popup = okresy$NAZEV)
+    
+  #  map <- map %>% addPolygons(data = clicked_polygon, color = "#a53333", opacity = 1)
 })
 
+
+    # center <- reactive({
+    #     subset(data, nom == input$canton) 
+    # })
+    # 
+    # observe({
+    #     leafletProxy('map') %>% 
+    #         setView(lng =  center()$long, lat = center()$lat, zoom = 12)
+    # })
+    
 ```
+
+
+```{r ZM.zoominputs}
+# 
+# absolutePanel(class = "panel panel-default", fixed = TRUE,
+#                 draggable = FALSE, top = 100, left = 80, right = "auto", bottom = "auto",
+#                 width = '15%', height = '4%', style = "opacity: 1; style = z-index: 400",
+#                 selectInput(inputId = "canton", "Přibliž na:", choices = ))
+
+```
+
 
 Row {.tabset}
 -------------------------------------
@@ -617,80 +646,6 @@ uzivani <- leaflet() %>%setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
     addLegend(pal = pal_2, values = u_leaflet$JEV, opacity = 0.7, title = "Legenda",
               position = "bottomright")
 })
-
-
-
-
-#default.shape <- function(){return("DUN_0010")}
-# leafletOutput("uzivani")
-# 
-# output$uzivani <- renderLeaflet({
-# 
-# u_leaflet <- kde()$u_leaflet
-# 
-# dta <- reac()$dta
-# 
-#   labels <- sprintf(
-#       "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s",
-#       dta$NAZ_UTVAR, dta$KTG_UPOV, dta$U_PMU, dta$UPOV_ID) %>% lapply(htmltools::HTML)
-# 
-# labels.points <- sprintf(
-#       "<strong>%s</strong><br/>Povodí: %s<br/>Jev: %s<br/>ICOC: %s",
-#       u_leaflet$NAZICO, u_leaflet$POVODI, u_leaflet$JEV, u_leaflet$ICOC) %>%
-#       lapply(htmltools::HTML)
-# 
-# pal_2 <- colorFactor("Paired", domain = u_leaflet$JEV, na.color = "gray50")
-# 
-# centr <- getSpPPolygonsLabptSlots(povodi.ds())
-# 
-# uzivani <- leaflet() %>%
-#     setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
-#     addTiles(group = "Mapový podklad", options = tileOptions(minZoom=10, maxZoom=13)) %>%
-#     addProviderTiles(providers$Esri.WorldTopoMap, group = "Mapový podklad",
-#                      options = tileOptions(minZoom=11, maxZoom=13))    %>%
-#   addPolygons(
-#     data = dta,
-#     color = "black",
-#     fillColor = "whitesmoke",
-#     weight = 2,
-#     opacity = 0.4,
-#     fillOpacity = 0.7,
-#     layerId = dta$UPOV_ID,
-#     label= labels,
-#     labelOptions = labelOptions(
-#     clickable = TRUE,
-#     style = list(
-#     "font-weight" = "normal",
-#     "font-family" = "sans-serif",
-#     padding = "3px 8px",
-#     keepInView = TRUE,
-#     "border-color" = "rgb(255, 255, 255)"
-#     ),
-#     textsize = "15px",
-#     direction = "auto"
-#     )
-#     ) %>% 
-#    
-#     addPolygons(data=povodi.ds(),
-#                 color = "black", fillColor = "whitesmoke", weight = 2, opacity = 0.4, fillOpacity = 0.7)%>%
-#     addCircleMarkers(data=kde()$xy, radius = 5, color = "black", fillColor = pal_2(u_leaflet$JEV),
-#                  weight = 0.5, opacity = 0.7, fillOpacity = 1, layerId = u_leaflet$NAZICO,
-#                  label = labels.points,
-#                  labelOptions = labelOptions(clickable = TRUE, style = list("font-weight" = "normal",
-#                                              "font-family" = "sans-serif", padding = "3px 8px",
-#                                              keepInView = TRUE,
-#                                              "border-color" = "rgb(255, 255, 255)"),
-#                                              textsize = "15px", direction = "auto")) %>%
-#     addPolylines(data=reky[reky$UPOV_ID==input$search.id.u, ], color="#007C8C", weight = 1.5,
-#                  opacity = 1, stroke= TRUE, group = "Řeky") %>%
-#     addPolygons(data=jezera[jezera$UPOV_ID==input$search.id.u, ], color="#007C8C", fillColor = "#0099ff",
-#                 weight = 1, opacity = 1, stroke= TRUE, group = "Jezera") %>%
-#     addLayersControl(overlayGroups = c("Mapový podklad", "Řeky", "Jezera"),
-#                      position = "topright",
-#                      options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>%
-#     addLegend(pal = pal_2, values = u_leaflet$JEV, opacity = 0.7, title = "Legenda",
-#               position = "bottomright")
-# })
 
 ```
 
