@@ -33,3 +33,15 @@
 }
 
 .shiny-output-error:before { visibility: hidden; }
+
+  .col2 {
+    columns: 2 200px;         /* number of columns and width in pixels*/
+    -webkit-columns: 2 200px; /* chrome, safari */
+    -moz-columns: 2 200px;    /* firefox */
+  vertical-align: top;
+  }
+  
+  .inst {
+    min-height:200px; 
+    background-color:white
+  }
