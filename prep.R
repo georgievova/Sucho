@@ -32,12 +32,13 @@ nadrze <- spTransform(nadrze_0, CRS("+init=epsg:4326"))
 
 kraje_0 <- readOGR('data/geo/admin/kraje.shp')
 kraje <- spTransform(kraje_0, CRS("+init=epsg:4326"))
-#kraje <- ms_simplify(kraje_0, keep_shapes = TRUE, keep = 0.10)
+kraje <- ms_simplify(kraje_0, keep_shapes = TRUE, keep = 0.10)
 
-a <- kraje$NAZEV
+a <- kraje_0$NAZEV
 a[1] <- "Ústecký"
-kraje$NAZEV <- kraje$NK
-kraje$NAZEV <- a
+kraje_0$NAZEV <- kraje_0$NK
+kraje_0$NAZEV <- a
+
 
 okresy_0 <- readOGR('data/geo/admin/okresy.shp')
 okresy_0 <- spTransform(okresy_0, CRS("+init=epsg:4326"))
@@ -54,8 +55,27 @@ writeOGR(reky, "data/prep", "reky", driver="ESRI Shapefile", encoding  = "UTF-8"
 writeOGR(jezera, "data/prep", "jezera", driver="ESRI Shapefile", encoding  = "UTF-8")
 writeOGR(nadrze, "data/prep", "nadrze", driver="ESRI Shapefile", encoding  = "UTF-8")
 #writeOGR(kraje, "data/prep", "kraje", driver="ESRI Shapefile", encoding  = "UTF-8")
-writeSpatialShape(kraje,"data/prep/kraje")
 writeOGR(okresy, "data/prep", "okresy", driver="ESRI Shapefile", encoding  = "UTF-8")
+
+kraje <- readOGR("data/prep/kraje.shp")
+a <- as.character(kraje$NAZEV)
+a[2] <- "Ústecký"
+kraje <- ms_simplify(kraje, keep_shapes = TRUE, keep = 0.10)
+kraje$NAZEV <- a 
+
+writeSpatialShape(kraje,"data/prep/kraje")
+
+povodi_III_0 <- readOGR('data/geo/A08_Povodi_III.shp')
+povodi_III_0 <- spTransform(povodi_III_0, CRS("+init=epsg:4326"))
+povodi_III <- ms_simplify(povodi_III_0, keep_shapes = TRUE, keep = 0.10)
+
+writeSpatialShape(povodi_III,"data/prep/povodi_III")
+
+# leaflet() %>%
+#   addTiles() %>% 
+#   addPolygons(data=kraje, color="#000000", fillColor = "#595959", 
+#               weight = 2, opacity = 1,
+#               popup = kraje$NAZEV)
 
 #2 Měsiční bilance
 
