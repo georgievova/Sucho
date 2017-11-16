@@ -1,18 +1,17 @@
 ---
-title: "`r HTML('<div style=width:370px;text-align:center>Demo</div>')`"
+title: "`r HTML('<div style=width:370px;text-align:center>HAMR</div>')`"
 output: 
   flexdashboard::flex_dashboard:
     orientation: rows
     vertical_layout: fill
     runtime: shiny
-    css: ['styles.css']
+    css: 'styles.css'
 ---
 
 ```{r global, include=FALSE}
 
 library(flexdashboard)
 library(leaflet)
-library(rgdal)
 library(data.table)
 library(ggplot2)
 library(GGally)
@@ -34,6 +33,7 @@ library(datasets)
 #Load data--------------------
 #webapp_data -> geo
 CatCa::Data("webapp_data")
+povodi_III = rgdal::readOGR(file.path(.datadir, "webapp_data/geo/povodi_III.shp"))
 
 # Merging data----------------
 povodi <- sp::merge(povodi, popis, by='UPOV_ID')
@@ -148,12 +148,6 @@ actionButton("reset_button", "Reset", icon("arrows"),
 ```{r ZM}
 #Reactions--------------------
 
-#input<-c()
-#input$entry.variable = "P"
-#input$entry.year = 1968
-#input$entry.month = 2
-#input$entry.number = 15
-
 observe({
     input$reset_button
     leafletProxy("map") %>% setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom)
@@ -207,7 +201,17 @@ reac<- eventReactive(input$go1,{
 }, ignoreNULL = FALSE, ignoreInit = FALSE)
 
 
+```
 
+```{r loga}
+absolutePanel(id = "logos", fixed = TRUE,
+                  draggable = FALSE, top = "auto", left = "auto", right = "auto", bottom = 1,
+                  width = 385,
+                  style = "opacity: 1;",
+ wellPanel(HTML('<img src="img/logo_vuv.png" style="height:50px" hspace="6" />'),
+           HTML('<img src="img/logo_fzp.png" style="height:50px" hspace="6" />'),
+           HTML('<img src="img/logo_cgz.png" style="height:50px" hspace="6" />'),
+           HTML('<img src="img/logo_chmi.png" style="height:50px" hspace="6" />')))
 ```
 
 Row 
@@ -233,7 +237,6 @@ initial_lat = 49.7437572
 initial_lng = 15.3386383
 initial_zoom = 7
 
-
 #Outputs
 
 #Leaflet--------------------
@@ -243,8 +246,6 @@ output$map<-renderLeaflet({
   #Select subset based on input--------------------
   
   dta <- reac()$dta
-
- #clicked_polygon <- base::subset(dta,UPOV_ID == input$search.id.u)
   
   # Creating palettes--------------------
   
@@ -282,10 +283,10 @@ output$map<-renderLeaflet({
                                              keepInView = TRUE, noHide = FALSE,
                                              "border-color" = "rgb(255, 255, 255)"),
                                              textsize = "15px", direction = "auto")) %>%
-    addLayersControl(overlayGroups = c("Povodí","Mapový podklad", "Řeky", "Jezera", "Nádrže", "Kraje", "Okresy"),
+    addLayersControl(overlayGroups = c("Povodí","Mapový podklad", "Řeky", "Jezera", "Nádrže", "Kraje", "Okresy", "Povodí 3. řádu"),
                      position = "bottomleft",
                      options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE)) %>%
-    hideGroup(c("Kraje", "Okresy"))%>%
+    hideGroup(c("Kraje", "Okresy", "Povodí 3. řádu"))%>%
     addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
               position = "bottomright")
 
@@ -295,15 +296,19 @@ output$map<-renderLeaflet({
                 weight = 1, opacity = 1, stroke= TRUE, group = "Jezera")%>%
           addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
                 weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže")%>%
-          addPolygons(data=kraje, color="#000000", fillColor = "#595959", 
-                weight = 2, opacity = 1, stroke= TRUE, group = "Kraje",
-                popup = kraje$NAZEV) %>%
-          addPolygons(data=okresy, color="#000000", fillColor = "#595959", 
-                weight = 1, opacity = 1, stroke= TRUE, group = "Okresy",
-                popup = okresy$NAZEV)
+          addPolylines(data=kraje, color="#000000",  weight = 2.5, 
+                       stroke= TRUE, group = "Kraje") %>%
+          addPolylines(data=okresy, color="#000000",  weight = 2, 
+                       stroke= TRUE, group = "Okresy") %>%
+          addPolylines(data=povodi_III, color="#cc0000",  weight = 2.5,
+                       stroke= TRUE, group = "Povodí 3. řádu")
     
-  #  map <- map %>% addPolygons(data = clicked_polygon, color = "#a53333", opacity = 1)
-})
+   # zvyraznění zvoleného polygonu
+   # lepší způsob?
+   # map <- map %>% addPolygons(data = dta[dta$UPOV_ID == default.shape(),], 
+   #                            color = "#a53333", opacity = 1.5, fillOpacity = 0)
+
+    })
 
 
     # center <- reactive({
@@ -878,3 +883,78 @@ absolutePanel(class = "panel panel-default", fixed = TRUE,
                                               choices = choices.pars, selected = "Spa")))
 
 ```
+
+
+O projektu {data-icon="fa-user-circle"}
+===================================== 
+
+#### O projektu
+
+Systém je založen na propojení modelu půdního (SoilClim), modelu hydrologické (Bilan) a vodohospodářské bilance. Tyto modely spolu se vstupními klimatologickými daty reprezentují sucho meteorologické, zemědělské a hydrologické.
+
+Na vzniku systému se podílí:
+
+
+<div class="col2" style="margin-top:50px">
+
+
+<div class='well well-sm inst'>
+  <img src="img/logo_vuv.png" style="height:50px" />
+
+##### **Výzkumný ústav vodohospodářský T. G. Masaryka, v.v.i.**
+
+Podbabská 30, 160 00 Praha 6
+
+**Ing. Adam Vizina, Ph.D.**
+
+</div>
+
+
+<div class='well well-sm inst'>
+  <img src="img/logo_fzp.jpg"  style="height:50px"/>
+
+
+##### **Česká zemědělská univerzita v Praze, Fakulta životního prostředí**
+
+Kamýcká 129, 165 21 Praha 6
+
+**doc. Ing. Martin Hanel, Ph.D.**
+
+</div>
+
+</div>
+
+
+<div class="col2" >
+
+<div class='well well-sm inst'>
+  <img src="img/logo_cgz.png" style="height:40px margin-bottom:10px" />
+
+##### **Ústav výzkumu globální změny AV ČR, v.v.i.**
+
+Bělidla 986/4a, 603 00 Brno
+
+**prof. Ing. Mgr. Miroslav Trnka, Ph.D.**
+
+</div>
+
+<div class='well well-sm inst'>
+<img src="img/logo_chmi.png" style="height:50px" />
+
+##### **Český hydrometeorologický ústav**
+
+Na Šabatce 2050/17, 143 06 Praha 412
+
+**RNDr. Jan Daňhelka, Ph.D.**
+
+</div>
+</div>
+
+
+<div class='well well-sm' style="background-color:white">
+
+  <img src="img/logo_mzp.png" width="250px" />
+  
+Systém pro předpověď sucha vznikl v rámci projektu financovaném Ministerstvem životního prostředí v roce 2017. 
+
+</div>
