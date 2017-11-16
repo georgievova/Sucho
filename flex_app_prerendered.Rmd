@@ -193,6 +193,19 @@ reac1 <- eventReactive(input$go1,{
 
 ```
 
+
+```{r loga}
+# absolutePanel(WellPanel(id = "logos", class = "panel panel-default", fixed = TRUE,
+#                   draggable = FALSE, top = "auto", left = "auto", right = "auto", bottom = "auto",
+#                   width = "auto",
+#                   style = "opacity: 0.9; style = z-index: 400",
+#     HTML('<img src="img/logo_vuv.png" style="height:50px" />'),
+#     HTML('<img src="img/logo_fzp.jpg" style="height:50px" />'),
+#     HTML('<img src="img/logo_cgz.png" style="height:50px" />'),
+#     HTML('<img src="img/logo_chmi.png" style="height:50px" />')))
+```
+
+
 Row 
 -------------------------------------
 
