@@ -43,14 +43,14 @@
   
   .inst {
     min-height:200px; 
-    background-color:white
+    background-color: white
   }
   
   
   .help-tip{
-    position: absolute;
-    top: 18px;
-    right: 18px;
+    position: relative;
+    top: 10px;
+    left: 310px;
     text-align: center;
     background-color: #BCDBEA;
     border-radius: 50%;
@@ -63,14 +63,14 @@
 
 .help-tip:before{
     content:'?';
-    font-weight: bold;
-    color:#fff;
+    font-size: 1.2em;
+    color:#00001a;
 }
 
 .help-tip:hover p{
     display:block;
     transform-origin: 100% 0%;
-
+    
     -webkit-animation: fadeIn 0.3s ease-in-out;
     animation: fadeIn 0.3s ease-in-out;
 
@@ -79,16 +79,16 @@
 .help-tip p{    /* The tooltip */
     display: none;
     text-align: left;
-    background-color: #1E2021;
+    background-color: #BCDBEA;
     padding: 20px;
     width: 300px;
     position: absolute;
     border-radius: 3px;
     box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2);
     right: -4px;
-    color: #FFF;
+    color: #00001a;
     z-index: 100;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.4;
 }
 
@@ -98,7 +98,7 @@
     width:0;
     height: 0;
     border:6px solid transparent;
-    border-bottom-color:#1E2021;
+    border-bottom-color: #BCDBEA;
     right:10px;
     top:-12px;
 }
