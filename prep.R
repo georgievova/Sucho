@@ -108,8 +108,8 @@ BM = rbindlist(M, idcol = 'UPOV_ID')
 mesice <- c("Leden","Únor","Březen","Duben","Květen","Červen",
             "Červenec","Srpen","Září","Říjen","Listopad","Prosinec")
 
-seasons <- data.frame(month = c(1:12), seasons = c("Zíma", "Zíma", "Jaro", "Jaro", "Jaro", "Léto", "Léto",
-                                                   "Léto","Podzim", "Podzim", "Podzim", "Zíma"))
+seasons <- data.frame(month = c(1:12), seasons = c("Zima", "Zima", "Jaro", "Jaro", "Jaro", "Leto", "Leto",
+                                                   "Leto","Podzim", "Podzim", "Podzim", "Zima"))
 
 BM <- BM %>% left_join(seasons, by="month") 
 BM$month2 <- as.factor(BM$month)
