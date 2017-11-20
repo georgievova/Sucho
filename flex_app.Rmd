@@ -416,12 +416,12 @@ renderDygraph({
 })
 
 absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
-                  draggable = FALSE, top = 515, left = "auto", right = 10, bottom = "auto",
+                  draggable = FALSE, top = '52.7%', left = "auto", right = '0.5%', bottom = "auto",
                   width = '15%',
                   style = "opacity: 0.9; style = z-index: 400",
     HTML('<button data-toggle="collapse" data-target="#box4" class="choose">Výběr časových řad</button>'),
         tags$div(id = 'box4', class="collapse", style = "max-height: 250px; overflow-y:scroll",
-                 checkboxGroupInput("entry.variable2", "Zvolte:", choices = choices, selected = c("PET", "ET"))))
+                 checkboxGroupInput("entry.variable2", "Zvolte:", choices = choices, selected = c("RM"))))
 
 ```
 
@@ -454,7 +454,7 @@ renderDygraph({
 })
 
 absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
-                  draggable = FALSE, top = 515, left = "auto", right = 10, bottom = "auto",
+                  draggable = FALSE, top = '52.7%', left = "auto", right = '0.5%', bottom = "auto",
                   width = '15%',
                   style = "opacity: 0.9; style = z-index: 400",
     HTML('<button data-toggle="collapse" data-target="#box6" class="choose">Výběr časových řad</button>'),
@@ -514,7 +514,7 @@ renderPlot({
   }) 
 
 absolutePanel(class = "panel panel-default", fixed = TRUE,
-                  draggable = FALSE, top = 515, left = "auto", right = 10, bottom = "auto",
+                  draggable = FALSE, top = '52.7%', left = "auto", right = '0.5%', bottom = "auto",
                   width = '12%',
                   style = "opacity: 1; style = z-index: 400",
     HTML('<button data-toggle="collapse" data-target="#box5" class="choose">Výběr pro čáru překročení</button>'),
@@ -775,7 +775,7 @@ default.circle <- reactive({
 
 renderUI({
     absolutePanel(class = "panel panel-default", fixed = TRUE,
-                draggable = FALSE, top = 30, left = 15, right = "auto", bottom = "auto",
+                draggable = FALSE, top = '2.9%', left = '3%', right = "auto", bottom = "auto",
                 width = '15%', height = '4.5%', style = "opacity: 1; style = z-index: 400",
           selectizeInput(inputId = "search.id.u","Vyhledávání útvaru",
                              selected=input$uzivani_shape_click$id, choices = search.choices))
@@ -1026,7 +1026,7 @@ choices3 <- c("value", "mean_month", "mean_year")
 names(choices3) <- c("Denní průtok", "Měsiční průměr", "Roční průměr")
 
 absolutePanel(class = "panel panel-default", fixed = TRUE,
-                  draggable = FALSE, top = 80, left = "auto", right = 10, bottom = "auto",
+                  draggable = FALSE, top = '6%', left = "auto", right = '1%', bottom = "auto",
                   width = '10%',
                   style = "opacity: 1; style = z-index: 400",
     HTML('<button data-toggle="collapse" data-target="#box8" class="choose">Výběr časových řad</button>'),
@@ -1039,14 +1039,18 @@ absolutePanel(class = "panel panel-default", fixed = TRUE,
 ```{r validace.inputs}
 
 absolutePanel(class = "panel panel-default", fixed = TRUE,
-                draggable = FALSE, top = 100, left = 80, right = "auto", bottom = "auto",
-                width = '8%', height = '7.5%', style = "opacity: 1; style = z-index: 400",
+                draggable = FALSE, top = '10%', left = '8%', right = "auto", bottom = "auto",
+                width = '8.3%', height = '7.5%', style = "opacity: 1; style = z-index: 400",
+  wellPanel(
           radioButtons("validace", label = NULL, choices = c("Denní průtoky" = "A", 
                                                      "Přepínání parametrů" = "B")),
           conditionalPanel(condition = "input.validace == 'A'"),
           conditionalPanel(condition = "input.validace == 'B'",
                                   selectInput("entry.pars", label=NULL,
-                                              choices = choices.pars, selected = "Spa")))
+                                              choices = choices.pars, selected = "Spa")),
+HTML('<div class="help-tip">
+           <p>Vyhledat můžete jak dle názvu, tak dle UPOV_ID.</p>
+            </div>')))
 
 ```
 
