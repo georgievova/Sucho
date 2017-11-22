@@ -8,28 +8,30 @@ output:
 runtime: shiny
 ---
 
-```{r global, context = "setup", include=FALSE}
+```{r global, include=FALSE}
 
+library(shiny)
 library(flexdashboard)
 library(leaflet)
-library(data.table)
-library(ggplot2)
-library(GGally)
-library(DBI)
-library(odbc)
 library(dplyr)
-library(dbplyr)
 library(dygraphs)
+library(ggplot2)
+library(gridExtra)
+library(data.table)
 library(sp)
-library(shiny)
-library(DT)
 library(rgeos)
 library(datasets)
-library(gridExtra)
 library(SPEI)
 # library(checkpoint)
 # checkpoint("2017-11-18")
 # library(xts)
+# library(GGally)
+# databaze:
+# library(dbplyr)
+# library(DBI)
+# library(odbc)
+# An R interface to the DataTables library:
+# library(DT)
 
 
 #Load data--------------------
@@ -105,7 +107,7 @@ Základní mapa {data-icon="fa-map-o"}
 Column {.sidebar data-width=400}
 -----------------------------------------------------------------------
 
-```{r ZM sidebar, context="server"}
+```{r ZM sidebar}
 
 #Inputs--------------------
 
@@ -272,7 +274,7 @@ Row
 -------------------------------------
 
 
-```{r ZM mapa, context="server"}
+```{r ZM mapa}
 #Functions--------------------
 
 title.f <- reactive({
@@ -392,7 +394,7 @@ Row {.tabset}
 
 ### Měsíční data
 
-```{r cr mesicni data, context="server"}
+```{r cr mesicni data}
 
 renderDygraph({
   
@@ -427,7 +429,7 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
 
 ### Denní data
 
-```{r cr denni data, context="server"}
+```{r cr denni data}
 renderDygraph({
   
   d <- dir(file.path(.datadir, "bilan"))
@@ -464,7 +466,7 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
 
 ### Čára překročení
 
-```{r cara prekroceni, context="server"}
+```{r cara prekroceni}
 
 
 renderPlot({  
@@ -771,7 +773,7 @@ default.circle <- reactive({
 ```
 
 
-```{r uzivani: abs.panel, context="server"}
+```{r uzivani: abs.panel}
 
 renderUI({
     absolutePanel(class = "panel panel-default", fixed = TRUE,
@@ -791,7 +793,7 @@ Row {data-height=600}
 
 ### Mapa
 
-```{r uzivani: mapa, context="server"}
+```{r uzivani: mapa}
 
 
 
@@ -858,7 +860,7 @@ leafletOutput("uzivani")
 
 ### Časová řada
 
-```{r uzivani: casova rada, context="server"}
+```{r uzivani: casova rada}
 renderDygraph({
   ts.uzivani <-  u %>% filter(UPOV_ID == default.shape2()) %>% group_by(JEV, DTM) %>%
                        summarise(sum = sum(value)) %>% ungroup %>% dcast(DTM~JEV)
@@ -887,7 +889,7 @@ Row {data-heigth=400}
 
 ### Suma dle odběratele
 
-```{r uzivani: tab:odberatel, context="server"}
+```{r uzivani: tab:odberatel}
 renderDataTable({
   subtotal <- u %>% filter(UPOV_ID == default.shape2()) %>% replace(is.na(.), 0) %>% group_by(NAZICO, JEV) %>% summarise(suma = sum(value)) %>% select(NAZICO, JEV, suma)}, class = 'compact cell-border', colnames = c("Odběratel", "Jev", "Suma"), options = list(scrollY = "300px", lengthMenu = c(100,200)))
 ```
@@ -895,7 +897,7 @@ renderDataTable({
 
 ### Časová řada - odběratel
 
-```{r uzivani: TS odberatel, context="server"}
+```{r uzivani: TS odberatel}
 renderDygraph({
   ts.uzivani <-  u %>% filter(NAZICO == default.circle()) %>% group_by(JEV, DTM) %>%
                        summarise(sum = sum(value)) %>% ungroup %>% dcast(DTM~JEV)
@@ -934,7 +936,7 @@ title.f4 <- reactive({
 ### Mapa denních průtoků
 
 
-```{r validace: mapa, context="server"}
+```{r validace: mapa}
 leafletOutput("rozvodnice")
 
 output$rozvodnice <- renderLeaflet({
@@ -1008,7 +1010,7 @@ output$rozvodnice <- renderLeaflet({
 
 ### Časová řada
 
-```{r QD: casova rada, context="server"}
+```{r QD: casova rada}
 
 renderDygraph({
   ts.QD <- QD %>% filter(DBCN == default.line()) %>% mutate(month = format(DTM, "%m"), year = format(DTM, "%Y")) %>% 
