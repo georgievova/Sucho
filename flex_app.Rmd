@@ -29,7 +29,7 @@ library(gridExtra)
 library(SPEI)
 # library(checkpoint)
 # checkpoint("2017-11-18")
-#library(xts)
+# library(xts)
 
 
 #Load data--------------------
@@ -263,7 +263,7 @@ absolutePanel(id = "logos", fixed = TRUE,
                   width = 385,
                   style = "opacity: 1;",
  wellPanel(HTML('<img src="img/logo_vuv.png" style="height:50px" hspace="6" />'),
-           HTML('<img src="img/logo_fzp.png" style="height:50px" hspace="6" />'),
+           HTML('<img src="img/logo_fzp.jpg" style="height:50px" hspace="6" />'),
            HTML('<img src="img/logo_cgz.png" style="height:50px" hspace="6" />'),
            HTML('<img src="img/logo_chmi.png" style="height:50px" hspace="6" />')))
 ```
