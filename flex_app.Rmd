@@ -1,11 +1,11 @@
 ---
-title: "`r HTML('<div style=width:370px;text-align:center>HAMR</div>')`"
+title: "HAMR"
 output: 
   flexdashboard::flex_dashboard:
     orientation: rows
     vertical_layout: fill
-    runtime: shiny_prerendered
     css: 'styles.css'
+runtime: shiny
 ---
 
 ```{r global, context = "setup", include=FALSE}

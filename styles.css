@@ -1,3 +1,7 @@
+.navbar-brand {
+  width:370px;
+  text-align:center;}
+
 .dygraph-legend {
   left: 80px !important;
   background-color: transparent !important;
