@@ -128,8 +128,8 @@ BM.long <- dcast(BM, month+year+UPOV_ID+DTM~variable)
 BM.long$m <- as.factor(BM.long$month)
 levels(BM.long$m) <- mesice
 
-saveRDS(BM, 'data/mbilan/bilan_month.rds')
-saveRDS(BM.long, 'data/mbilan/bilan_month_long.rds')
+saveRDS(BM, 'data/mbilan/bilan_month_update.rds')
+saveRDS(BM.long, 'data/mbilan/bilan_month_long_update.rds')
 
 #3 Denní průtoky
 #--------------------
