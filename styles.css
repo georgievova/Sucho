@@ -1,6 +1,46 @@
+body {
+  font-size: 14px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.well {
+  padding: 5px;
+  margin-bottom: 5px;
+  
+}
+
+.form-group {
+  margin-bottom: 1px;
+}
+
+.form-control {
+  font-size: inherit;
+  height: 34px;
+  padding: 6px 12px;
+}
+
+.irs-slider {
+  width: 16px;
+  height: 16px;
+  top: 21px;
+}
+
+.btn {
+  padding: 5px 9px;
+}
+
 .navbar-brand {
-  width:400px;
-  text-align:center;}
+  width:212px;
+  text-align:left;
+  font-weight: 800;
+}
+
+.navbar-logo {
+  margin-top: 5px;
+  float: right !important;
+  height: 32px;
+  
+}
 
 .dygraph-legend {
   left: 80px !important;
@@ -51,17 +91,17 @@
   }
   
   
-  .help-tip{
+.help-tip {
     position: relative;
     top: 10px;
     left: 310px;
     text-align: center;
     background-color: #BCDBEA;
     border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    font-size: 14px;
-    line-height: 26px;
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+    line-height: 20px;
     cursor: default;
 }
 

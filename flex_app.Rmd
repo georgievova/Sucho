@@ -2,6 +2,7 @@
 title: "HAMR"
 output: 
   flexdashboard::flex_dashboard:
+    logo: img/logos_trans_black.png
     orientation: rows
     vertical_layout: fill
     css: 'styles.css'
@@ -259,7 +260,7 @@ reac<- eventReactive(input$go1,{
 
 ```
 
-```{r loga}
+```{r loga, include=FALSE}
 absolutePanel(id = "logos", fixed = TRUE,
                   draggable = FALSE, top = "auto", left = "auto", right = "auto", bottom = 10,
                   width = 400,
