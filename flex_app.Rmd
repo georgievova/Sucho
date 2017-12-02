@@ -332,7 +332,7 @@ output$map<-renderLeaflet({
                                              "font-family" = "sans-serif", padding = "3px 8px",
                                              keepInView = TRUE, noHide = FALSE,
                                              "border-color" = "rgb(255, 255, 255)"),
-                                             textsize = "15px", direction = "auto")) %>%
+                                             textsize = "13px", direction = "auto")) %>%
 #Vykreslení zakladních prvků mapy
           addPolylines(data=reky, color="#007C8C", weight = 1.5,
                  opacity = 1, stroke= TRUE, group = "Řeky") %>%
@@ -677,7 +677,7 @@ output$indikatory<-renderLeaflet({
                                              "font-family" = "sans-serif", padding = "3px 8px",
                                              keepInView = TRUE, noHide = FALSE,
                                              "border-color" = "rgb(255, 255, 255)"),
-                                             textsize = "15px", direction = "auto")) %>%
+                                             textsize = "13px", direction = "auto")) %>%
 #Vykreslení zakladních prvků mapy
           addPolylines(data=reky, color="#007C8C", weight = 1.5,
                  opacity = 1, stroke= TRUE, group = "Řeky") %>%
@@ -992,7 +992,7 @@ leaflet() %>% setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
                                                          "font-family" = "sans-serif", padding = "3px 8px",
                                                          keepInView = TRUE,
                                                          "border-color" = "#F5F5F5"),
-                                            textsize = "15px", direction = "auto")
+                                            textsize = "13px", direction = "auto")
                 )
 })
 
@@ -1103,7 +1103,7 @@ output$rozvodnice <- renderLeaflet({
                                              "font-family" = "sans-serif", padding = "3px 8px",
                                              keepInView = TRUE,
                                              "border-color" = "rgb(255, 255, 255)"),
-                                             textsize = "15px", direction = "auto")) %>% 
+                                             textsize = "13px", direction = "auto")) %>% 
     addPolylines(data=reky, color="#007C8C", weight = 1,
                  opacity = 1, stroke= TRUE, group = "Řeky") %>% 
     addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff", 
