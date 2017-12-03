@@ -86,7 +86,7 @@ Podobně jako v záložce "Základní mapa" zde existuje panel s názvem povodí
 
 ## Validace
 
-![](manual/screenshots/validace1.gif)
+![](manual/screenshots/validace.gif)
 
 V současné verzi záložka "Validace" se dělí na dvě částí: mapový výstup denních průtoků/parametrů (lze přepnout v příslušném panelu) a grafický panel s časovou řadou zvoleného povodí (lze vykreslit v denním, měsíčním a ročním kroku pomocí panelu "Výběr časových řad").
 
