@@ -269,3 +269,13 @@ for (i in povodi$UPOV_ID) {
 }
 
  saveRDS(u, 'data/uzivani/79_15/uzivani_upovid.rds')
+ 
+ #7 indikatory
+ #--------------------
+ 
+ spi <- readRDS(file.path(.datadir, "indikatory/spi.Rds"))
+ spi$month <- month(spi$DTM) 
+ spi$year <- year(spi$DTM)
+
+ saveRDS(spi, file.path(.datadir, "indikatory/spi.Rds")) 
+ 
