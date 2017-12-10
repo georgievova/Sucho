@@ -22,8 +22,9 @@ library(data.table)
 library(sp)
 library(rgeos)
 library(datasets)
-library(SPEI)
 library(DT) # An R interface to the DataTables library
+#devtools::install_github("KVHEM/CatCa")
+
 # library(checkpoint)
 # checkpoint("2017-11-18")
 # library(xts)
@@ -32,6 +33,8 @@ library(DT) # An R interface to the DataTables library
 # library(dbplyr)
 # library(DBI)
 # library(odbc)
+# indexy:
+# library(SPEI)
 
 
 
@@ -54,12 +57,27 @@ library(DT) # An R interface to the DataTables library
 
 #webapp_data -> geo
 
+CatCa::give_paths()
 
-CatCa::Data("webapp_data")
-BM = readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_update.rds"))
-BM.long = readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_long_update.rds"))
-povodi_III = rgdal::readOGR(file.path(.datadir, "webapp_data/geo/povodi_III.shp"))
-routing.tab = readRDS(file.path(.datadir, "webapp_data/to_from/routing_matrix.Rds"))
+BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_update.rds"))
+BM.long <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_long_update.rds"))
+
+povodi <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi.rds"))
+reky <- readRDS(file.path(.datadir, "webapp_data/geo_rds/reky.rds"))
+jezera <- readRDS(file.path(.datadir, "webapp_data/geo_rds/jezera.rds"))
+nadrze <- readRDS(file.path(.datadir, "webapp_data/geo_rds/nadrze.rds"))
+kraje <- readRDS(file.path(.datadir, "webapp_data/geo_rds/kraje.rds"))
+okresy <- readRDS(file.path(.datadir, "webapp_data/geo_rds/okresy.rds"))
+povodi_III <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi_III.rds"))
+stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/stanice.rds"))
+routing.tab <- readRDS(file.path(.datadir, "webapp_data/to_from/routing_matrix.Rds"))
+
+popis <- read.table(file.path(.datadir, "webapp_data/E_ISVS$UTV_POV.txt"),encoding = 'UTF-8', header = TRUE, sep=';')
+
+pars <- readRDS(file.path(.datadir, "webapp_data/pars/pars.rds"))
+u <- readRDS(file.path(.datadir, "webapp_data/uzivani/06_16/uzivani_na_nahraz.rds"))
+QD <- readRDS(file.path(.datadir, "webapp_data/chmu/QD.rds"))
+
 spi <- readRDS(file.path(.datadir, "indikatory/spi.Rds"))
 
 # Merging data----------------
@@ -597,9 +615,8 @@ reac.ind<- eventReactive(input$go2,{
 
 #Dlouhodobé průměry (celé období/vybrané období)
 if(input$indikatory == "A"){
-    spi_d <- spi_filter %>% filter(DTM == as.Date(input$entry.date.ind))
+    spi_d <- spi_filter %>% filter(year == year(as.Date(input$entry.date.ind)) & month==month(as.Date(input$entry.date.ind)))
     dta <- (sp::merge(povodi,spi_d, by="UPOV_ID"))}
-
   
 #Vytvaření palet
 
@@ -662,8 +679,8 @@ output$indikatory<-renderLeaflet({
      setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom) %>%
      addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13) ) %>%
 #Zbarvení povodí dle hodnoty
-          addPolygons(data=dta, layerId = dta$UPOV_ID, color = "burlywood4",
-                             weight = 1.3, opacity = 0.3,
+          addPolygons(data=dta, layerId = dta$UPOV_ID, color = "black",
+                             weight = 1.5, opacity = 0.45,
                              fillColor = ~pal(value), fillOpacity = 0.8,
                              group = "Povodí",
                  highlightOptions = highlightOptions(color = "#a53333",
