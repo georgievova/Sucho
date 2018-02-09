@@ -106,7 +106,7 @@ body {
   
   
 .help-tip {
-    position: relative;
+    position: absolute;
     top: 10px;
     left: 310px;
     text-align: center;
