@@ -161,6 +161,8 @@ stanice <- spTransform(stanice_0, CRS("+init=epsg:4326"))
 QD$DTM <- as.Date(QD$DTM, format = "%d.%m.%Y")
 QD <- merge(seznam.st,QD, by="DBCN")
 
+QD <- select(QD, -OBDOBI.S.DATY.DENNICH.PRUTOKU, -NAZEV.STANICE, -TOK, -Plocha..km2.)
+
 #Saving
 #--------------------
 saveRDS(QD, "QD.rds")
@@ -214,6 +216,10 @@ u <- u[!is.na(u$X)|!is.na(u$Y),]
 
 saveRDS(u, 'data/uzivani/06_16/uzivani_na_nahraz.rds') # NA nahrazene průměrem za ICOC
 
+u <- select(u, -ROCNI.MNOZSTVI.tis.m3, -POVOLENE.MNOZSTVI.ROK.tis.m3 , -HEIS_POZN, -na, -CZ_NACE)
+
+saveRDS(u, file.path(.datadir, 'webapp_data/uzivani/06_16/uzivani_na_nahraz.rds')) # NA nahrazene průměrem za ICOC zmenseny
+
 # #5 Denni data
 # #--------------------
 # 
@@ -240,7 +246,7 @@ saveRDS(u, 'data/uzivani/06_16/uzivani_na_nahraz.rds') # NA nahrazene průměrem
 require(rgeos)
 
 povodi <- readOGR("data/prep/povodi.shp")
-popis <- read.table('data/E_ISVS$UTV_POV.txt',encoding = 'UTF-8', header = TRUE, sep=';')
+popis 
 povodi <- sp::merge(povodi, popis, by='UPOV_ID')
 
 u <- readRDS('data/uzivani/79_15/uzivani.rds')
@@ -277,5 +283,44 @@ for (i in povodi$UPOV_ID) {
  spi$month <- month(spi$DTM) 
  spi$year <- year(spi$DTM)
 
- saveRDS(spi, file.path(.datadir, "indikatory/spi.Rds")) 
+ spei <- readRDS(file.path(.datadir, "indikatory/spei.Rds"))
  
+ spi <- select(spi, -IID)
+ spei <- select(spei, -IID)
+ 
+ saveRDS(spi, file.path(.datadir, "webapp_data/indikatory/spi.rds")) 
+ saveRDS(spei, file.path(.datadir, "webapp_data/indikatory/spei.rds")) 
+ 
+ #8 pars
+ #--------------------
+ 
+ data <- c()
+ name <- names(pars)
+ for(i in 1:length(pars)){
+   tab <- pars[[i]]
+   data <- rbind(data,
+                 data.frame(UPOV_ID = rep(name[i],6), tab$pars))
+   print(paste("Processing....",i))
+   
+ }
+ 
+ saveRDS(data, file.path("used_data/webapp_data/pars/pars.rds"))
+ 
+ #9 popis txt to rds
+ #--------------------
+ 
+popis <- read.table('used_data/webapp_data/E_ISVS$UTV_POV.txt',encoding = 'UTF-8', header = TRUE, sep=';')
+popis <- select(popis, UPOV_ID, NAZ_UTVAR, NAZ_POVODI, NAZ_OBLAST, KTG_UPOV, U_PMU)
+saveRDS(popis, file.path(.datadir, "webapp_data/popis.rds"))
+
+#uzivani_leaflet
+#--------------------
+
+u <- readRDS(file.path(.datadir, "webapp_data/uzivani/06_16/uzivani_na_nahraz.rds"))
+
+  u_leaflet <- u %>% group_by(UPOV_ID, NAZICO, POVODI, JEV, X, Y, ICOC) %>% summarise(mean=mean(value))
+  u_leaflet <- SpatialPointsDataFrame(u_leaflet[, c("X", "Y")], u_leaflet, proj4string = CRS("+init=epsg:2065"))
+  u_leaflet <- spTransform(u_leaflet, CRS("+init=epsg:4326"))
+  
+saveRDS(u_leaflet, file.path(.datadir, "webapp_data/uzivani/u_leaflet.rds"))
+

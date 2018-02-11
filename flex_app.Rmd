@@ -24,7 +24,11 @@ library(rgeos)
 library(datasets)
 library(DT) # An R interface to the DataTables library
 library(parallel) #Parallel detectCores() error
-#devtools::install_github("georgievova/CatCa")
+#devtools::install_github("KVHEM/CatCa")
+# install.packages("C:/Users/Irina/ownCloud/Shared/BILAN_UPOV/bilan/bilan_2016-10-20.zip",repos=NULL, type="source")
+# library(bilan)
+
+
 
 # library(checkpoint)
 # checkpoint("2017-11-18")
@@ -60,8 +64,8 @@ library(parallel) #Parallel detectCores() error
 
 CatCa::give_paths()
 
-BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_update.rds"))
-BM.long <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_long_update.rds"))
+BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month.rds"))
+BM.long <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_long.rds"))
 
 povodi <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi.rds"))
 reky <- readRDS(file.path(.datadir, "webapp_data/geo_rds/reky.rds"))
@@ -73,15 +77,16 @@ povodi_III <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi_III.rds"))
 stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/stanice.rds"))
 routing.tab <- readRDS(file.path(.datadir, "webapp_data/to_from/routing_matrix.Rds"))
 
-popis <- read.table(file.path(.datadir, "webapp_data/E_ISVS$UTV_POV.txt"),encoding = 'UTF-8', header = TRUE, sep=';')
+popis <- readRDS(file.path(.datadir, "webapp_data/popis.rds"))
 
 pars <- readRDS(file.path(.datadir, "webapp_data/pars/pars.rds"))
 u <- readRDS(file.path(.datadir, "webapp_data/uzivani/06_16/uzivani_na_nahraz.rds"))
+u_leaflet <- readRDS(file.path(.datadir, "webapp_data/uzivani/u_leaflet.rds"))
 QD <- readRDS(file.path(.datadir, "webapp_data/chmu/QD.rds"))
 chars <- readRDS(file.path(.datadir, "chmu/chars.rds"))
 
-spi <- readRDS(file.path(.datadir, "indikatory/spi.rds"))
-spei <- readRDS(file.path(.datadir, "indikatory/spei.rds"))
+spi <- readRDS(file.path(.datadir, "webapp_data/indikatory/spi.rds"))
+spei <- readRDS(file.path(.datadir, "webapp_data/indikatory/spei.rds"))
 
 # Merging data----------------
 povodi <- sp::merge(povodi, popis, by='UPOV_ID')
@@ -329,7 +334,7 @@ output$map<-renderLeaflet({
   # Creating labels--------------------
 
     labels <- sprintf(
-      "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s <br/> Hodnota: %s",
+      "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> UPOV_ID: %s <br/> Hodnota: %s",
       dta$NAZ_UTVAR, dta$KTG_UPOV, dta$U_PMU, dta$UPOV_ID, round(dta$value,2)
       ) %>% lapply(htmltools::HTML)
 
@@ -342,7 +347,7 @@ output$map<-renderLeaflet({
      addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13) ) %>%
 #Zbarvení povodí dle hodnoty
           addPolygons(data=dta, layerId = dta$UPOV_ID, color = "burlywood4",
-                             weight = 1.3, opacity = 0.3,
+                             weight = 1.3, opacity = 0.3, smoothFactor = 0,
                              fillColor = ~pal(value), fillOpacity = 0.8,
                              group = "Povodí",
                  highlightOptions = highlightOptions(color = "#a53333",
@@ -495,62 +500,70 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
 
 ```{r cara prekroceni}
 
-
-renderPlot({  
-  ts.bilance <- BM %>% filter(UPOV_ID == default.shape(), variable == input$variable_cp) %>%
-                       arrange(desc(value)) %>% select(value)
-  
-   ggt <- ggplot(ts.bilance, aes((order(-ts.bilance$value)-0.3)/(nrow(ts.bilance)+0.4), value))+geom_line()+
-     xlab("Pravděpodobnosti")+ylab(input$variable_cp)+theme_minimal()+ggtitle("Celé období")+
-     theme(plot.title = element_text(hjust = 0.5))
-  
-  
-    ts.s <- BM %>% filter(UPOV_ID == default.shape(), variable == input$variable_cp) %>% group_by(seasons) %>% 
-                       arrange(desc(value)) %>% select(value, s=seasons) 
- 
-    ts.s$rank <- 0
-    for(i in ts.s$s){ts.s$rank[ts.s$s==i] <- (order(-ts.s$value[ts.s$s==i])-0.3)/(nrow(ts.s[ts.s$s==i,])+0.4)}
-    
-    ggs <- ggplot(ts.s, aes(rank, value))+geom_line(aes(group=s, colour=s))+
-      xlab("Pravděpodobnosti")+ylab(input$variable_cp)+
-      theme_minimal()+ggtitle("Roční období")+theme(plot.title = element_text(hjust = 0.5))
-    
-    ggs$labels$colour <- "Legenda"
-  
-  
-    
-    ts.m <- BM %>% filter(UPOV_ID == default.shape(), variable == input$variable_cp) %>% group_by(month2) %>% 
-                       arrange(desc(value))  %>% select(value, m=month2) 
-  
-    ts.m$rank <- 0
-    for(i in ts.m$m){ts.m$rank[ts.m$m==i] <- (order(-ts.m$value[ts.m$m==i])-0.3)/(nrow(ts.m[ts.m$m==i,])+0.4)}
-    
-    ggm <- ggplot(ts.m, aes(rank, value))+geom_line(aes(group=m, colour=m))+
-      xlab("Pravděpodobnosti")+ylab(input$variable_cp)+theme_minimal()+ggtitle("Měsíce")+
-      theme(plot.title = element_text(hjust = 0.5))
-    
-    ggm$labels$colour <- "Legenda"
-  
-  
-  grid.arrange(ggt,ggs,ggm, ncol=3)
-  
-  # ts.bilance <- ts(ts.bilance, frequency = 12, start=c(1961,1))
-  # dygraph(ts.bilance, main = paste(as.character(title.f())),
-  #         xlab = "Čas", ylab = paste(names(choices[choices == input$variable_cp]))) %>%
-  # dySeries('value', label=input$variable_cp) %>%
-  # dyRangeSelector() %>% 
-  # dyCrosshair(direction = "vertical")
-  }) 
-
-absolutePanel(class = "panel panel-default", fixed = TRUE,
-                  draggable = FALSE, top = '52.7%', left = "auto", right = '0.5%', bottom = "auto",
-                  width = '12%',
-                  style = "opacity: 1; style = z-index: 400",
-    HTML('<button data-toggle="collapse" data-target="#box5" class="choose">Výběr pro čáru překročení</button>'),
-        tags$div(id = 'box5', class="collapse in", style = "max-height: 420px",
-                 selectInput("variable_cp", label=NULL , choices = choices, selected = c("RM"))))
+# 
+# renderPlot({  
+#   ts.bilance <- BM %>% filter(UPOV_ID == default.shape(), variable == input$variable_cp) %>%
+#                        arrange(desc(value)) %>% select(value)
+#   
+#    ggt <- ggplot(ts.bilance, aes((order(-ts.bilance$value)-0.3)/(nrow(ts.bilance)+0.4), value))+geom_line()+
+#      xlab("Pravděpodobnosti")+ylab(input$variable_cp)+theme_minimal()+ggtitle("Celé období")+
+#      theme(plot.title = element_text(hjust = 0.5))
+#   
+#   
+#     ts.s <- BM %>% filter(UPOV_ID == default.shape(), variable == input$variable_cp) %>% group_by(seasons) %>% 
+#                        arrange(desc(value)) %>% select(value, s=seasons) 
+#  
+#     ts.s$rank <- 0
+#     for(i in ts.s$s){ts.s$rank[ts.s$s==i] <- (order(-ts.s$value[ts.s$s==i])-0.3)/(nrow(ts.s[ts.s$s==i,])+0.4)}
+#     
+#     ggs <- ggplot(ts.s, aes(rank, value))+geom_line(aes(group=s, colour=s))+
+#       xlab("Pravděpodobnosti")+ylab(input$variable_cp)+
+#       theme_minimal()+ggtitle("Roční období")+theme(plot.title = element_text(hjust = 0.5))
+#     
+#     ggs$labels$colour <- "Legenda"
+#   
+#   
+#     
+#     ts.m <- BM %>% filter(UPOV_ID == default.shape(), variable == input$variable_cp) %>% group_by(month2) %>% 
+#                        arrange(desc(value))  %>% select(value, m=month2) 
+#   
+#     ts.m$rank <- 0
+#     for(i in ts.m$m){ts.m$rank[ts.m$m==i] <- (order(-ts.m$value[ts.m$m==i])-0.3)/(nrow(ts.m[ts.m$m==i,])+0.4)}
+#     
+#     ggm <- ggplot(ts.m, aes(rank, value))+geom_line(aes(group=m, colour=m))+
+#       xlab("Pravděpodobnosti")+ylab(input$variable_cp)+theme_minimal()+ggtitle("Měsíce")+
+#       theme(plot.title = element_text(hjust = 0.5))
+#     
+#     ggm$labels$colour <- "Legenda"
+#   
+#   
+#   grid.arrange(ggt,ggs,ggm, ncol=3)
+#   
+#   # ts.bilance <- ts(ts.bilance, frequency = 12, start=c(1961,1))
+#   # dygraph(ts.bilance, main = paste(as.character(title.f())),
+#   #         xlab = "Čas", ylab = paste(names(choices[choices == input$variable_cp]))) %>%
+#   # dySeries('value', label=input$variable_cp) %>%
+#   # dyRangeSelector() %>% 
+#   # dyCrosshair(direction = "vertical")
+#   }) 
+# 
+# absolutePanel(class = "panel panel-default", fixed = TRUE,
+#                   draggable = FALSE, top = '52.7%', left = "auto", right = '0.5%', bottom = "auto",
+#                   width = '12%',
+#                   style = "opacity: 1; style = z-index: 400",
+#     HTML('<button data-toggle="collapse" data-target="#box5" class="choose">Výběr pro čáru překročení</button>'),
+#         tags$div(id = 'box5', class="collapse in", style = "max-height: 420px",
+#                  selectInput("variable_cp", label=NULL , choices = choices, selected = c("RM"))))
 
 ```
+
+
+### Trendy
+
+```{r}
+
+```
+
 
 Indikátory sucha {data-icon="fa-tint"}
 ===================================== 
@@ -678,7 +691,7 @@ output$indikatory<-renderLeaflet({
   # Creating labels--------------------
 
     labels <- sprintf(
-      "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s <br/> Hodnota: %s",
+      "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> UPOV_ID: %s <br/> Hodnota: %s",
       dta$NAZ_UTVAR, dta$KTG_UPOV, dta$U_PMU, dta$UPOV_ID, round(dta$value,2)
       ) %>% lapply(htmltools::HTML)
 
@@ -691,7 +704,7 @@ output$indikatory<-renderLeaflet({
      addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13) ) %>%
 #Zbarvení povodí dle hodnoty
           addPolygons(data=dta, layerId = dta$UPOV_ID, color = "black",
-                             weight = 1.5, opacity = 0.45,
+                             weight = 1.5, opacity = 0.45, smoothFactor = 0,
                              fillColor = ~pal(value), fillOpacity = 0.8,
                              group = "Povodí",
                  highlightOptions = highlightOptions(color = "#a53333",
@@ -936,14 +949,7 @@ povodi.ds <- reactive({
   povodi[povodi$UPOV_ID==input$search.id.u, ]
 })
 
-kde <- reactive({
-u_leaflet <- u %>% group_by(UPOV_ID, NAZICO, POVODI, JEV, X, Y, ICOC) %>% summarise(mean=mean(value))
-u_leaflet <- SpatialPointsDataFrame(u_leaflet[, c("X", "Y")], u_leaflet, proj4string = CRS("+init=epsg:2065"))
-u_leaflet <- spTransform(u_leaflet, CRS("+init=epsg:4326"))
-
 pal_2 <- colorFactor("Paired", domain = u_leaflet$JEV, na.color = "gray50")
-
-return(list(u_leaflet = u_leaflet, pal_2 = pal_2))})
 
 #Functions--------------------
 
@@ -964,7 +970,7 @@ title.f3 <- reactive({
 
 default.circle <- reactive({
   if(is.null(input$uzivani_marker_click$id)){
-  NAZICO.sel <- kde()$u_leaflet$NAZICO[1]}
+  NAZICO.sel <- u_leaflet$NAZICO[1]}
   else{NAZICO.sel<-input$uzivani_marker_click$id}
   return(NAZICO.sel)})
 
@@ -997,13 +1003,6 @@ Row {data-height=600}
 
 output$uzivani <- renderLeaflet({
 
-u_leaflet <- kde()$u_leaflet
-pal_2 <- kde()$pal_2 
-
-  
-
-
-
 labels.points <- sprintf(
     "<strong>%s</strong><br/>Povodí: %s<br/>Jev: %s<br/>ICOC: %s",
     u_leaflet$NAZICO, u_leaflet$POVODI, u_leaflet$JEV, u_leaflet$ICOC) %>%
@@ -1018,10 +1017,12 @@ labels.points <- sprintf(
 
   if(length(labels)==0){labels <- c(" ")}
 
-
-  centr <- getSpPPolygonsLabptSlots(povodi.ds())
-
-leaflet() %>% setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
+# centr <- getSpPPolygonsLabptSlots(povodi.ds())
+# leaflet() %>% setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
+    
+  centr <- gCentroid(povodi.ds(), byid = TRUE)
+    
+    leaflet() %>% setView(lng=centr@coords[1], lat = centr@coords[2], zoom=12) %>%
     addProviderTiles(providers$Esri.WorldTopoMap, group = "Mapový podklad",
                                                   options = tileOptions(minZoom=7, maxZoom=20)) %>%
     addPolylines(data=reky, color="#007C8C", weight = 1.5,
@@ -1034,12 +1035,12 @@ leaflet() %>% setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
                      position = "topright",
                      options = layersControlOptions(collapsed = FALSE, autoZIndex = FALSE))%>%   
     hideGroup(c("Řeky", "Jezera", "Nádrže")) %>%
-    addLegend(pal = kde()$pal_2, values = u_leaflet$JEV, opacity = 0.7, title = "Legenda",
+    addLegend(pal = pal_2, values = u_leaflet$JEV, opacity = 0.7, title = "Legenda",
               position = "bottomright") %>% 
     addCircleMarkers(data=u_leaflet, radius = 6.5, color = "black", fillColor = pal_2(u_leaflet$JEV),
                  weight = 0.5, opacity = 0.7, fillOpacity = 1, layerId = u_leaflet$NAZICO,
                  popup = labels.points, clusterOptions = markerClusterOptions()) %>%
-    addPolygons(data=povodif, color = "#000000", fillColor = "#708090", weight = 2, opacity = 0.4, 
+    addPolygons(data=povodif, color = "#000000", fillColor = "#708090", weight = 2, opacity = 0.4, smoothFactor = 0,
                 layerId = povodi$UPOV_ID,
                 label = labels,
                 labelOptions = labelOptions(clickable = TRUE, noHide = TRUE,
@@ -1152,7 +1153,7 @@ wellPanel(
           conditionalPanel(condition = "input.validace == 'A'"),
           conditionalPanel(condition = "input.validace == 'B'",
                                   selectInput("entry.pars", label=NULL,
-                                              choices = choices.pars, selected = "Spa")),
+                                              choices = choices.pars, selected = "Dgm")),
           conditionalPanel(condition = "input.validace == 'C'",
                                   selectInput("entry.mday", label = NULL, choices = choices.mday),
                            renderUI({
@@ -1170,7 +1171,7 @@ wellPanel(
 Row {data-height=520} 
 -------------------------------------
 
-### Mapa denních průtoků
+### Mapa 
 
 ```{r validace: mapa}
 # input <- c()
@@ -1227,7 +1228,7 @@ output$rozvodnice <- renderLeaflet({
    
      labels <- sprintf(
      "<strong>%s</strong><br/> UPOV_ID: %s <br/> current: %s <br/> lower: %s <br/> upper: %s <br/> initial: %s",
-      dta$NAZ_UTVAR , dta$UPOV_ID, dta$value, dta$lower, dta$upper, dta$initial
+      dta$NAZ_UTVAR , dta$UPOV_ID, round(dta$value,3), dta$lower, dta$upper, dta$initial
       ) %>% lapply(htmltools::HTML)
      pal <- colorBin("YlGnBu", domain = dta$value, pretty = TRUE)
      
@@ -1236,7 +1237,7 @@ output$rozvodnice <- renderLeaflet({
      addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13) )
   
     rozvodnice <- rozvodnice %>% addPolygons(data=dta, #layerId = dta$UPOV_ID, 
-                                             color = "burlywood4", weight = 1.3,
+                                             color = "burlywood4", weight = 1.3, smoothFactor = 0,
                                              opacity = 0.3, fillColor = ~pal(value), 
                                              fillOpacity = 0.8, group = "Povodí",
                                 label = labels,
@@ -1258,15 +1259,15 @@ output$rozvodnice <- renderLeaflet({
    
      labels <- sprintf(
      "<strong>%s</strong><br/>UPOV_ID: %s <br/> Hodnota: %s",
-      dta$NAZ_UTVAR, dta$UPOV_ID, round(dta$value,2)) %>% lapply(htmltools::HTML)
-     pal <- colorBin("YlGnBu", domain = dta$value, pretty = TRUE)
+      dta$NAZ_UTVAR, dta$UPOV_ID, round(dta$value,3)) %>% lapply(htmltools::HTML)
+     pal <- colorBin("YlGnBu", domain = round(dta$value,3), pretty = TRUE)
      
      rozvodnice <- leaflet() %>% 
      setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom) %>%
      addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13) )
   
     rozvodnice <- rozvodnice %>% addPolygons(data=dta, layerId = dta$UPOV_ID, 
-                                             color = "burlywood4", weight = 1.3,
+                                             color = "burlywood4", weight = 1.3, smoothFactor = 0,
                                              opacity = 0.3, fillColor = ~pal(value), 
                                              fillOpacity = 0.8, group = "Povodí",
                                 highlightOptions = highlightOptions(color = "#800000", opacity = 0.8,
@@ -1355,8 +1356,6 @@ absolutePanel(class = "panel panel-default", fixed = TRUE,
 
 
 ### Simulovaná data
-
-![](img/logo_fzp.jpg)
 
 
 
