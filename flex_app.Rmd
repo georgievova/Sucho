@@ -23,7 +23,7 @@ library(sp)
 library(rgeos)
 library(datasets)
 library(psych)
-library(ggvis)
+library(plotly)
 library(DT) # An R interface to the DataTables library
 library(parallel) #Parallel detectCores() error
 #devtools::install_github("KVHEM/CatCa")
@@ -410,12 +410,6 @@ Row {.tabset}
 renderDygraph({
   
   ts.bilance <- BM.long %>% filter(UPOV_ID == default.shape()) %>% select(input$entry.variable2, DTM) 
-
-  for(exp_var in input$entry.variable2){
-    fit <- data.frame(lm(paste0(exp_var,"~DTM"),data=ts.bilance)$fitted)
-    colnames(fit) <- paste0(exp_var,"_trend")
-    ts.bilance <- cbind(ts.bilance, fit) 
-  }
   
   RangeMin <- min(ts.bilance[, input$entry.variable2])-0.5
   RangeMax <- max(ts.bilance[, input$entry.variable2])+0.5
@@ -448,13 +442,7 @@ renderDygraph({
   dta_bd <- readRDS(file.path(.datadir,"bilan", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
   
   ts.bilance <- dta_bd %>%  select(input$entry.variable_d, DTM)
-  
-   for(exp_var in input$entry.variable_d){
-    fit <- data.frame(lm(paste0(exp_var,"~DTM"),data=ts.bilance)$fitted)
-    colnames(fit) <- paste0(exp_var,"_trend")
-    ts.bilance <- cbind(ts.bilance, fit) 
-  }
-  
+
   RangeMin <- min(ts.bilance %>% select(c(input$entry.variable_d)))-0.5
   RangeMax <- max(ts.bilance %>% select(c(input$entry.variable_d)))+0.5
   
@@ -470,8 +458,8 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
                   draggable = FALSE, top = '52.7%', left = "auto", right = '0.5%', bottom = "auto",
                   width = '15%',
                   style = "opacity: 0.9; style = z-index: 400",
-    HTML('<button data-toggle="collapse" data-target="#box6" class="choose">Výběr časových řad</button>'),
-        tags$div(id = 'box6', class="collapse", style = "max-height: 250px; overflow-y:scroll",
+    HTML('<button data-toggle="collapse" data-target="#box7" class="choose">Výběr časových řad</button>'),
+        tags$div(id = 'box7', class="collapse", style = "max-height: 250px; overflow-y:scroll",
                  checkboxGroupInput("entry.variable_d", "Zvolte:", choices = choices, selected = c("RM"))))
 ```
 
@@ -479,46 +467,45 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
 
 ```{r cara prekroceni}
 
-# ggvisOutput("p1")
-# 
-# reactive({
-#   
-#     cp_c <- cp %>% filter(UPOV_ID == default.shape(), variable == input$entry.variable_cp) %>% select(p_year, value)
-#   
-#     cp_c %>% ggvis(x = ~value, y = ~p_year) %>% layer_lines(stroke := "#00091a", strokeWidth := 2) %>%
-#       add_axis("x", title = "Pravděpodobnosti") %>%
-#       add_axis("x", orient = "top", ticks = 0, title = "Celé období") %>%
-#       add_axis("y", title = input$variable_cp)
-#     }) %>%  bind_shiny("p1")
+renderPlot({
 
-    
-    # cp_s <- cp %>% group_by(seasons) %>% filter(UPOV_ID == default.shape(), variable == input$entry.variable_cp) %>%
-    #  select(p_season, value)
-    # 
-    # cp_s %>% ggvis(x = ~value, y = ~p_season) %>% layer_lines(stroke = ~factor(seasons) ,strokeWidth := 2.5) %>%
-    #   add_axis("x", title = "Pravděpodobnosti") %>%
-    #   add_axis("x", orient = "top", ticks = 0, title = "Roční období") %>%
-    #   add_axis("y", title = input$variable_cp)
-    # 
-    # cp_m <- cp %>% group_by(month2) %>% filter(UPOV_ID == default.shape(), variable == input$entry.variable_cp) %>%
-    #  select(p_month, value)
-    # 
-    # cp_m %>% ggvis(x = ~value, y = ~p_month) %>% layer_lines(stroke = ~factor(month2), strokeWidth := 1.5) %>%
-    #   add_axis("x", title = "Pravděpodobnosti") %>%
-    #   add_axis("x", orient = "top", ticks = 0, title = "Měsíce") %>%
-    #   add_axis("y", title = input$variable_cp)
+  cp_c <- cp %>% filter(UPOV_ID == default.shape(), variable == input$variable_cp) %>%
+    select(value, p_year) %>% arrange(value)
+
+ g1<- ggplot(cp_c, aes(p_year, value)) + geom_line()+
+                        xlab("Pravděpodobnosti") + ylab(input$variable_cp)+
+                        theme_minimal() + ggtitle("Celé období")+
+                        theme(plot.title = element_text(hjust = 0.5))
 
 
-  # grid.arrange(cp_c,cp_s,cp_m, ncol=3)
+ cp_s <- cp %>% group_by(seasons) %>% filter(UPOV_ID == default.shape(), variable == input$variable_cp) %>%
+    select(p_season, value, seasons) %>% arrange(value)
 
-  # ts.bilance <- ts(ts.bilance, frequency = 12, start=c(1961,1))
-  # dygraph(ts.bilance, main = paste(as.character(title.f())),
-  #         xlab = "Čas", ylab = paste(names(choices[choices == input$variable_cp]))) %>%
-  # dySeries('value', label=input$variable_cp) %>%
-  # dyRangeSelector() %>%
-  # dyCrosshair(direction = "vertical")
- 
+ g2<-ggplot(cp_s, aes(p_season, value)) + geom_line(aes(group=seasons, colour=seasons)) +
+      xlab("Pravděpodobnosti")+ylab(input$variable_cp)+
+      theme_minimal()+ggtitle("Roční období")+theme(plot.title = element_text(hjust = 0.5))
 
+    g2$labels$colour <- "Legenda"
+
+
+ cp_m <- cp %>% group_by(month2) %>% filter(UPOV_ID == default.shape(), variable == input$variable_cp) %>%
+ select(p_month, value, month2) %>% arrange(value)
+
+ g3<- ggplot(cp_m, aes(p_month, value)) + geom_line(aes(group=month2, colour=month2))+
+      xlab("Pravděpodobnosti")+ylab(input$variable_cp)+theme_minimal()+ggtitle("Měsíce")+
+      theme(plot.title = element_text(hjust = 0.5))
+
+    g3$labels$colour <- "Legenda"
+
+ grid.arrange(g1,g2,g3, ncol=3)
+
+})
+
+
+```
+
+
+```{r ZM cp: absPanel}
 absolutePanel(class = "panel panel-default", fixed = TRUE,
                   draggable = FALSE, top = '52.7%', left = "auto", right = '0.5%', bottom = "auto",
                   width = '12%',
@@ -526,14 +513,66 @@ absolutePanel(class = "panel panel-default", fixed = TRUE,
     HTML('<button data-toggle="collapse" data-target="#box5" class="choose">Výběr pro čáru překročení</button>'),
         tags$div(id = 'box5', class="collapse in", style = "max-height: 420px",
                  selectInput("variable_cp", label=NULL , choices = choices, selected = c("RM"))))
-
 ```
 
 
 ### Trendy
 
 ```{r}
+#input$variable_trend <- "P"
+#input$date_trend <- as.Date("2015-01-01")
 
+renderPlotly({
+
+  d <- dir(file.path(.datadir, "bilan"))
+  bilan_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
+  dta_bd <- readRDS(file.path(.datadir,"bilan", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
+
+  ts.year <- dta_bd %>%  select(input$variable_trend, DTM) %>% filter(year(as.Date(dta_bd$DTM)) == year(as.Date(input$date_trend))) %>% mutate(m = month(as.Date(DTM)))
+  colnames(ts.year)[1] <- "var" 
+  ts.year$t <- (1:length(ts.year$var))
+
+  ts.month <- dta_bd %>%  select(input$variable_trend, DTM) %>% filter(year(as.Date(DTM)) == year(as.Date(input$date_trend))&                                                                       month(as.Date(DTM))==month(as.Date(input$date_trend)))
+  colnames(ts.month)[1] <- "var" 
+  ts.month$t <- (1:length(ts.month$var))
+  
+model <- lm(var~t+as.factor(m)-1,data=ts.year)
+                                     
+ts.year$lmt <- model$fitted
+
+ts1<-plot_ly(data=ts.year, x = ~t, y= ~var, name="Časová řada", mode="lines",type = 'scatter', text= paste(ts.year$DTM)) %>% 
+  add_trace(y = ~lmt, name = 'Linearni trend', mode = 'lines') 
+
+
+model_m <- lm(var~t,data=ts.month)
+
+ts.month$lmt <- model_m$fitted
+  
+ts2<- plot_ly(data=ts.month, x = ~t, y= ~var, name="Časová řada", mode="lines",type = 'scatter', text= paste(ts.month$DTM)) %>% 
+  add_trace(y = ~lmt, name = 'Linearni trend', mode = 'lines') 
+
+
+print(subplot(ts1,ts2,nrows=2))
+
+})
+
+```
+
+```{r ZM trendy: absPanel}
+absolutePanel(class = "panel panel-default", fixed = TRUE,
+                  draggable = FALSE, top = '58%', left = '0.5%', right = 'auto', bottom = 'auto',
+                  width = '18%',
+                  style = "opacity: 1; style = z-index: 400",
+  wellPanel(
+    HTML('<button data-toggle="collapse" data-target="#box6" class="choose">Výběr pro trendy</button>'),
+        tags$div(id = 'box6', class="collapse in", style = "max-height: 420px",
+                 selectInput("variable_trend", label=NULL , choices = choices, selected = c("RM")),
+                 dateInput("date_trend", label = NULL, "yyyy-mm-dd", language = "cs",
+                           value = as.Date("1961-01-01"), startview = "decade",
+                           min = as.Date("1961-01-01"), max = as.Date("2015-12-01"))
+                 )
+    )
+)
 ```
 
 
@@ -1066,7 +1105,7 @@ output$rozvodnice <- renderLeaflet({
      setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom) %>%
      addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13) )
   
-    rozvodnice <- rozvodnice %>% addPolygons(data=dta, layerId = dta$UPOV_ID, 
+    rozvodnice <- rozvodnice %>% addPolygons(data=dta, # layerId = dta$UPOV_ID, 
                                              color = "burlywood4", weight = 1.3, smoothFactor = 0,
                                              opacity = 0.3, fillColor = ~pal(value), 
                                              fillOpacity = 0.8, group = "Povodí",
@@ -1163,54 +1202,45 @@ if(input$validace == "A"){
 ```
 
 
-Row {.tabset data-height=400}
+Row {data-height=400}
 -------------------------------------
 
-### Denní průtoky
+### Grafy
 
-```{r QD: casova rada}
+```{r}
+renderPlotly({
  
-renderDygraph({
+if(input$validace == "A"){
   
         ts.QD <- QD %>% filter(DBCN == default.line()) %>% mutate(month = format(DTM, "%m"), year = format(DTM, "%Y")) %>%
           group_by(year) %>% mutate(mean_year = mean(value, na.rm = TRUE)) %>% ungroup %>% group_by(month, year) %>%
           mutate(mean_month = mean(value, na.rm=TRUE)) %>% ungroup %>% select(input$entry.variable4, DTM)
 
-        ts.QD <- xts::xts(ts.QD, order.by = ts.QD$DTM)
+        
+        plot_ly(data=ts.QD, x=~DTM, y=~value, text=paste(ts.QD$DTM), mode="lines", type="scatter")
+        
+}else if(input$validace == "B"){
+  
+  
+} else if(input$validace == "C" & !is.null(default.shape3())) {
 
-          dygraph(ts.QD, main = paste(as.character(title.f4())),
-                xlab = "Čas", ylab = "Průtok") %>%
-          dyRoller(showRoller = TRUE, rollPeriod = 1)%>%
-          dyCSS("styles.css") %>%
-          dyRangeSelector() %>%
-          dyOptions(colors = c("green", "dark blue", "red")) %>%
-          dyCrosshair(direction = "vertical")
-})
+     chars_filter <- data.frame(value = t(chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday)), m = c(seq(30,330,30),355,364))
+   
+   plot_ly(data=chars_filter, x=~m, y=~value, type="scatter", mode="lines") %>% layout(title=paste(as.character(title.f3.1())))
+   
+   }
 
-```
-
-### Parametry
-
-```{r}
-
-```
-
-### m-denní průtoky
-
-```{r}
-renderPlot({
-          chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday)
-          chars_filter <- data.frame(value = t(chars_filter), m = c(seq(30,330,30),355,364))
-          # ts.chars <- ts(chars_filter)
-          # dygraph(chars_filter) %>%
-          #   dyAxis("x", label = "m dní", valueRange = chars_filter$m) %>%
-          #   dyAxis("y", label = "Q", valueRange = chars_filter$value)
-
-          plot(x = chars_filter$m, y = chars_filter$value,
-               main = paste(as.character(title.f3.1())),
-               type = "l", xlab = "m dní", ylab = "Q")
+  
 })
 ```
+
+
+
+
+
+
+
+
 
 
 O projektu {data-icon="fa-user-circle"}
