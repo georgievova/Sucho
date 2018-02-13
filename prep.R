@@ -313,7 +313,7 @@ popis <- read.table('used_data/webapp_data/E_ISVS$UTV_POV.txt',encoding = 'UTF-8
 popis <- select(popis, UPOV_ID, NAZ_UTVAR, NAZ_POVODI, NAZ_OBLAST, KTG_UPOV, U_PMU)
 saveRDS(popis, file.path(.datadir, "webapp_data/popis.rds"))
 
-#uzivani_leaflet
+#10 uzivani_leaflet
 #--------------------
 
 u <- readRDS(file.path(.datadir, "webapp_data/uzivani/06_16/uzivani_na_nahraz.rds"))
@@ -324,3 +324,20 @@ u <- readRDS(file.path(.datadir, "webapp_data/uzivani/06_16/uzivani_na_nahraz.rd
   
 saveRDS(u_leaflet, file.path(.datadir, "webapp_data/uzivani/u_leaflet.rds"))
 
+#11 cara prekroceni rdc
+#--------------------
+
+BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month.rds"))
+
+cp <- BM %>% group_by(UPOV_ID, variable) %>% mutate(k = rank(-value), n = n()) %>% mutate(p_year = (k-0.3)/(n+0.4)) 
+
+cp <- cp %>%  group_by(UPOV_ID, variable, seasons) %>% mutate(k = rank(-value), n = n()) %>% mutate(p_season = (k-0.3)/(n+0.4))
+
+cp <- cp %>%  group_by(UPOV_ID, variable, month) %>% mutate(k = rank(-value), n = n()) %>% mutate(p_month = (k-0.3)/(n+0.4))
+
+cpa <- cp %>% ungroup() %>% filter(UPOV_ID == "DUN_0010", variable == "P", seasons == "Zima") %>% select(value, p_season) 
+plot(cpa)
+
+cp_final <- cp %>% ungroup() %>% select(UPOV_ID, variable, p_year, p_month, p_season, seasons, month2, value)
+
+saveRDS(cp_final, file.path(.datadir, "webapp_data/to_from/cara_prekroceni.rds"))
