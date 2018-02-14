@@ -38,7 +38,7 @@ Aplikace pracuje s velkým množstvím dat, které se v rámci aplikace filtruj�
 
 ## Základní mapa
 
-![](manual/screenshots/ZM.png)
+![](manual/screenshots_new/ZM.gif)
 
 Okno prohlížeče je rozděleno do tří části: boční panel, panel s mapovým výstupem a panel s grafickými výstupy. 
 
@@ -63,7 +63,7 @@ Momentálně jsou v grafickém panelu u časových řad zobrazeny trendy pro cel
 
 ## Indikátory sucha 
 
-![](manual/screenshots/indikatory.png)
+![](manual/screenshots_new/indikatory.png)
 
 Záložka indikátory sucha se skládá z bočního panelu, mapového panelu a grafického panelu. V bočním panelu si lze zvolit indikátor, krok, do kterého budou data agregována a datum. Momentálně v mapě je zobrazen indikátor SPI počítány klouzavě s krokem 1, 3, 6 a 12 měsíců. Časem budou přidány indikátory SPEI, PDSI, SGI, SRI a nedostatkové objemy ve stejném kroku. Povodí se rozdělují do 4 kategorií dle hodnot indexu:
 
@@ -76,7 +76,7 @@ V grafický panelu se vykresluje časová řada indikátoru v konkretním povod�
 
 ## Užívání
 
-![](manual/screenshots/uzivani.png)
+![](manual/screenshots_new/uzivani.png)
 
 Záložka užívání je rozdělena do čtyř části: panel s mapovým výstupem, dva panely s grafickými výstupy a jeden panel s tabulkovým výstupem. 
 
@@ -86,7 +86,7 @@ Podobně jako v záložce "Základní mapa" zde existuje panel s názvem povodí
 
 ## Validace
 
-![](manual/screenshots/validace.gif)
+![](manual/screenshots_new/validace.gif)
 
 V současné verzi záložka "Validace" se dělí na dvě částí: mapový výstup denních průtoků/parametrů (lze přepnout v příslušném panelu) a grafický panel s časovou řadou zvoleného povodí (lze vykreslit v denním, měsíčním a ročním kroku pomocí panelu "Výběr časových řad").
 
@@ -99,6 +99,6 @@ V dalších verzích bude umožněno porovnání výstupu modelu s pozorováním
 
 ## O projektu
 
-![](manual/screenshots/o_projektu.png)
+![](manual/screenshots_new/o_projektu.png)
 
 Krátký popis projektu a veškeré kontakty.V budoucnu bude rozšířeno o metodiky k jednotlivým součástem systému.
