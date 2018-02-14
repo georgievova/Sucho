@@ -560,7 +560,7 @@ print(subplot(ts1,ts2,nrows=2))
 
 ```{r ZM trendy: absPanel}
 absolutePanel(class = "panel panel-default", fixed = TRUE,
-                  draggable = FALSE, top = '58%', left = '0.5%', right = 'auto', bottom = 'auto',
+                  draggable = FALSE, top = '65%', left = '0.5%', right = 'auto', bottom = 'auto',
                   width = '18%',
                   style = "opacity: 1; style = z-index: 400",
   wellPanel(
@@ -568,7 +568,7 @@ absolutePanel(class = "panel panel-default", fixed = TRUE,
         tags$div(id = 'box6', class="collapse in", style = "max-height: 420px",
                  selectInput("variable_trend", label=NULL , choices = choices, selected = c("RM")),
                  dateInput("date_trend", label = NULL, "yyyy-mm-dd", language = "cs",
-                           value = as.Date("1961-01-01"), startview = "decade",
+                           value = as.Date("2010-01-01"), startview = "decade",
                            min = as.Date("1961-01-01"), max = as.Date("2015-12-01"))
                  )
     )
@@ -1188,16 +1188,16 @@ renderTable({
 if(input$validace == "A"){
   QD_filter <- QD %>% filter(DBCN == default.line()) %>% select(value)
   QD_filter <-describe(QD_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
-  print(cbind(name="value",QD_filter[,-1]), digits=3)
-}else if(input$validace == "B"){
-  pars_filter <- pars %>% filter(name == input$entry.pars) %>% select(current, lower, upper, initial)
-  pars_filter <- describe(pars_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
-  print(cbind(name=rownames(pars_filter),pars_filter[,-1]), digits=3)
-} else {
-  chars_filter <- chars %>% select(choices.mday)
-  chars_filter <- describe(chars_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
-  print(cbind(name=rownames(chars_filter),chars_filter[,-1]), digits=3)
-  }
+  print(cbind(name="value",QD_filter[,-1]), digits=3)}
+# else if(input$validace == "B"){
+#   pars_filter <- pars %>% filter(name == input$entry.pars) %>% select(current, lower, upper, initial)
+#   pars_filter <- describe(pars_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
+#   print(cbind(name=rownames(pars_filter),pars_filter[,-1]), digits=3)
+# } else {
+#   chars_filter <- chars %>% select(choices.mday)
+#   chars_filter <- describe(chars_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
+#   print(cbind(name=rownames(chars_filter),chars_filter[,-1]), digits=3)
+#   }
 })
 ```
 
@@ -1217,7 +1217,7 @@ if(input$validace == "A"){
           mutate(mean_month = mean(value, na.rm=TRUE)) %>% ungroup %>% select(input$entry.variable4, DTM)
 
         
-        plot_ly(data=ts.QD, x=~DTM, y=~value, text=paste(ts.QD$DTM), mode="lines", type="scatter")
+        plot_ly(data=ts.QD, x=~DTM, y=~value, text=paste(ts.QD$DTM), mode="lines", type="scatter") %>% layout(title=paste(as.character(title.f4())))
         
 }else if(input$validace == "B"){
   
@@ -1233,12 +1233,6 @@ if(input$validace == "A"){
   
 })
 ```
-
-
-
-
-
-
 
 
 
