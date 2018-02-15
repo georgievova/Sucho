@@ -325,7 +325,7 @@ u <- readRDS(file.path(.datadir, "webapp_data/uzivani/06_16/uzivani_na_nahraz.rd
   
 saveRDS(u_leaflet, file.path(.datadir, "webapp_data/uzivani/u_leaflet.rds"))
 
-#11 cara prekroceni rdc
+#11 cara prekroceni rds
 #--------------------
 
 BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month.rds"))
@@ -342,3 +342,11 @@ cp <- cp %>%  group_by(UPOV_ID, variable, month) %>% mutate(k = rank(-value), n 
 cp_final <- cp %>% ungroup() %>% select(UPOV_ID, variable, p_year, p_month, p_season, seasons, month2, value)
 
 saveRDS(cp_final, file.path(.datadir, "webapp_data/to_from/cara_prekroceni.rds"))
+
+#12 m-denní prutoky (chars)
+#--------------------
+chars<- readRDS(file.path(.datadir, "chmu/chars_mm.rds"))
+
+chars <- chars %>% select(UPOV_ID, Qa, choices.mday)
+
+saveRDS(chars, file.path(.datadir, "webapp_data/chmu/chars_mm.rds"))
