@@ -33,7 +33,6 @@ library(parallel) #Parallel detectCores() error
 CatCa::give_paths()
 
 BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month.rds"))
-BM.long <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_long.rds"))
 
 povodi <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi.rds"))
 reky <- readRDS(file.path(.datadir, "webapp_data/geo_rds/reky.rds"))
@@ -52,7 +51,7 @@ pars <- readRDS(file.path(.datadir, "webapp_data/pars/pars.rds"))
 u <- readRDS(file.path(.datadir, "webapp_data/uzivani/06_16/uzivani_na_nahraz.rds"))
 u_leaflet <- readRDS(file.path(.datadir, "webapp_data/uzivani/u_leaflet.rds"))
 QD <- readRDS(file.path(.datadir, "webapp_data/chmu/QD.rds"))
-chars <- readRDS(file.path(.datadir, "chmu/chars_mm.rds"))
+chars <- readRDS(file.path(.datadir, "webapp_data/chmu/chars_mm.rds"))
 spi <- readRDS(file.path(.datadir, "webapp_data/indikatory/spi.rds"))
 spei <- readRDS(file.path(.datadir, "webapp_data/indikatory/spei.rds"))
 
@@ -409,10 +408,10 @@ Row {.tabset}
 
 renderDygraph({
   
-  ts.bilance <- BM.long %>% filter(UPOV_ID == default.shape()) %>% select(input$entry.variable2, DTM) 
+  ts.bilance <- BM %>% filter(UPOV_ID == default.shape(), variable == input$entry.variable2) %>% select(value, DTM) 
   
-  RangeMin <- min(ts.bilance[, input$entry.variable2])-0.5
-  RangeMax <- max(ts.bilance[, input$entry.variable2])+0.5
+  RangeMin <- min(ts.bilance$value)-0.5
+  RangeMax <- max(ts.bilance$value)+0.5
   
   ts.bilance <- xts::xts(ts.bilance, order.by = ts.bilance$DTM)
 
@@ -980,7 +979,7 @@ Validace {data-icon="fa-clone"}
 #Functions--------------------
 
 default.shape3 <- reactive({
-  UPOV_ID.sel <- input$search.id
+  UPOV_ID.sel <- input$search.id.val
   return(UPOV_ID.sel)})
 
 title.f3.1 <- reactive({
@@ -1032,14 +1031,14 @@ wellPanel(
                                   selectInput("entry.pars", label=NULL,
                                               choices = choices.pars, selected = "Dgm")
                                   # , renderUI({
-                                  #   selectizeInput(inputId = "search.id","Vyhledávání útvaru",
+                                  #   selectizeInput(inputId = "search.id.val","Vyhledávání útvaru",
                                   #         selected=input$rozvodnice_shape_click$id,
                                   #         choices = search.choices)})
                            ),
           conditionalPanel(condition = "input.validace == 'C'",
                                   selectInput("entry.mday", label = NULL, choices = choices.mday),
                            renderUI({
-                             selectizeInput(inputId = "search.id","Vyhledávání útvaru",
+                             selectizeInput(inputId = "search.id.val","Vyhledávání útvaru",
                                           selected=input$rozvodnice_shape_click$id,
                                           choices = search.choices)})
                            ))
@@ -1178,14 +1177,14 @@ output$rozvodnice <- renderLeaflet({
 })
 
 
-#   observe({
-#    leafletProxy("rozvodnice") %>%
-#     clearGroup("current_shape") %>% 
-#     addPolylines(data = subset(povodi, UPOV_ID==(if(is.null(input$search.id)){"DUN_0010"}else{input$search.id})),
-#                  group = "current_shape",
-#                  color = "#a53333", opacity = 1, weight = 3,
-#                  stroke = TRUE) 
-# })
+  observe({
+   leafletProxy("rozvodnice") %>%
+    clearGroup("current_shape") %>%
+    addPolylines(data = subset(povodi, UPOV_ID==(if(is.null(input$search.id.val)){"DUN_0010"}else{input$search.id.val})),
+                 group = "current_shape",
+                 color = "#a53333", opacity = 1, weight = 3,
+                 stroke = TRUE)
+    })
 
 
 ```
@@ -1201,23 +1200,7 @@ Row {data-height=400}
 
 renderPlotly({
  
-if(input$validace == "C" & !is.null(default.shape3())) {
-
-  chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday[-1])
-     chars_filter <- data.frame(value = t(chars_filter), m = c(seq(30,330,30),355,364))
-   
-   p1 <- plot_ly(data=chars_filter, x=~m, y=~value, type="scatter", mode="lines") %>%
-          layout(title=paste(as.character(title.f3.1())))
-   
-   p1
-   
-  
-        
-}else if(input$validace == "B"){
-  
-  plot_ly()
-  
-} else if(input$validace == "A"){
+if(input$validace == "A"){
   
         ts.QD <- QD %>% filter(DBCN == default.line()) %>% mutate(month = format(DTM, "%m"), year = format(DTM, "%Y")) %>%
           group_by(year) %>% mutate(mean_year = mean(value, na.rm = TRUE)) %>% ungroup %>% group_by(month, year) %>%
@@ -1237,8 +1220,15 @@ if(input$validace == "C" & !is.null(default.shape3())) {
           {p <- p %>% add_trace(x = ~DTM, y = ~mean_year, name = 'Rocni prumery')}
         
         p
- }
-  
+        
+  }else if(input$validace == "C") 
+      {chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday[-1])
+         chars_filter <- data.frame(value = t(chars_filter), m = c(seq(30,330,30),355,364))
+   
+   p1 <- plot_ly(data=chars_filter, x=~m, y=~value, type="scatter", mode="lines") %>%
+          layout(title=paste(as.character(title.f3.1())))
+   p1
+  }
 })
 ```
 
@@ -1249,15 +1239,15 @@ renderTable({
 if(input$validace == "A"){
   QD_filter <- QD %>% filter(DBCN == default.line()) %>% select(value)
   QD_filter <-describe(QD_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
-  print(cbind(name="value",QD_filter[,-1]), digits=3)
-# else if(input$validace == "B"){
+  QD_filter <-cbind(name="value",QD_filter[,-1])
+  # else if(input$validace == "B"){
 #   pars_filter <- pars %>% filter(name == input$entry.pars) %>% select(current, lower, upper, initial)
 #   pars_filter <- describe(pars_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
 #   print(cbind(name=rownames(pars_filter),pars_filter[,-1]), digits=3)
-} else {
+} else if(input$validace == "C"){
   chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday)
   }
-})
+}, digits = 3)
 ```
 
 
