@@ -44,7 +44,7 @@ okresy <- readRDS(file.path(.datadir, "webapp_data/geo_rds/okresy.rds"))
 povodi_III <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi_III.rds"))
 stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/stanice.rds"))
 routing.tab <- readRDS(file.path(.datadir, "webapp_data/to_from/routing_matrix.Rds"))
-cp <- readRDS(file.path(.datadir, "webapp_data/to_from/cara_prekroceni.Rds"))
+cp <- readRDS(file.path(.datadir, "webapp_data/to_from/cara_prekroceni.rds"))
 
 popis <- readRDS(file.path(.datadir, "webapp_data/popis.rds"))
 
@@ -97,7 +97,7 @@ names(choices3) <- c("Denní průtok", "Měsiční průměr", "Roční průměr"
 
 choices.pars <- as.character(unique(pars$name))
 
-choices.mday <- c("Q30d", "Q60d", "Q90d", "Q120d", "Q150d", "Q180d", "Q210d", 
+choices.mday <- c( "Qa", "Q30d", "Q60d", "Q90d", "Q120d", "Q150d", "Q180d", "Q210d", 
                   "Q240d", "Q270d", "Q300d", "Q330d", "Q355d", "Q364d")
 
 mesice <- c("Leden","Únor","Březen","Duben","Květen","Červen",
@@ -528,28 +528,32 @@ renderPlotly({
   bilan_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
   dta_bd <- readRDS(file.path(.datadir,"bilan", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
 
-  ts.year <- dta_bd %>%  select(input$variable_trend, DTM) %>% filter(year(as.Date(dta_bd$DTM)) == year(as.Date(input$date_trend))) %>% mutate(m = month(as.Date(DTM)))
+  ts.year <- dta_bd %>%  select(input$variable_trend, DTM) %>% mutate(m = month(as.Date(DTM)))
   colnames(ts.year)[1] <- "var" 
   ts.year$t <- (1:length(ts.year$var))
 
-  ts.month <- dta_bd %>%  select(input$variable_trend, DTM) %>% filter(year(as.Date(DTM)) == year(as.Date(input$date_trend))&                                                                       month(as.Date(DTM))==month(as.Date(input$date_trend)))
+  ts.month <- dta_bd %>%  select(input$variable_trend, DTM) %>%  filter(DTM > input$date_trend[1] & DTM < input$date_trend[2])
   colnames(ts.month)[1] <- "var" 
   ts.month$t <- (1:length(ts.month$var))
   
-model <- lm(var~t+as.factor(m)-1,data=ts.year)
+  model <- lm(var~t+as.factor(m)-1,data=ts.year)
                                      
-ts.year$lmt <- model$fitted
+  ts.year$lmt <- model$fitted
 
-ts1<-plot_ly(data=ts.year, x = ~t, y= ~var, name="Časová řada", mode="lines",type = 'scatter', text= paste(ts.year$DTM)) %>% 
-  add_trace(y = ~lmt, name = 'Linearni trend', mode = 'lines') 
+  ts1 <- plot_ly(data=ts.year, x = ~DTM, y= ~var, name="Casova rada", 
+                 mode="lines",type = 'scatter', text= paste(ts.year$DTM), line = list(width = 1)) %>%
+    layout(title=paste(as.character(title.f()))) %>% 
+    add_trace(y = ~lmt, name = 'Linearni trend', mode = 'lines') 
 
 
-model_m <- lm(var~t,data=ts.month)
+  model_m <- lm(var~t,data=ts.month)
 
-ts.month$lmt <- model_m$fitted
+  ts.month$lmt <- model_m$fitted
   
-ts2<- plot_ly(data=ts.month, x = ~t, y= ~var, name="Časová řada", mode="lines",type = 'scatter', text= paste(ts.month$DTM)) %>% 
-  add_trace(y = ~lmt, name = 'Linearni trend', mode = 'lines') 
+  ts2 <- plot_ly(data=ts.month, x = ~DTM, y= ~var, name="Casova rada", 
+                 mode="lines",type = 'scatter', text= paste(ts.month$DTM), line = list(width = 1)) %>%
+    layout(title=paste(as.character(title.f()))) %>%
+    add_trace(y = ~lmt, name = 'Linearni trend', mode = 'lines') 
 
 
 print(subplot(ts1,ts2,nrows=2))
@@ -567,8 +571,9 @@ absolutePanel(class = "panel panel-default", fixed = TRUE,
     HTML('<button data-toggle="collapse" data-target="#box6" class="choose">Výběr pro trendy</button>'),
         tags$div(id = 'box6', class="collapse in", style = "max-height: 420px",
                  selectInput("variable_trend", label=NULL , choices = choices, selected = c("RM")),
-                 dateInput("date_trend", label = NULL, "yyyy-mm-dd", language = "cs",
-                           value = as.Date("2010-01-01"), startview = "decade",
+                 dateRangeInput("date_trend", label = NULL, "yyyy-mm-dd",
+                                language = "cs", weekstart = 1, startview = "decade",
+                           start = as.Date("2000-01-01"), end = as.Date("2011-01-01") ,
                            min = as.Date("1961-01-01"), max = as.Date("2015-12-01"))
                  )
     )
@@ -654,15 +659,17 @@ if(input$indikatory == "A"){
     dta <- (sp::merge(povodi,spei_d, by="UPOV_ID"))}
   
 #Vytvaření palet
-
-# 0 - bez výskytu sucha (-0,7 a vyšší)
-# 1 - slabé sucho (-0,8 až -1,3)
-# 2 - silné sucho (-1,4 až -1,9)
-# 3 - mimořádné sucho (- 2,0 a nižší)   
+# (2,0 až inf) - tmave modra
+# (1,4 až 2,0) - modra
+# (0,5 až 1,4) - svetle zelena
+# (-0,5 až 0,5) - neutralni
+# (-0,5 až -1,4) - zluto oranzova (+-)
+# (-1,4 až -2,0) - cervena
+# (- 2,0 až -inf) - tmave červena
   
-  mojePaleta <- c("#800000", "#ff0000", "#0066ff", "#000066")
-      pal <- colorBin(mojePaleta, domain = dta$value, bins = c(Inf,-0.8, -1.4, -2, -Inf),  
-                      na.color = "#ffffff")
+  mojePaleta <- c("#800000", "#ff0000", "#feb316", "#eafe9a", "#99ff66", "#0066ff", "#000066")
+      pal <- colorBin(mojePaleta, domain = dta$value, bins = c(Inf, 2, 1.4, 0.5, -0.5, -1.4, -2, -Inf),  
+                      na.color = "#999999")
   
   
   
@@ -716,7 +723,7 @@ output$indikatory<-renderLeaflet({
 #Zbarvení povodí dle hodnoty
           addPolygons(data=dta, layerId = dta$UPOV_ID, color = "black",
                              weight = 1.5, opacity = 0.45, smoothFactor = 0,
-                             fillColor = ~pal(value), fillOpacity = 0.8,
+                             fillColor = ~pal(value), fillOpacity = 0.5,
                              group = "Povodí",
                  highlightOptions = highlightOptions(color = "#a53333",
                                                      opacity = 1,
@@ -1007,14 +1014,28 @@ wellPanel(
           radioButtons("validace", label = NULL, choices = c("Denní průtoky" = "A", 
                                                              "Přepínání parametrů" = "B", 
                                                              "m-denní průtoky" = "C")),
-          conditionalPanel(condition = "input.validace == 'A'"),
+          conditionalPanel(condition = "input.validace == 'A'",
+                           absolutePanel(class = "panel panel-default", fixed = TRUE,
+                                         draggable = FALSE, top = "auto", left = '1%', right = "auto", bottom = '40%',
+                                         width = '13%', height = "2%",
+                                         style = "opacity: 1; style = z-index: 400",
+                                         HTML('<button data-toggle="collapse" data-target="#box8" 
+                                              class="choose">Výběr časových řad</button>'),
+                                         tags$div(id = 'box8', class="collapse", style = "max-height: 200px;
+                                                  overflow-y:scroll"),
+  
+    conditionalPanel(condition = "input.validace == 'A'",
+                     checkboxGroupInput("entry.variable4", "Zvolte:", choices = choices3, 
+                                        selected = c("value", "mean_month"))))
+                           ),
           conditionalPanel(condition = "input.validace == 'B'",
                                   selectInput("entry.pars", label=NULL,
-                                              choices = choices.pars, selected = "Dgm"),
-                                  renderUI({
-                                    selectizeInput(inputId = "search.id","Vyhledávání útvaru",
-                                          selected=input$rozvodnice_shape_click$id,
-                                          choices = search.choices)})),
+                                              choices = choices.pars, selected = "Dgm")
+                                  # , renderUI({
+                                  #   selectizeInput(inputId = "search.id","Vyhledávání útvaru",
+                                  #         selected=input$rozvodnice_shape_click$id,
+                                  #         choices = search.choices)})
+                           ),
           conditionalPanel(condition = "input.validace == 'C'",
                                   selectInput("entry.mday", label = NULL, choices = choices.mday),
                            renderUI({
@@ -1024,18 +1045,6 @@ wellPanel(
                            ))
 ```
 
-```{r validace: absolutePanel}
-absolutePanel(class = "panel panel-default", fixed = TRUE,
-                  draggable = FALSE, top = "auto", left = '1%', right = "auto", bottom = '40%',
-                  width = '13%', height = "2%",
-                  style = "opacity: 1; style = z-index: 400",
-    HTML('<button data-toggle="collapse" data-target="#box8" class="choose">Výběr časových řad</button>'),
-    tags$div(id = 'box8', class="collapse", style = "max-height: 200px; overflow-y:scroll"),
-  
-    conditionalPanel(condition = "input.validace == 'A'",
-                     checkboxGroupInput("entry.variable4", "Zvolte:", choices = choices3, 
-                                        selected = c("value"))))
-```
 
 Row {data-height = 600}
 -------------------------------------
@@ -1181,26 +1190,6 @@ output$rozvodnice <- renderLeaflet({
 
 ```
 
-### Tabulka se základními charakteristikami {data-width=450}
-
-```{r}
-renderTable({
-if(input$validace == "A"){
-  QD_filter <- QD %>% filter(DBCN == default.line()) %>% select(value)
-  QD_filter <-describe(QD_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
-  print(cbind(name="value",QD_filter[,-1]), digits=3)}
-# else if(input$validace == "B"){
-#   pars_filter <- pars %>% filter(name == input$entry.pars) %>% select(current, lower, upper, initial)
-#   pars_filter <- describe(pars_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
-#   print(cbind(name=rownames(pars_filter),pars_filter[,-1]), digits=3)
-# } else {
-#   chars_filter <- chars %>% select(choices.mday)
-#   chars_filter <- describe(chars_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
-#   print(cbind(name=rownames(chars_filter),chars_filter[,-1]), digits=3)
-#   }
-})
-```
-
 
 Row {data-height=400}
 -------------------------------------
@@ -1208,33 +1197,68 @@ Row {data-height=400}
 ### Grafy
 
 ```{r}
+#input$entry.variable4 = c("value", "mean_month", "mean_year")
+
 renderPlotly({
  
-if(input$validace == "A"){
+if(input$validace == "C" & !is.null(default.shape3())) {
+
+  chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday[-1])
+     chars_filter <- data.frame(value = t(chars_filter), m = c(seq(30,330,30),355,364))
+   
+   p1 <- plot_ly(data=chars_filter, x=~m, y=~value, type="scatter", mode="lines") %>%
+          layout(title=paste(as.character(title.f3.1())))
+   
+   p1
+   
+  
+        
+}else if(input$validace == "B"){
+  
+  plot_ly()
+  
+} else if(input$validace == "A"){
   
         ts.QD <- QD %>% filter(DBCN == default.line()) %>% mutate(month = format(DTM, "%m"), year = format(DTM, "%Y")) %>%
           group_by(year) %>% mutate(mean_year = mean(value, na.rm = TRUE)) %>% ungroup %>% group_by(month, year) %>%
           mutate(mean_month = mean(value, na.rm=TRUE)) %>% ungroup %>% select(input$entry.variable4, DTM)
-
+      
+       
+        p <- plot_ly(data=ts.QD, text=paste(ts.QD$DTM), mode="lines", type="scatter", line = list(width = 1)) %>%
+          layout(title=paste(as.character(title.f4())))
         
-        plot_ly(data=ts.QD, x=~DTM, y=~value, text=paste(ts.QD$DTM), mode="lines", type="scatter") %>% layout(title=paste(as.character(title.f4())))
+        if( "value" %in% input$entry.variable4)
+          {p <- p %>% add_trace(x = ~DTM, y = ~value, name = 'Denni prutoky')} 
         
-}else if(input$validace == "B"){
-  
-  
-} else if(input$validace == "C" & !is.null(default.shape3())) {
-
-     chars_filter <- data.frame(value = t(chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday)), m = c(seq(30,330,30),355,364))
-   
-   plot_ly(data=chars_filter, x=~m, y=~value, type="scatter", mode="lines") %>% layout(title=paste(as.character(title.f3.1())))
-   
-   }
-
+        if( "mean_month" %in% input$entry.variable4)
+        {p <- p %>% add_trace(x = ~DTM, y = ~mean_month, name = 'Mesicni prumery')}
+        
+        if("mean_year" %in% input$entry.variable4)
+          {p <- p %>% add_trace(x = ~DTM, y = ~mean_year, name = 'Rocni prumery')}
+        
+        p
+ }
   
 })
 ```
 
+### Tabulka se základními charakteristikami {data-width=400}
 
+```{r}
+renderTable({
+if(input$validace == "A"){
+  QD_filter <- QD %>% filter(DBCN == default.line()) %>% select(value)
+  QD_filter <-describe(QD_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
+  print(cbind(name="value",QD_filter[,-1]), digits=3)
+# else if(input$validace == "B"){
+#   pars_filter <- pars %>% filter(name == input$entry.pars) %>% select(current, lower, upper, initial)
+#   pars_filter <- describe(pars_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
+#   print(cbind(name=rownames(pars_filter),pars_filter[,-1]), digits=3)
+} else {
+  chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday)
+  }
+})
+```
 
 
 O projektu {data-icon="fa-user-circle"}
