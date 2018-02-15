@@ -105,8 +105,8 @@ BM = rbindlist(M, idcol = 'UPOV_ID')
 # setwd("./data")
 # BM <- readRDS('data/mbilan/bilan_month - puvodni.rds')
 
-mesice <- c("Leden","Únor","Březen","Duben","Květen","Červen",
-            "Červenec","Srpen","Září","Říjen","Listopad","Prosinec")
+mesice <- c("Leden","Unor","Brezen","Duben","Kveten","Cerven",
+            "Cervenec","Srpen","Zari","Rijen","Listopad","Prosinec")
 
 seasons <- data.frame(month = c(1:12), seasons = c("Zima", "Zima", "Jaro", "Jaro", "Jaro", "Leto", "Leto",
                                                    "Leto","Podzim", "Podzim", "Podzim", "Zima"))
@@ -128,7 +128,7 @@ BM.long <- dcast(BM, month+year+UPOV_ID+DTM~variable)
 BM.long$m <- as.factor(BM.long$month)
 levels(BM.long$m) <- mesice
 
-saveRDS(BM, 'data/mbilan/bilan_month_update.rds')
+saveRDS(BM, file.path(.datadir, 'webapp_data/mbilan/bilan_month.rds'))
 saveRDS(BM.long, 'data/mbilan/bilan_month_long_update.rds')
 
 #3 Denní průtoky
@@ -293,6 +293,7 @@ for (i in povodi$UPOV_ID) {
  
  #8 pars
  #--------------------
+ pars <- readRDS(file.path(.datadir, "pars/pars.rds"))
  
  data <- c()
  name <- names(pars)
@@ -304,7 +305,7 @@ for (i in povodi$UPOV_ID) {
    
  }
  
- saveRDS(data, file.path("used_data/webapp_data/pars/pars.rds"))
+ saveRDS(data, file.path(.datadir, "webapp_data/pars/pars.rds"))
  
  #9 popis txt to rds
  #--------------------
@@ -335,8 +336,8 @@ cp <- cp %>%  group_by(UPOV_ID, variable, seasons) %>% mutate(k = rank(-value), 
 
 cp <- cp %>%  group_by(UPOV_ID, variable, month) %>% mutate(k = rank(-value), n = n()) %>% mutate(p_month = (k-0.3)/(n+0.4))
 
-cpa <- cp %>% ungroup() %>% filter(UPOV_ID == "DUN_0010", variable == "P", seasons == "Zima") %>% select(value, p_season) 
-plot(cpa)
+# cpa <- cp %>% ungroup() %>% filter(UPOV_ID == "DUN_0010", variable == "P", seasons == "Zima") %>% select(value, p_season) 
+# plot(cpa)
 
 cp_final <- cp %>% ungroup() %>% select(UPOV_ID, variable, p_year, p_month, p_season, seasons, month2, value)
 
