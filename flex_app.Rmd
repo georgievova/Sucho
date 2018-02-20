@@ -42,7 +42,7 @@ kraje <- readRDS(file.path(.datadir, "webapp_data/geo_rds/kraje.rds"))
 okresy <- readRDS(file.path(.datadir, "webapp_data/geo_rds/okresy.rds"))
 povodi_III <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi_III.rds"))
 stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/stanice.rds"))
-routing.tab <- readRDS(file.path(.datadir, "webapp_data/to_from/routing_matrix.Rds"))
+tabB <- readRDS(file.path(.datadir, "routing/TABB.rds"))
 cp <- readRDS(file.path(.datadir, "webapp_data/to_from/cara_prekroceni.rds"))
 
 popis <- readRDS(file.path(.datadir, "webapp_data/popis.rds"))
@@ -366,7 +366,7 @@ output$map<-renderLeaflet({
 
 
 horni.povodi <- reactive({
-      base::subset(povodi, routing.tab[povodi$UPOV_ID, (if(is.null(input$search.id)){"DUN_0010"}else{input$search.id})]==1)
+     povodi[povodi$UPOV_ID %in% tabB$FROM[tabB$TO==input$search.id],]
   })
 
 #Zobrazení celého horního povodí 
