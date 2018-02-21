@@ -436,9 +436,9 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
 ```{r cr denni data}
 renderDygraph({
   
-  d <- dir(file.path(.datadir, "bilan"))
+  d <- dir(file.path(.datadir, "res"))
   bilan_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
-  dta_bd <- readRDS(file.path(.datadir,"bilan", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
+  dta_bd <- readRDS(file.path(.datadir,"res", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
   
   ts.bilance <- dta_bd %>%  select(input$entry.variable_d, DTM)
 
