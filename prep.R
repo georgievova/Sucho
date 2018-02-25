@@ -103,7 +103,7 @@ BM = rbindlist(M, idcol = 'UPOV_ID')
 #Saving
 #--------------------
 # setwd("./data")
-# BM <- readRDS('data/mbilan/bilan_month - puvodni.rds')
+# BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month.rds"))
 
 mesice <- c("Leden","Unor","Brezen","Duben","Kveten","Cerven",
             "Cervenec","Srpen","Zari","Rijen","Listopad","Prosinec")
@@ -128,8 +128,11 @@ BM.long <- dcast(BM, month+year+UPOV_ID+DTM~variable)
 BM.long$m <- as.factor(BM.long$month)
 levels(BM.long$m) <- mesice
 
+BMt <- as.data.table(BM)
+
 saveRDS(BM, file.path(.datadir, 'webapp_data/mbilan/bilan_month.rds'))
-saveRDS(BM.long, 'data/mbilan/bilan_month_long_update.rds')
+saveRDS(BM.long, file.path(.datadir, 'webapp_data/mbilan/bilan_month_long.rds'))
+saveRDS(BMt, file.path(.datadir, 'webapp_data/mbilan/bilan_month_data_table.rds'))
 
 #3 Denní průtoky
 #--------------------
@@ -291,6 +294,9 @@ for (i in povodi$UPOV_ID) {
  saveRDS(spi, file.path(.datadir, "webapp_data/indikatory/spi.rds")) 
  saveRDS(spei, file.path(.datadir, "webapp_data/indikatory/spei.rds")) 
  
+ spi <- as.data.table(spi)
+ spei <- as.data.table(spei)
+ 
  #8 pars
  #--------------------
  pars <- readRDS(file.path(.datadir, "pars/pars.rds"))
@@ -318,6 +324,8 @@ saveRDS(popis, file.path(.datadir, "webapp_data/popis.rds"))
 #--------------------
 
 u <- readRDS(file.path(.datadir, "webapp_data/uzivani/06_16/uzivani_na_nahraz.rds"))
+u <- as.data.table(u)
+saveRDS(u, file.path(.datadir, "webapp_data/uzivani/06_16/uzivani_na_nahraz_dt.rds"))
 
   u_leaflet <- u %>% group_by(UPOV_ID, NAZICO, POVODI, JEV, X, Y, ICOC) %>% summarise(mean=mean(value))
   u_leaflet <- SpatialPointsDataFrame(u_leaflet[, c("X", "Y")], u_leaflet, proj4string = CRS("+init=epsg:2065"))
@@ -342,6 +350,9 @@ cp <- cp %>%  group_by(UPOV_ID, variable, month) %>% mutate(k = rank(-value), n 
 cp_final <- cp %>% ungroup() %>% select(UPOV_ID, variable, p_year, p_month, p_season, seasons, month2, value)
 
 saveRDS(cp_final, file.path(.datadir, "webapp_data/to_from/cara_prekroceni.rds"))
+
+cp <- as.data.table(cp)
+saveRDS(cp, file.path(.datadir, "webapp_data/to_from/cara_prekroceni_dt.rds"))
 
 #12 m-denní prutoky (chars)
 #--------------------

@@ -33,7 +33,7 @@ library(rhandsontable)
 
 CatCa::give_paths()
 
-BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month.rds"))
+BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_data_table.rds"))
 
 povodi <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi.rds"))
 reky <- readRDS(file.path(.datadir, "webapp_data/geo_rds/reky.rds"))
@@ -44,12 +44,12 @@ okresy <- readRDS(file.path(.datadir, "webapp_data/geo_rds/okresy.rds"))
 povodi_III <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi_III.rds"))
 stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/stanice.rds"))
 tabB <- readRDS(file.path(.datadir, "routing/TABB.rds"))
-cp <- readRDS(file.path(.datadir, "webapp_data/to_from/cara_prekroceni.rds"))
+cp <- readRDS(file.path(.datadir, "webapp_data/to_from/cara_prekroceni_dt.rds"))
 
 popis <- readRDS(file.path(.datadir, "webapp_data/popis.rds"))
 
 pars <- readRDS(file.path(.datadir, "webapp_data/pars/pars.rds"))
-u <- readRDS(file.path(.datadir, "webapp_data/uzivani/06_16/uzivani_na_nahraz.rds"))
+u <- readRDS(file.path(.datadir, "webapp_data/uzivani/06_16/uzivani_na_nahraz_dt.rds"))
 u_leaflet <- readRDS(file.path(.datadir, "webapp_data/uzivani/u_leaflet.rds"))
 QD <- readRDS(file.path(.datadir, "webapp_data/chmu/QD.rds"))
 chars <- readRDS(file.path(.datadir, "webapp_data/chmu/chars_mm.rds"))
@@ -202,7 +202,7 @@ actionButton("reset_button", "Reset", icon("arrows"),
 #Reactions--------------------
 reac<- eventReactive(input$go1,{ 
 
-  bilance <-  BM %>% filter(variable == input$entry.variable) 
+  bilance <-  BM[variable == input$entry.variable]
   
   bilance_filtr <- c()
   dta <- c()
@@ -210,7 +210,7 @@ reac<- eventReactive(input$go1,{
 #Dlouhodobé průměry (celé období/vybrané období)
   if(input$kartogram == "A"){
   if(input$DP == "DP1"){
-    bilance_filtr <- bilance %>% filter(year==2000 & month==1)
+    bilance_filtr <- bilance[year==2000 & month==1]
     colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
         colnames(bilance_filtr)[colnames(bilance_filtr)=="mean_ep"] <- "value"
     dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
@@ -218,18 +218,17 @@ reac<- eventReactive(input$go1,{
         if(input$entry.period == "1"){period=seq(1961,1990,1)
         }else if(input$entry.period == "2"){period = seq(1971,2000,1) 
         }else if(input$entry.period == "3"){period = seq(1981,2010,1)}
-       bilance_filtr <- bilance %>% group_by(UPOV_ID) %>% filter(year==period) %>%
-       summarise(mean.period = mean(value))
+       bilance_filtr <- bilance[year %in% period] %>% group_by(UPOV_ID) %>% summarise(mean.period = mean(value))
        colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
        colnames(bilance_filtr)[colnames(bilance_filtr)=="mean.period"] <- "value"
        dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
 #Měsíční průměry
   }}else if(input$kartogram == "B"){
-    bilance_filtr <- bilance %>% filter(year == year(as.Date(input$entry.date)) & month==month(as.Date(input$entry.date)))
+    bilance_filtr <- bilance[year == year(input$entry.date) & month==month(input$entry.date)]
     dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
 #Roční průměry
   }else if(input$kartogram == "C"){
-    bilance_filtr <- bilance %>% filter(year==input$entry.yearC & month==1)
+    bilance_filtr <- bilance[year==input$entry.yearC & month==1]
     colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
     colnames(bilance_filtr)[colnames(bilance_filtr)=="annual.avg"] <- "value"
     dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))}
@@ -409,7 +408,7 @@ Row {.tabset}
 
 renderDygraph({
   
-  ts.bilance <- BM %>% filter(UPOV_ID == default.shape(), variable == input$entry.variable2) %>% select(value, DTM) 
+  ts.bilance <- BM[UPOV_ID == default.shape() & variable == input$entry.variable2] %>% select(value, DTM) 
   
   RangeMin <- min(ts.bilance$value)-0.5
   RangeMax <- max(ts.bilance$value)+0.5
@@ -469,7 +468,7 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
 
 renderPlot({
 
-  cp_c <- cp %>% filter(UPOV_ID == default.shape(), variable == input$variable_cp) %>%
+  cp_c <- cp[UPOV_ID == default.shape() & variable == input$variable_cp] %>%
     select(value, p_year) %>% arrange(value)
 
  g1<- ggplot(cp_c, aes(p_year, value)) + geom_line()+
@@ -478,7 +477,7 @@ renderPlot({
                         theme(plot.title = element_text(hjust = 0.5))
 
 
- cp_s <- cp %>% group_by(seasons) %>% filter(UPOV_ID == default.shape(), variable == input$variable_cp) %>%
+ cp_s <- cp[UPOV_ID == default.shape() & variable == input$variable_cp] %>% group_by(seasons) %>%
     select(p_season, value, seasons) %>% arrange(value)
 
  g2<-ggplot(cp_s, aes(p_season, value)) + geom_line(aes(group=seasons, colour=seasons)) +
@@ -488,7 +487,7 @@ renderPlot({
     g2$labels$colour <- "Legenda"
 
 
- cp_m <- cp %>% group_by(month2) %>% filter(UPOV_ID == default.shape(), variable == input$variable_cp) %>%
+ cp_m <- cp[UPOV_ID == default.shape() & variable == input$variable_cp] %>% group_by(month2) %>%
  select(p_month, value, month2) %>% arrange(value)
 
  g3<- ggplot(cp_m, aes(p_month, value)) + geom_line(aes(group=month2, colour=month2))+
@@ -524,9 +523,9 @@ absolutePanel(class = "panel panel-default", fixed = TRUE,
 
 renderPlotly({
 
-  d <- dir(file.path(.datadir, "bilan"))
+  d <- dir(file.path(.datadir, "res"))
   bilan_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
-  dta_bd <- readRDS(file.path(.datadir,"bilan", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
+  dta_bd <- readRDS(file.path(.datadir,"res", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
 
   ts.year <- dta_bd %>%  select(input$variable_trend, DTM) %>% mutate(m = month(as.Date(DTM)))
   colnames(ts.year)[1] <- "var" 
@@ -643,19 +642,17 @@ actionButton("reset_button", "Reset", icon("arrows"),
 #Reactions--------------------
 reac.ind<- eventReactive(input$go2,{ 
 
-  spi_filter <-  spi %>% filter(variable == input$entry.variable.ind) %>% filter(scale == input$krok)
-  spei_filter <- spei %>% filter(scale == input$krok)
+  spi_filter <-  spi[variable == input$entry.variable.ind & scale == input$krok]
+  spei_filter <- spei[scale == input$krok]
 
   dta <- c()
 
 #Dlouhodobé průměry (celé období/vybrané období)
 if(input$indikatory == "A"){
-    spi_d <- spi_filter %>% filter(year == year(as.Date(input$entry.date.ind)) &
-                                     month==month(as.Date(input$entry.date.ind)))
+    spi_d <- spi_filter[year == year(input$entry.date.ind) & month==month(input$entry.date.ind)]
     dta <- (sp::merge(povodi,spi_d, by="UPOV_ID"))}
   else{
-    spei_d <- spei_filter %>% filter(year == year(as.Date(input$entry.date.ind)) &
-                                          month==month(as.Date(input$entry.date.ind)))
+    spei_d <- spei_filter[year == year(input$entry.date.ind) & month==month(input$entry.date.ind)]
     dta <- (sp::merge(povodi,spei_d, by="UPOV_ID"))}
   
 #Vytvaření palet
@@ -786,14 +783,14 @@ leafletOutput("indikatory")
 Row
 -------------------------------------
 
-```{r 2 indikatory mesicni data}
+```{r indikatory: TS}
 
 renderDygraph({
 
   if(input$indikatory == "A"){
-    ts.indikatory <- reac.ind()$spi_filter %>% filter(UPOV_ID == default.shape.ind()) %>% select(value, DTM)
+    ts.indikatory <- reac.ind()$spi_filter[UPOV_ID == default.shape.ind()] %>% select(value, DTM)
 }else{
-    ts.indikatory <- reac.ind()$spei_filter %>% filter(UPOV_ID == default.shape.ind()) %>% select(value, DTM)
+    ts.indikatory <- reac.ind()$spei_filter[UPOV_ID == default.shape.ind()] %>% select(value, DTM)
   }
 
 RangeMin <- min(ts.indikatory$value, na.rm = T)-0.5
@@ -855,7 +852,6 @@ default.circle <- reactive({
 
 
 ```{r uzivani: abs.panel}
-
 renderUI({
     absolutePanel(class = "panel panel-default", fixed = TRUE,
                 draggable = TRUE, top = '5%', left = '3.5%', right = "auto", bottom = "auto",
@@ -867,6 +863,7 @@ renderUI({
 # absolutePanel(wellPanel(HTML(paste("POD - odběr z podzemních vod",
 #          "POV - evidované odběry z povrchových vod",
 #          "VYP - vypouštění", sep="<br/>"))))
+
 ```
 
 Row {data-height=600}
@@ -938,7 +935,7 @@ leafletOutput("uzivani")
 
 ```{r uzivani: casova rada}
 renderDygraph({
-  ts.uzivani <-  u %>% filter(UPOV_ID == default.shape2()) %>% group_by(JEV, DTM) %>%
+  ts.uzivani <-  u[UPOV_ID == default.shape2()] %>% group_by(JEV, DTM) %>%
                        summarise(sum = sum(value)) %>% ungroup %>% dcast(DTM~JEV)
   ts.uzivani <- xts::xts(ts.uzivani, order.by = ts.uzivani$DTM)
   #ts.uzivani <- ts(ts.uzivani, start = decimal_date(as.Date("2006-12-01")), frequency = 1)
@@ -954,7 +951,7 @@ Row {data-heigth=400}
 
 ```{r uzivani: tab:odberatel}
 renderDataTable({
-  subtotal <- u %>% filter(UPOV_ID == default.shape2()) %>% replace(is.na(.), 0) %>% group_by(NAZICO, JEV) %>% summarise(suma = sum(value)) %>% select(NAZICO, JEV, suma)}, class = 'compact cell-border', colnames = c("Odběratel", "Jev", "Suma"), options = list(scrollY = "300px", lengthMenu = c(100,200)))
+  subtotal <- u[UPOV_ID == default.shape2()] %>% replace(is.na(.), 0) %>% group_by(NAZICO, JEV) %>% summarise(suma = sum(value)) %>% select(NAZICO, JEV, suma)}, class = 'compact cell-border', colnames = c("Odběratel", "Jev", "Suma"), options = list(scrollY = "300px", lengthMenu = c(100,200)))
 ```
 
 
@@ -962,7 +959,7 @@ renderDataTable({
 
 ```{r uzivani: TS odberatel}
 renderDygraph({
-  ts.uzivani <-  u %>% filter(NAZICO == default.circle()) %>% group_by(JEV, DTM) %>% ungroup %>% dcast(DTM~JEV)
+  ts.uzivani <-  u[NAZICO == default.circle()] %>% group_by(JEV, DTM) %>% ungroup %>% dcast(DTM~JEV)
   ts.uzivani <- xts::xts(ts.uzivani, order.by = ts.uzivani$DTM)
   #ts.uzivani <- ts(ts.uzivani, start = decimal_date(as.Date("2006-12-01")), frequency = 1)
 
@@ -1114,7 +1111,7 @@ rhandsontable(DF, width = 500, height = 600) %>%
 
 ```{r vyhled_uzivani:: TS odberatel}
 renderDygraph({
-  ts.uzivani.uv <-  u %>% filter(NAZICO == default.circle_uv()) %>% group_by(JEV, DTM) %>% ungroup %>% dcast(DTM~JEV)
+  ts.uzivani.uv <-  u[NAZICO == default.circle_uv()] %>% group_by(JEV, DTM) %>% ungroup %>% dcast(DTM~JEV)
   ts.uzivani.uv <- xts::xts(ts.uzivani.uv, order.by = ts.uzivani.uv$DTM)
   #ts.uzivani <- ts(ts.uzivani, start = decimal_date(as.Date("2006-12-01")), frequency = 1)
 
