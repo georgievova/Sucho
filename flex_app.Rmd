@@ -302,6 +302,8 @@ default.shape <- reactive({
 
 #Outputs
 
+
+  
 #Leaflet--------------------
 
 output$map<-renderLeaflet({
@@ -394,7 +396,7 @@ observe({
     leafletProxy("map") %>% setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom)})
 
 
-leafletOutput("map")
+leafletOutput("map")  
   
 ```
 
@@ -959,7 +961,7 @@ renderDataTable({
 
 ```{r uzivani: TS odberatel}
 renderDygraph({
-  ts.uzivani <-  u[NAZICO == default.circle()] %>% group_by(JEV, DTM) %>% ungroup %>% dcast(DTM~JEV)
+  ts.uzivani <-  u[NAZICO == default.circle()] %>% dcast(DTM~JEV)
   ts.uzivani <- xts::xts(ts.uzivani, order.by = ts.uzivani$DTM)
   #ts.uzivani <- ts(ts.uzivani, start = decimal_date(as.Date("2006-12-01")), frequency = 1)
 
@@ -989,12 +991,12 @@ default.shape_uv <- reactive({
   return(UPOV_ID.sel)})
 
 title_uv <- reactive({
-  title<- popis$NAZ_UTVAR[popis$UPOV_ID == default.shape2()]
+  title<- popis$NAZ_UTVAR[popis$UPOV_ID == default.shape_uv()]
   return(title)
   })
 
 title_bod_uv <- reactive({
-  title <- u$NAZICO[u$NAZICO == default.circle()]
+  title <- u$NAZICO[u$NAZICO == default.circle_uv()]
   return(title)
 })
 
@@ -1092,6 +1094,10 @@ Row {data-height=500}
 ### Tabulka 
 
 ```{r vyhled_uzivani: tab}
+# DF <- u[NAZICO == default.circle_uv()] %>% group_by(JEV) %>% select(value, ROK, MESIC, UPOV_ID, JEV)
+# DF <- DF[DF$ROK %in% DF$ROK[nrow(DF)] & DF$MESIC %in% c(DF$MESIC[nrow(DF)], as.character(as.numeric(DF$MESIC[nrow(DF)]-1))),]
+# DF = data.frame()
+
 DF = data.frame(integer = 1:10,
                    numeric = rnorm(10),
                    logical = rep(TRUE, 10), 
@@ -1111,7 +1117,7 @@ rhandsontable(DF, width = 500, height = 600) %>%
 
 ```{r vyhled_uzivani:: TS odberatel}
 renderDygraph({
-  ts.uzivani.uv <-  u[NAZICO == default.circle_uv()] %>% group_by(JEV, DTM) %>% ungroup %>% dcast(DTM~JEV)
+  ts.uzivani.uv <- u[NAZICO == default.circle_uv()] %>% dcast(DTM~JEV)
   ts.uzivani.uv <- xts::xts(ts.uzivani.uv, order.by = ts.uzivani.uv$DTM)
   #ts.uzivani <- ts(ts.uzivani, start = decimal_date(as.Date("2006-12-01")), frequency = 1)
 
