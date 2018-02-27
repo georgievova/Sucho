@@ -174,17 +174,28 @@ wellPanel(HTML('<div class="help-tip">
                             ceiling(reac()$inputed_max)))
     )
             })
+  
+  hr()
+  
+  wellPanel(checkboxGroupInput("entry.layer", label = "Vrstvy",
+    choices = c("Mapový podklad" = "MP", "Povodí" ="P", "Horní povodí" = "HP", "Řeky" = "R", "Jezera" = "J", 
+                "Nádrže" = "N", "Kraje" = "K", "Okresy" = "O", "Povodí 3. řádu" = "P3"), 
+    selected = c("MP", "P"),
+    inline = T))
+  
+  hr()
 
 #         HTML('<button data-toggle="collapse" data-target="#box3" class="btn-block btn-primary">Filtování dle hodnoty</button>'),
 #         tags$div()
 
-actionButton("go1", "Zobrazit", icon("check"), 
-    style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
+div(style="display:inline-block",
+    actionButton("reset_button", "Reset", icon("arrows"),
+                 style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
+    actionButton("go1", "Zobrazit", icon("check"),
+                 style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
+)
+  
 
-hr()
-
-actionButton("reset_button", "Reset", icon("arrows"), 
-    style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
 
 ```
 
@@ -321,12 +332,14 @@ output$map<-renderLeaflet({
 
    if(length(labels)==0){labels <- c(" ")}
   
-  
- leaflet() %>% 
-     setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom) %>%
-     addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13) ) %>%
-#Zbarvení povodí dle hodnoty
-          addPolygons(data=dta, layerId = dta$UPOV_ID, color = "burlywood4",
+ #ZM
+    map <- leaflet() %>% 
+     setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom)
+ 
+ #Zbarvení povodí dle hodnoty + Legenda
+ 
+    if("P" %in% input$entry.layer){
+     map <- map %>% addPolygons(data=dta, layerId = dta$UPOV_ID, color = "burlywood4",
                              weight = 1.3, opacity = 0.3, smoothFactor = 0,
                              fillColor = ~pal(value), fillOpacity = 0.8,
                              group = "Povodí",
@@ -341,44 +354,64 @@ output$map<-renderLeaflet({
                                              "font-family" = "sans-serif", padding = "3px 8px",
                                              keepInView = TRUE, noHide = FALSE,
                                              "border-color" = "rgb(255, 255, 255)"),
-                                             textsize = "13px", direction = "auto")) %>%
-#Vykreslení zakladních prvků mapy
-          addPolylines(data=reky, color="#007C8C", weight = 1.5,
-                 opacity = 1, stroke= TRUE, group = "Řeky") %>%
-          addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff", 
-                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera")%>%
-          addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
-                weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže")%>%
-          addPolylines(data=kraje, color="#000000",  weight = 2.5, 
-                       stroke= TRUE, group = "Kraje") %>%
-          addPolylines(data=okresy, color="#000000",  weight = 2, 
-                       stroke= TRUE, group = "Okresy") %>%
-          addPolylines(data=povodi_III, color="#cc0000",  weight = 2.5, opacity = 1,
-                       stroke= TRUE, group = "Povodí 3. řádu") %>%
-#Legenda a ovládání vrstev mapy
-      addLayersControl(overlayGroups = c("Mapový podklad", "Povodí", "Horní povodí", "Řeky", "Jezera", "Nádrže",
-                                         "Kraje", "Okresy", "Povodí 3. řádu"),
-                     position = "bottomleft",
-                     options = layersControlOptions(collapsed = TRUE)) %>%
-      hideGroup(c("Kraje", "Okresy", "Povodí 3. řádu", "Horní povodí"))%>%
-      addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
-              position = "bottomright") 
-
+                                             textsize = "13px", direction = "auto")) %>% 
+          addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
+                    position = "bottomright")}
+ 
+ #Vrstvy mapy 
+ 
+    if("MP" %in% input$entry.layer){
+      map <-  map %>% addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13))}
+    
+    if("R" %in% input$entry.layer){    
+       map <- map %>% addPolylines(data=reky, color="#007C8C", weight = 1.5,
+                 opacity = 1, stroke= TRUE, group = "Řeky")}
+    
+    if("J" %in% input$entry.layer){     
+       map <- map %>% addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff", 
+                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera")}
+    
+    if("N" %in% input$entry.layer){       
+      map <-  map %>% addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
+                weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže")}
+    
+    if("K" %in% input$entry.layer){  
+      map <-  map %>% addPolylines(data=kraje, color="#000000",  weight = 2.5, 
+                       stroke= TRUE, group = "Kraje")} 
+    
+    if("O" %in% input$entry.layer){       
+       map <- map %>% addPolylines(data=okresy, color="#000000",  weight = 2, 
+                       stroke= TRUE, group = "Okresy")} 
+    
+    if("P3" %in% input$entry.layer){     
+       map <- map %>% addPolylines(data=povodi_III, color="#cc0000",  weight = 2.5, opacity = 1,
+                       stroke= TRUE, group = "Povodí 3. řádu")}
+        
+#Ovládání vrstev mapy v leaflet
+      # addLayersControl(overlayGroups = c("Mapový podklad", "Povodí", "Horní povodí", "Řeky", "Jezera", "Nádrže",
+      #                                    "Kraje", "Okresy", "Povodí 3. řádu"),
+      #                position = "bottomleft",
+      #                options = layersControlOptions(collapsed = TRUE)) %>%
+      # hideGroup(c("Kraje", "Okresy", "Povodí 3. řádu", "Horní povodí"))%>%
+      
     })
-
-
-horni.povodi <- reactive({
-     povodi[povodi$UPOV_ID %in% tabB$FROM[tabB$TO==input$search.id],]
-  })
-
-#Zobrazení celého horního povodí 
-observe({
-  leafletProxy("map") %>%
-    clearGroup("Horní povodí") %>%
-    addPolylines(data=horni.povodi(),
-                 color = "#00264d", weight = 2.5, opacity = 0.7, stroke = TRUE,
-                 group = "Horní povodí")
-})
+  
+#Zobrazení horního povodí 
+  
+#   if(input$entry.layer == "HP"){ 
+#     
+#     horni.povodi <- reactive({
+#      povodi[povodi$UPOV_ID %in% tabB$FROM[tabB$TO==input$search.id],] })
+# 
+# 
+# observe({
+#   leafletProxy("map") %>%
+#     clearGroup("Horní povodí") %>%
+#     addPolylines(data=horni.povodi(),
+#                  color = "#00264d", weight = 2.5, opacity = 0.7, stroke = TRUE,
+#                  group = "Horní povodí")
+# })
+# }
 
 #Zvyraznění současného povodí
 observe({
@@ -565,7 +598,7 @@ print(subplot(ts1,ts2,nrows=2))
 
 ```{r ZM trendy: absPanel}
 absolutePanel(class = "panel panel-default", fixed = TRUE,
-                  draggable = FALSE, top = '65%', left = '0.5%', right = 'auto', bottom = 'auto',
+                  draggable = FALSE, top = 'auto', left = '1.5%', right = 'auto', bottom = '15%',
                   width = '18%',
                   style = "opacity: 1; style = z-index: 400",
   wellPanel(
