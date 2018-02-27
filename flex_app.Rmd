@@ -17,12 +17,12 @@ library(leaflet)
 library(dplyr)
 library(dygraphs)
 library(ggplot2)
-library(gridExtra)
+#library(gridExtra)
 library(data.table)
-library(sp)
-library(rgeos)
-library(datasets)
-library(psych)
+#library(sp)
+#library(rgeos)
+#library(datasets)
+#library(psych)
 library(plotly)
 library(DT) # An R interface to the DataTables library
 library(parallel) #Parallel detectCores() error
@@ -178,7 +178,7 @@ wellPanel(HTML('<div class="help-tip">
   hr()
   
   wellPanel(checkboxGroupInput("entry.layer", label = "Vrstvy",
-    choices = c("Mapový podklad" = "MP", "Povodí" ="P", "Horní povodí" = "HP", "Řeky" = "R", "Jezera" = "J", 
+    choices = c("Mapový podklad" = "MP", "Povodí" ="P", "Řeky" = "R", "Jezera" = "J", 
                 "Nádrže" = "N", "Kraje" = "K", "Okresy" = "O", "Povodí 3. řádu" = "P3"), 
     selected = c("MP", "P"),
     inline = T))
@@ -208,10 +208,12 @@ div(style="display:inline-block",
 #input$entry.year = 1968
 #input$entry.month = 2
 #input$entry.number = 15
-
+# input$entry.layer <- c("P")
 
 #Reactions--------------------
 reac<- eventReactive(input$go1,{ 
+ 
+  vrstvy <- input$entry.layer
 
   bilance <-  BM[variable == input$entry.variable]
   
@@ -272,7 +274,7 @@ reac<- eventReactive(input$go1,{
   
   
   return(list(bilance=bilance_filtr, dta=dta, pal = pal, inputed_min=inputed_min, inputed_max=inputed_max,
-              def_min=def_min, def_max=def_max))
+              def_min=def_min, def_max=def_max, vrstvy = vrstvy))
 }, ignoreNULL = FALSE, ignoreInit = FALSE)
 
 
@@ -319,8 +321,13 @@ default.shape <- reactive({
 
 output$map<-renderLeaflet({
 
-    dta <- reac()$dta
-    pal <- reac()$pal
+
+  
+
+    reac_app <- reac()
+    dta <- reac_app$dta
+    pal <- reac_app$pal
+    vrstvy <- reac_app$vrstvy
 
   # Creating labels--------------------
 
@@ -334,12 +341,14 @@ output$map<-renderLeaflet({
   
  #ZM
     map <- leaflet() %>% 
-     setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom)
+       setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom)
+      
  
  #Zbarvení povodí dle hodnoty + Legenda
  
-    if("P" %in% input$entry.layer){
-     map <- map %>% addPolygons(data=dta, layerId = dta$UPOV_ID, color = "burlywood4",
+    
+    if("P" %in% vrstvy){
+map <-  map %>% addPolygons(data=dta, layerId = dta$UPOV_ID, color = "burlywood4",
                              weight = 1.3, opacity = 0.3, smoothFactor = 0,
                              fillColor = ~pal(value), fillOpacity = 0.8,
                              group = "Povodí",
@@ -354,64 +363,67 @@ output$map<-renderLeaflet({
                                              "font-family" = "sans-serif", padding = "3px 8px",
                                              keepInView = TRUE, noHide = FALSE,
                                              "border-color" = "rgb(255, 255, 255)"),
-                                             textsize = "13px", direction = "auto")) %>% 
+                                             textsize = "13px", direction = "auto")) %>%
           addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
                     position = "bottomright")}
- 
- #Vrstvy mapy 
- 
-    if("MP" %in% input$entry.layer){
-      map <-  map %>% addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13))}
-    
-    if("R" %in% input$entry.layer){    
+     
+
+ #Vrstvy mapy
+# 
+    if("MP" %in% vrstvy){
+      map <-  map %>% addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13))
+      }
+
+    if("R" %in% vrstvy){
        map <- map %>% addPolylines(data=reky, color="#007C8C", weight = 1.5,
-                 opacity = 1, stroke= TRUE, group = "Řeky")}
-    
-    if("J" %in% input$entry.layer){     
-       map <- map %>% addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff", 
+                 opacity = 1, stroke= TRUE, group = "Řeky")
+       }
+
+    if("J" %in% vrstvy){
+       map <- map %>% addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff",
                 weight = 1, opacity = 1, stroke= TRUE, group = "Jezera")}
-    
-    if("N" %in% input$entry.layer){       
-      map <-  map %>% addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
+
+    if("N" %in% vrstvy){
+      map <-  map %>% addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff",
                 weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže")}
-    
-    if("K" %in% input$entry.layer){  
-      map <-  map %>% addPolylines(data=kraje, color="#000000",  weight = 2.5, 
-                       stroke= TRUE, group = "Kraje")} 
-    
-    if("O" %in% input$entry.layer){       
-       map <- map %>% addPolylines(data=okresy, color="#000000",  weight = 2, 
-                       stroke= TRUE, group = "Okresy")} 
-    
-    if("P3" %in% input$entry.layer){     
+
+    if("K" %in% vrstvy){
+      map <-  map %>% addPolylines(data=kraje, color="#000000",  weight = 2.5,
+                       stroke= TRUE, group = "Kraje")}
+
+    if("O" %in% vrstvy){
+       map <- map %>% addPolylines(data=okresy, color="#000000",  weight = 2,
+                       stroke= TRUE, group = "Okresy")}
+
+    if("P3" %in% vrstvy){
        map <- map %>% addPolylines(data=povodi_III, color="#cc0000",  weight = 2.5, opacity = 1,
-                       stroke= TRUE, group = "Povodí 3. řádu")}
-        
+                       stroke= TRUE, group = "Povodí 3. řádu")
+    }
+
 #Ovládání vrstev mapy v leaflet
-      # addLayersControl(overlayGroups = c("Mapový podklad", "Povodí", "Horní povodí", "Řeky", "Jezera", "Nádrže",
-      #                                    "Kraje", "Okresy", "Povodí 3. řádu"),
-      #                position = "bottomleft",
-      #                options = layersControlOptions(collapsed = TRUE)) %>%
-      # hideGroup(c("Kraje", "Okresy", "Povodí 3. řádu", "Horní povodí"))%>%
-      
+     map <- map %>%  addLayersControl(overlayGroups = c("Horní povodí"),
+                     position = "bottomleft",
+                     options = layersControlOptions(collapsed = FALSE)) %>%
+      hideGroup(c("Horní povodí"))
+      print(map)
     })
   
 #Zobrazení horního povodí 
   
 #   if(input$entry.layer == "HP"){ 
 #     
-#     horni.povodi <- reactive({
-#      povodi[povodi$UPOV_ID %in% tabB$FROM[tabB$TO==input$search.id],] })
-# 
-# 
-# observe({
-#   leafletProxy("map") %>%
-#     clearGroup("Horní povodí") %>%
-#     addPolylines(data=horni.povodi(),
-#                  color = "#00264d", weight = 2.5, opacity = 0.7, stroke = TRUE,
-#                  group = "Horní povodí")
-# })
-# }
+    horni.povodi <- reactive({
+     povodi[povodi$UPOV_ID %in% tabB$FROM[tabB$TO==input$search.id],] })
+
+
+observe({
+  leafletProxy("map") %>%
+    clearGroup("Horní povodí") %>%
+    addPolylines(data=horni.povodi(),
+                 color = "#00264d", weight = 2.5, opacity = 0.7, stroke = TRUE,
+                 group = "Horní povodí")
+})
+
 
 #Zvyraznění současného povodí
 observe({
@@ -436,35 +448,6 @@ leafletOutput("map")
 
 Row {.tabset}
 -------------------------------------
-
-### Měsíční data
-
-```{r cr mesicni data}
-
-renderDygraph({
-  
-  ts.bilance <- BM[UPOV_ID == default.shape() & variable == input$entry.variable2] %>% select(value, DTM) 
-  
-  RangeMin <- min(ts.bilance$value)-0.5
-  RangeMax <- max(ts.bilance$value)+0.5
-  
-  ts.bilance <- xts::xts(ts.bilance, order.by = ts.bilance$DTM)
-
-  dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas") %>%
-  dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>%  
-  dyRangeSelector() %>% 
-   dyCrosshair(direction = "vertical")
-})
-
-absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
-                  draggable = FALSE, top = '52.7%', left = "auto", right = '0.5%', bottom = "auto",
-                  width = '15%',
-                  style = "opacity: 0.9; style = z-index: 400",
-    HTML('<button data-toggle="collapse" data-target="#box4" class="choose">Výběr časových řad</button>'),
-        tags$div(id = 'box4', class="collapse", style = "max-height: 250px; overflow-y:scroll",
-                 checkboxGroupInput("entry.variable2", "Zvolte:", choices = choices, selected = c("RM"))))
-
-```
 
 ### Denní data
 
@@ -496,6 +479,38 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
         tags$div(id = 'box7', class="collapse", style = "max-height: 250px; overflow-y:scroll",
                  checkboxGroupInput("entry.variable_d", "Zvolte:", choices = choices, selected = c("RM"))))
 ```
+
+
+### Měsíční data
+
+```{r cr mesicni data}
+
+renderDygraph({
+  
+  ts.bilance <- BM[UPOV_ID == default.shape() & variable == input$entry.variable2] %>% select(value, DTM) 
+  
+  RangeMin <- min(ts.bilance$value)-0.5
+  RangeMax <- max(ts.bilance$value)+0.5
+  
+  ts.bilance <- xts::xts(ts.bilance, order.by = ts.bilance$DTM)
+
+  dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas") %>%
+  dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>%  
+  dyRangeSelector() %>% 
+   dyCrosshair(direction = "vertical")
+})
+
+absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
+                  draggable = FALSE, top = '52.7%', left = "auto", right = '0.5%', bottom = "auto",
+                  width = '15%',
+                  style = "opacity: 0.9; style = z-index: 400",
+    HTML('<button data-toggle="collapse" data-target="#box4" class="choose">Výběr časových řad</button>'),
+        tags$div(id = 'box4', class="collapse", style = "max-height: 250px; overflow-y:scroll",
+                 checkboxGroupInput("entry.variable2", "Zvolte:", choices = choices, selected = c("RM"))))
+
+```
+
+
 
 ### Čára překročení
 
@@ -531,7 +546,7 @@ renderPlot({
 
     g3$labels$colour <- "Legenda"
 
- grid.arrange(g1,g2,g3, ncol=3)
+ gridExtra::grid.arrange(g1,g2,g3, ncol=3)
 
 })
 
@@ -735,8 +750,9 @@ default.shape.ind <- reactive({
 
 output$indikatory<-renderLeaflet({
 
-    dta <- reac.ind()$dta
-    pal <- reac.ind()$pal
+    reac.ind_app <- reac.ind()
+    dta <- reac.ind_app$dta
+    pal <- reac.ind_app$pal
 
   # Creating labels--------------------
 
@@ -871,11 +887,6 @@ title.f2 <- reactive({
   title<- popis$NAZ_UTVAR[popis$UPOV_ID == default.shape2()]
   return(title)
   })
-
-title.f3 <- reactive({
-  title <- u$NAZICO[u$NAZICO == default.circle()]
-  return(title)
-})
 
 default.circle <- reactive({
   if(is.null(input$uzivani_marker_click$id)){
@@ -1142,7 +1153,7 @@ DF = data.frame(integer = 1:10,
                    date = seq(from = Sys.Date(), by = "days", length.out = 10),
                    stringsAsFactors = FALSE)
 
-rhandsontable(DF, width = 500, height = 600) %>%
+rhandsontable::rhandsontable(DF, width = 500, height = 600) %>%
   hot_col("factor_allow", allowInvalid = TRUE)
 ```
 
@@ -1427,7 +1438,7 @@ if(input$validace == "A"){
 renderTable({
 if(input$validace == "A"){
   QD_filter <- QD %>% filter(DBCN == default.line()) %>% select(value)
-  QD_filter <-describe(QD_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
+  QD_filter <- psych::describe(QD_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
   QD_filter <-cbind(name="value",QD_filter[,-1])
   # else if(input$validace == "B"){
 #   pars_filter <- pars %>% filter(name == input$entry.pars) %>% select(current, lower, upper, initial)
