@@ -128,7 +128,7 @@ BM.long <- dcast(BM, month+year+UPOV_ID+DTM~variable)
 BM.long$m <- as.factor(BM.long$month)
 levels(BM.long$m) <- mesice
 
-BMt <- as.data.table(BM)
+BM <- as.data.table(BM)
 
 saveRDS(BM, file.path(.datadir, 'webapp_data/mbilan/bilan_month.rds'))
 saveRDS(BM.long, file.path(.datadir, 'webapp_data/mbilan/bilan_month_long.rds'))

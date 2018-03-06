@@ -28,10 +28,12 @@ library(DT) # An R interface to the DataTables library
 library(parallel) #Parallel detectCores() error
 library(rhandsontable)
 #devtools::install_github("KVHEM/CatCa")
-# install.packages("C:/Users/Irina/ownCloud/Shared/BILAN_UPOV/bilan/bilan_2016-10-20.zip",repos=NULL, type="source")
+# install.packages("home/ownCloud/Shared/BILAN_UPOV/bilan/bilan_2016-10-20.tar.gz",repos=NULL, type="source")
 # library(bilan)
 
-CatCa::give_paths()
+.datadir <- "/home/irysek/ownCloud/Shared/BILAN_UPOV/used_data"
+
+#CatCa::give_paths()
 
 BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_data_table.rds"))
 
@@ -99,9 +101,8 @@ choices.pars <- as.character(unique(pars$name))
 
 choices.mday <- c( "Qa", "Q30d", "Q60d", "Q90d", "Q120d", "Q150d", "Q180d", "Q210d", 
                   "Q240d", "Q270d", "Q300d", "Q330d", "Q355d", "Q364d")
-
-mesice <- c("Leden","Únor","Březen","Duben","Květen","Červen",
-            "Červenec","Srpen","Září","Říjen","Listopad","Prosinec")
+mesice <- c("Leden", "Únor", "Březen", "Duben", "Květen", "Červen",
+            "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec")
 
 #knitr::opts_chunk(cache.path='/home/owc/-hanel/KVHEM/-projekty/2017 SUCHO/Sucho/.ch/')
 ```
@@ -557,10 +558,10 @@ renderPlot({
 ```{r ZM cp: absPanel}
 absolutePanel(class = "panel panel-default", fixed = TRUE,
                   draggable = FALSE, top = '52.7%', left = "auto", right = '0.5%', bottom = "auto",
-                  width = '12%',
+                  width = '15%',
                   style = "opacity: 1; style = z-index: 400",
     HTML('<button data-toggle="collapse" data-target="#box5" class="choose">Výběr pro čáru překročení</button>'),
-        tags$div(id = 'box5', class="collapse in", style = "max-height: 420px",
+        tags$div(id = 'box5', class="collapse", style = "max-height: 420px",
                  selectInput("variable_cp", label=NULL , choices = choices, selected = c("RM"))))
 ```
 
@@ -608,27 +609,42 @@ renderPlotly({
 print(subplot(ts1,ts2,nrows=2))
 
 })
-
 ```
 
 ```{r ZM trendy: absPanel}
 absolutePanel(class = "panel panel-default", fixed = TRUE,
-                  draggable = FALSE, top = 'auto', left = '1.5%', right = 'auto', bottom = '15%',
-                  width = '18%',
-                  style = "opacity: 1; style = z-index: 400",
-  wellPanel(
+                  draggable = FALSE, top = '70%', left = '1%', right = 'auto', bottom = 'auto',
+                  width = '20%',
+                  style = "opacity: 1",
     HTML('<button data-toggle="collapse" data-target="#box6" class="choose">Výběr pro trendy</button>'),
-        tags$div(id = 'box6', class="collapse in", style = "max-height: 420px",
+        tags$div(id = 'box6', class="collapse", style = "max-height: 420px",
+            wellPanel(
                  selectInput("variable_trend", label=NULL , choices = choices, selected = c("RM")),
                  dateRangeInput("date_trend", label = NULL, "yyyy-mm-dd",
-                                language = "cs", weekstart = 1, startview = "decade",
-                           start = as.Date("2000-01-01"), end = as.Date("2011-01-01") ,
-                           min = as.Date("1961-01-01"), max = as.Date("2015-12-01"))
+                                language = "cs", weekstart = 1, startview = "decade", separator = "do",
+                                start = as.Date("2000-01-01"), end = as.Date("2011-01-01"),
+                                min = as.Date("1961-01-01"), max = as.Date("2015-12-01")))
                  )
     )
-)
 ```
 
+### Trendy: tabulka
+
+```{r ZM trendy: tabulka}
+renderTable({
+  
+  d <- dir(file.path(.datadir, "res"))
+  bilan_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
+  dta_bd <- readRDS(file.path(.datadir,"res", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
+
+  ts.year <- dta_bd %>%  select(input$variable_trend, DTM) %>% mutate(m = month(as.Date(DTM)))
+  colnames(ts.year)[1] <- "var" 
+  ts.year$t <- (1:length(ts.year$var))
+
+  model <- lm(var~t+as.factor(m)-1,data=ts.year)
+  capture.output(print(summary(model)))
+  }, spacing = 'xs')
+```
 
 Indikátory sucha {data-icon="fa-tint"}
 ===================================== 
@@ -900,10 +916,11 @@ default.circle <- reactive({
 ```{r uzivani: abs.panel}
 renderUI({
     absolutePanel(class = "panel panel-default", fixed = TRUE,
-                draggable = TRUE, top = '5%', left = '3.5%', right = "auto", bottom = "auto",
-                width = '10%', height = '4%', style = "opacity: 1; style = z-index: 400",
+                draggable = TRUE, top = '5%', left = '4%', right = "auto", bottom = "auto",
+                width = '26%', style = "opacity: 1; style = z-index: 400",
+      wellPanel(
           selectizeInput(inputId = "search.id.u", label = NULL,
-                             selected=input$uzivani_shape_click$id, choices = search.choices))
+                             selected=input$uzivani_shape_click$id, choices = search.choices)))
   })
 
 # absolutePanel(wellPanel(HTML(paste("POD - odběr z podzemních vod",
@@ -940,7 +957,7 @@ labels.points <- sprintf(
 # centr <- getSpPPolygonsLabptSlots(povodi.ds())
 # leaflet() %>% setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
     
-  centr <- gCentroid(povodi.ds(), byid = TRUE)
+  centr <- rgeos::gCentroid(povodi.ds(), byid = TRUE)
     
     leaflet() %>% setView(lng=centr@coords[1], lat = centr@coords[2], zoom=12) %>%
     addProviderTiles(providers$Esri.WorldTopoMap, group = "Mapový podklad",
@@ -1056,11 +1073,12 @@ default.circle_uv <- reactive({
 ```{r vyhled_uzivani: abs.panel}
 
 renderUI({
-    absolutePanel(class = "panel panel-default", fixed = TRUE,
-                draggable = TRUE, top = '5%', left = '3.5%', right = "auto", bottom = "auto",
-                width = '10%', height = '4%', style = "opacity: 1; style = z-index: 400",
+  absolutePanel(class = "panel panel-default", fixed = TRUE,
+                draggable = TRUE, top = '5%', left = '4%', right = "auto", bottom = "auto",
+                width = '26%', style = "opacity: 1; style = z-index: 400",
+      wellPanel(
           selectizeInput(inputId = "search.id.uv", label = NULL,
-                             selected=input$vyhled_uzivani_shape_click$id, choices = search.choices))
+                             selected=input$vyhled_uzivani_shape_click$id, choices = search.choices)))
   })
 
 # absolutePanel(wellPanel(HTML(paste("POD - odběr z podzemních vod",
@@ -1096,7 +1114,7 @@ labels.points <- sprintf(
 # centr <- getSpPPolygonsLabptSlots(povodi.ds())
 # leaflet() %>% setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
     
-  centr <- gCentroid(povodi.uv(), byid = TRUE)
+  centr <- rgeos::gCentroid(povodi.uv(), byid = TRUE)
     
     leaflet() %>% setView(lng=centr@coords[1], lat = centr@coords[2], zoom=12) %>%
     addProviderTiles(providers$Esri.WorldTopoMap, group = "Mapový podklad",
@@ -1153,8 +1171,8 @@ DF = data.frame(integer = 1:10,
                    date = seq(from = Sys.Date(), by = "days", length.out = 10),
                    stringsAsFactors = FALSE)
 
-rhandsontable::rhandsontable(DF, width = 500, height = 600) %>%
-  hot_col("factor_allow", allowInvalid = TRUE)
+rhandsontable::rhandsontable(DF) %>% hot_col("factor_allow", allowInvalid = TRUE)
+
 ```
 
 ### Graf
@@ -1432,7 +1450,7 @@ if(input$validace == "A"){
 })
 ```
 
-### Tabulka se základními charakteristikami {data-width=600}
+### Tabulka {data-width=500}
 
 ```{r}
 renderTable({
@@ -1447,7 +1465,7 @@ if(input$validace == "A"){
 } else if(input$validace == "C"){
   chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday)
   }
-}, digits = 3)
+}, digits = 3, spacing = 'xs')
 ```
 
 
