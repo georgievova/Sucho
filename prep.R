@@ -297,6 +297,25 @@ for (i in povodi$UPOV_ID) {
  spi <- as.data.table(spi)
  spei <- as.data.table(spei)
  
+ .datadir <- "/home/irysek/ownCloud/Shared/BILAN_UPOV/used_data"
+ 
+ spi <- readRDS(file.path(.datadir, "webapp_data/spi.rds")) 
+ spei <- readRDS(file.path(.datadir, "webapp_data/spei.rds")) 
+ 
+ for(i in unique(spi$scale)){
+  x <- spi[scale == i]
+  saveRDS(x,
+          paste0("/home/irysek/ownCloud/Shared/BILAN_UPOV/used_data/webapp_data/indikatory/", "spi_", i, ".rds"))
+ }
+ 
+ for(i in unique(spei$scale)){
+   x <- spei[scale == i]
+   saveRDS(x,
+           paste0("/home/irysek/ownCloud/Shared/BILAN_UPOV/used_data/webapp_data/indikatory/", "spei_", i, ".rds"))
+ }
+ 
+ spei_filter <- spei[scale == input$krok]
+ 
  #8 pars
  #--------------------
  pars <- readRDS(file.path(.datadir, "pars/pars.rds"))

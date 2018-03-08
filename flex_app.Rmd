@@ -55,8 +55,6 @@ u <- readRDS(file.path(.datadir, "webapp_data/uzivani/06_16/uzivani_na_nahraz_dt
 u_leaflet <- readRDS(file.path(.datadir, "webapp_data/uzivani/u_leaflet.rds"))
 QD <- readRDS(file.path(.datadir, "webapp_data/chmu/QD.rds"))
 chars <- readRDS(file.path(.datadir, "webapp_data/chmu/chars_mm.rds"))
-spi <- readRDS(file.path(.datadir, "webapp_data/indikatory/spi.rds"))
-spei <- readRDS(file.path(.datadir, "webapp_data/indikatory/spei.rds"))
 
 # Merging data----------------
 povodi <- sp::merge(povodi, popis, by='UPOV_ID')
@@ -670,9 +668,9 @@ renderUI({
 wellPanel(HTML('<div class="help-tip">
                <p>Volba indikátoru, kroku a datumu.</p></div>'),
 
-  radioButtons("indikatory", label=NULL, choices = c("SPI" = "A","SPEI" = "B"), 
+  radioButtons("indikatory", label=NULL, choices = c("SPI" = "spi","SPEI" = "spei"), 
             # "PDSI" = "C", "SGI" = "D", "SRI" = "E", "Nedostatkové objemy" = "F"),
-             selected = "A"),
+             selected = "spei"),
   selectInput("krok", label = NULL, choices = c("1 měsíc" = 1, "3 měsíce" = 3,
                                                 "6 měsíců" = 6, "12 měsíců" = 12), selected = 3),
   dateInput("entry.date.ind", label = NULL, "yyyy-mm-dd", language = "cs",
@@ -700,6 +698,7 @@ actionButton("reset_button", "Reset", icon("arrows"),
 #help-------------------------
 #default.shape.ind <- function(){return("DUN_0010")}
 #input<-c()
+#input$indikatory = "spi"
 #input$entry.variable.ind = "P"
 #input$krok = 3
 #input$entry.date.ind <- as.Date("1961-01-01")
@@ -707,19 +706,20 @@ actionButton("reset_button", "Reset", icon("arrows"),
 
 #Reactions--------------------
 reac.ind<- eventReactive(input$go2,{ 
+  
 
-  spi_filter <-  spi[variable == input$entry.variable.ind & scale == input$krok]
-  spei_filter <- spei[scale == input$krok]
-
-  dta <- c()
+ ind_dta <- readRDS(file.path(.datadir,"webapp_data/indikatory", paste0(input$indikatory, "_", input$krok, ".rds")))
+  
+  spei_f <- c()
+  spi_f <- c()
 
 #Dlouhodobé průměry (celé období/vybrané období)
-if(input$indikatory == "A"){
-    spi_d <- spi_filter[year == year(input$entry.date.ind) & month==month(input$entry.date.ind)]
-    dta <- (sp::merge(povodi,spi_d, by="UPOV_ID"))}
+if(input$indikatory == "spi"){
+    spi_f <- ind_dta[variable == input$entry.variable.ind]
+    dta <- (sp::merge(povodi,spi_f[year == year(input$entry.date.ind) & month==month(input$entry.date.ind)], by="UPOV_ID"))}
   else{
-    spei_d <- spei_filter[year == year(input$entry.date.ind) & month==month(input$entry.date.ind)]
-    dta <- (sp::merge(povodi,spei_d, by="UPOV_ID"))}
+    spei_f <- ind_dta
+    dta <- (sp::merge(povodi,ind_dta[year == year(input$entry.date.ind) & month==month(input$entry.date.ind)], by="UPOV_ID"))}
   
 #Vytvaření palet
 # (2,0 až inf) - tmave modra
@@ -736,7 +736,7 @@ if(input$indikatory == "A"){
   
   
   
-  return(list(spi_filter = spi_filter, spei_filter = spei_filter, dta=dta, pal = pal))
+  return(list(dta=dta, spi_f = spi_f, spei_f = spei_f, pal = pal))
 }, ignoreNULL = FALSE, ignoreInit = FALSE)
 
 
@@ -853,11 +853,11 @@ Row
 ```{r indikatory: TS}
 
 renderDygraph({
-
-  if(input$indikatory == "A"){
-    ts.indikatory <- reac.ind()$spi_filter[UPOV_ID == default.shape.ind()] %>% select(value, DTM)
-}else{
-    ts.indikatory <- reac.ind()$spei_filter[UPOV_ID == default.shape.ind()] %>% select(value, DTM)
+  
+  if(input$indikatory == "spi"){
+    ts.indikatory <- reac.ind()$spi_f[UPOV_ID == default.shape.ind()] %>% select(value, DTM)
+  }else{
+    ts.indikatory <- reac.ind()$spei_f[UPOV_ID == default.shape.ind()] %>% select(value, DTM)
   }
 
 RangeMin <- min(ts.indikatory$value, na.rm = T)-0.5
