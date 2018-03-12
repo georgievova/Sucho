@@ -31,7 +31,7 @@ library(rhandsontable)
 # install.packages("home/ownCloud/Shared/BILAN_UPOV/bilan/bilan_2016-10-20.tar.gz",repos=NULL, type="source")
 # library(bilan)
 
-.datadir <- "/home/irysek/ownCloud/Shared/BILAN_UPOV/used_data"
+.datadir <- "/home/irina/ownCloud/Shared/BILAN_UPOV/used_data"
 
 #CatCa::give_paths()
 
@@ -567,62 +567,98 @@ absolutePanel(class = "panel panel-default", fixed = TRUE,
 ### Trendy
 
 ```{r}
+#input <-c()
 #input$variable_trend <- "P"
-#input$date_trend <- as.Date("2015-01-01")
+#input$date_trend <- c(1990,2015)
+#default.shape <- function(){"BER_0010"}
 
-renderPlotly({
-
-  d <- dir(file.path(.datadir, "res"))
-  bilan_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
-  dta_bd <- readRDS(file.path(.datadir,"res", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
-
-  ts.year <- dta_bd %>%  select(input$variable_trend, DTM) %>% mutate(m = month(as.Date(DTM)))
-  colnames(ts.year)[1] <- "var" 
+renderPlot({
+  
+  #denni data
+  # d <- dir(file.path(.datadir, "res"))
+  # bilan_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
+  # dta_bd <- readRDS(file.path(.datadir,"res", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
+  
+  #rocni data
+  dta_bd <- BM[UPOV_ID == default.shape() &
+                 (year > input$date_trend[1] & year < input$date_trend[2]) & 
+                 variable == input$variable_trend]
+  
+  ts.year <- dta_bd[!duplicated(year),] %>% select(annual.avg, year)
+  colnames(ts.year)[1] <- "var"
   ts.year$t <- (1:length(ts.year$var))
-
-  ts.month <- dta_bd %>%  select(input$variable_trend, DTM) %>%  filter(DTM > input$date_trend[1] & DTM < input$date_trend[2])
-  colnames(ts.month)[1] <- "var" 
+  
+  # ts1 <- plot_ly(data=ts.year, x = ~DTM, y= ~var, name="Casova rada", 
+  #                mode="lines",type = 'scatter', text= paste(ts.year$DTM), line = list(width = 1)) %>%
+  #   layout(title=paste(as.character(title.f()))) %>% 
+  #   add_trace(y = ~lmt, name = 'Linearni trend', mode = 'lines') 
+  
+  model_r <<- lm(var~t,data=ts.year)
+  ts.year$lmt <- model_r$fitted.values
+  
+  ts1 <- ggplot(ts.year) + 
+    geom_line(aes(x=year, y=var)) +
+    labs(x = 'rok', y = paste(input$variable_trend), title = 'Roční průměry') +
+    geom_line(aes(y=lmt, x=year), color = 'darkblue', show.legend = F)+
+    theme_minimal()
+  
+  ts.month <- dta_bd %>% select(value, month2, DTM)
+  colnames(ts.month)[1] <- "var"
   ts.month$t <- (1:length(ts.month$var))
   
-  model <- lm(var~t+as.factor(m)-1,data=ts.year)
-                                     
-  ts.year$lmt <- model$fitted
-
-  ts1 <- plot_ly(data=ts.year, x = ~DTM, y= ~var, name="Casova rada", 
-                 mode="lines",type = 'scatter', text= paste(ts.year$DTM), line = list(width = 1)) %>%
-    layout(title=paste(as.character(title.f()))) %>% 
-    add_trace(y = ~lmt, name = 'Linearni trend', mode = 'lines') 
-
-
-  model_m <- lm(var~t,data=ts.month)
-
-  ts.month$lmt <- model_m$fitted
+  model_m <<- lm(var~t,data=ts.month)
+  ts.month$lmt <- model_m$fitted.values
   
-  ts2 <- plot_ly(data=ts.month, x = ~DTM, y= ~var, name="Casova rada", 
-                 mode="lines",type = 'scatter', text= paste(ts.month$DTM), line = list(width = 1)) %>%
-    layout(title=paste(as.character(title.f()))) %>%
-    add_trace(y = ~lmt, name = 'Linearni trend', mode = 'lines') 
+  ts2 <- ggplot(ts.month) + 
+    geom_line(aes(x=DTM, y=var)) +
+    labs(x = 'DTM', y = paste(input$variable_trend), title = 'Měsiční průměry') +
+    geom_line(aes(y=lmt, x=DTM), color = 'darkblue', show.legend = F)+
+    theme_minimal()
+  
+  # ts1 <- plot_ly(data=ts.year, x = ~DTM, y= ~var, name="Casova rada",
+  #                mode="lines",type = 'scatter', text= paste(ts.year$DTM), line = list(width = 1)) %>%
+  #   layout(title=paste(as.character(title.f())))
 
+  ts.season <- dta_bd %>% select(seasons, value, DTM) %>%  filter(year(DTM) > input$date_trend[1] & year(DTM) < input$date_trend[2])
+  ts.season$t <- (1:length(ts.season$value))
+  
+  model_s <<- lm(value~t+as.factor(seasons),data=ts.season)
+  ts.season$lmt <- model_s$fitted.values
 
-print(subplot(ts1,ts2,nrows=2))
+  # model_m <- lm(var~t,data=ts.month)
+  # 
+  # ts.month$lmt <- model_m$fitted
+  # 
+  # ts2 <- plot_ly(data=ts.month, x = ~DTM, y= ~var, name="Casova rada", 
+  #                mode="lines",type = 'scatter', text= paste(ts.month$DTM), line = list(width = 1)) %>%
+  #   layout(title=paste(as.character(title.f()))) %>%
+  #   add_trace(y = ~lmt, name = 'Linearni trend', mode = 'lines') 
+
+  trend_seasons <- ggplot(ts.season) + 
+    geom_line(aes(x=DTM, y=value, color = seasons)) + 
+    facet_wrap(~seasons)+
+    labs(x = 'DTM', y = paste(input$variable_trend)) +
+    geom_line(aes(x=DTM, y = lmt), color = 'darkblue') +
+    theme_minimal()
+
+ts <- gridExtra::grid.arrange(ts1, ts2, ncol=1)
+gridExtra::grid.arrange(ts, trend_seasons, ncol= 2)
 
 })
 ```
 
 ```{r ZM trendy: absPanel}
 absolutePanel(class = "panel panel-default", fixed = TRUE,
-                  draggable = FALSE, top = '70%', left = '1%', right = 'auto', bottom = 'auto',
-                  width = '20%',
-                  style = "opacity: 1",
+                  draggable = FALSE, top = '52.7%', left = "auto", right = '0.5%', bottom = "auto",
+                  width = '15%',
+                  style = "opacity: 0.9; style = z-index: 400",
     HTML('<button data-toggle="collapse" data-target="#box6" class="choose">Výběr pro trendy</button>'),
         tags$div(id = 'box6', class="collapse", style = "max-height: 420px",
             wellPanel(
                  selectInput("variable_trend", label=NULL , choices = choices, selected = c("RM")),
-                 dateRangeInput("date_trend", label = NULL, "yyyy-mm-dd",
-                                language = "cs", weekstart = 1, startview = "decade", separator = "do",
-                                start = as.Date("2000-01-01"), end = as.Date("2011-01-01"),
-                                min = as.Date("1961-01-01"), max = as.Date("2015-12-01")))
+                 sliderInput("date_trend", label = NULL, min = 1961, max = 2015, value = c(1990,2015))
                  )
+            )
     )
 ```
 
@@ -631,16 +667,23 @@ absolutePanel(class = "panel panel-default", fixed = TRUE,
 ```{r ZM trendy: tabulka}
 renderTable({
   
-  d <- dir(file.path(.datadir, "res"))
-  bilan_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
-  dta_bd <- readRDS(file.path(.datadir,"res", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
+  # d <- dir(file.path(.datadir, "res"))
+  # bilan_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
+  # dta_bd <- readRDS(file.path(.datadir,"res", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
+  # 
+  # ts.year <- dta_bd %>%  select(input$variable_trend, DTM) %>% mutate(m = month(as.Date(DTM)))
+  # colnames(ts.year)[1] <- "var" 
+  # ts.year$t <- (1:length(ts.year$var))
 
-  ts.year <- dta_bd %>%  select(input$variable_trend, DTM) %>% mutate(m = month(as.Date(DTM)))
-  colnames(ts.year)[1] <- "var" 
-  ts.year$t <- (1:length(ts.year$var))
-
-  model <- lm(var~t+as.factor(m)-1,data=ts.year)
-  capture.output(print(summary(model)))
+  # model <- lm(var~t+as.factor(m)-1,data=ts.year)
+ 
+  sum.tab <- function(smr){
+  smr <- summary(smr)
+  df <- data.frame("intercept" = smr$coefficients[1,1], "směrnice" = smr$coefficients[2,1], "významnost" = smr$coefficients[2,4], "R2" = smr$r.squared, row.names = "ROK")
+  return(df)}
+  
+  rbind(sum.tab(model_r), sum.tab(model_m), sum.tab(model_s))
+  # capture.output(print(summary(model_r)))
   }, spacing = 'xs')
 ```
 
@@ -682,13 +725,19 @@ wellPanel(HTML('<div class="help-tip">
                )
   )
 
+wellPanel(checkboxGroupInput("entry.layer.ind", label = "Vrstvy",
+    choices = c("Mapový podklad" = "MP", "Povodí" ="P", "Řeky" = "R", "Jezera" = "J", 
+                "Nádrže" = "N", "Kraje" = "K", "Okresy" = "O", "Povodí 3. řádu" = "P3"), 
+    selected = c("MP", "P"),
+    inline = T))
+
 
 actionButton("go2", "Zobrazit", icon("check"), 
     style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
 
 hr()
 
-actionButton("reset_button", "Reset", icon("arrows"), 
+actionButton("reset_button2", "Reset", icon("arrows"), 
     style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
 
 ```
@@ -707,19 +756,19 @@ actionButton("reset_button", "Reset", icon("arrows"),
 #Reactions--------------------
 reac.ind<- eventReactive(input$go2,{ 
   
+ vrstvy <- input$entry.layer.ind
 
  ind_dta <- readRDS(file.path(.datadir,"webapp_data/indikatory", paste0(input$indikatory, "_", input$krok, ".rds")))
   
-  spei_f <- c()
-  spi_f <- c()
+  ind_dta_f <- c()
 
 #Dlouhodobé průměry (celé období/vybrané období)
 if(input$indikatory == "spi"){
-    spi_f <- ind_dta[variable == input$entry.variable.ind]
-    dta <- (sp::merge(povodi,spi_f[year == year(input$entry.date.ind) & month==month(input$entry.date.ind)], by="UPOV_ID"))}
+    ind_dta_f <- ind_dta[variable == input$entry.variable.ind]
+    dta <- (sp::merge(povodi,ind_dta_f[year == year(input$entry.date.ind) & month==month(input$entry.date.ind)], by="UPOV_ID"))}
   else{
-    spei_f <- ind_dta
-    dta <- (sp::merge(povodi,ind_dta[year == year(input$entry.date.ind) & month==month(input$entry.date.ind)], by="UPOV_ID"))}
+    ind_dta_f <- ind_dta
+    dta <- (sp::merge(povodi,ind_dta_f[year == year(input$entry.date.ind) & month==month(input$entry.date.ind)], by="UPOV_ID"))}
   
 #Vytvaření palet
 # (2,0 až inf) - tmave modra
@@ -736,7 +785,7 @@ if(input$indikatory == "spi"){
   
   
   
-  return(list(dta=dta, spi_f = spi_f, spei_f = spei_f, pal = pal))
+  return(list(vrstvy = vrstvy, dta=dta, ind_dta_f = ind_dta_f, pal = pal))
 }, ignoreNULL = FALSE, ignoreInit = FALSE)
 
 
@@ -769,6 +818,8 @@ output$indikatory<-renderLeaflet({
     reac.ind_app <- reac.ind()
     dta <- reac.ind_app$dta
     pal <- reac.ind_app$pal
+    
+    vrstvy <- reac.ind_app$vrstvy
 
   # Creating labels--------------------
 
@@ -781,11 +832,12 @@ output$indikatory<-renderLeaflet({
    if(length(labels)==0){labels <- c(" ")}
   
   
- leaflet() %>% 
-     setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom) %>%
-     addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13) ) %>%
+ indikatory <- leaflet() %>% 
+     setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom)
 #Zbarvení povodí dle hodnoty
-          addPolygons(data=dta, layerId = dta$UPOV_ID, color = "black",
+   
+   if("P" %in% vrstvy){
+       indikatory <- indikatory %>% addPolygons(data=dta, layerId = dta$UPOV_ID, color = "black",
                              weight = 1.5, opacity = 0.45, smoothFactor = 0,
                              fillColor = ~pal(value), fillOpacity = 0.5,
                              group = "Povodí",
@@ -800,30 +852,63 @@ output$indikatory<-renderLeaflet({
                                              "font-family" = "sans-serif", padding = "3px 8px",
                                              keepInView = TRUE, noHide = FALSE,
                                              "border-color" = "rgb(255, 255, 255)"),
-                                             textsize = "13px", direction = "auto")) %>%
-#Vykreslení zakladních prvků mapy
-          addPolylines(data=reky, color="#007C8C", weight = 1.5,
-                 opacity = 1, stroke= TRUE, group = "Řeky") %>%
-          addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff", 
-                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera")%>%
-          addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
-                weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže")%>%
-          addPolylines(data=kraje, color="#000000",  weight = 2.5, 
-                       stroke= TRUE, group = "Kraje") %>%
-          addPolylines(data=okresy, color="#000000",  weight = 2, 
-                       stroke= TRUE, group = "Okresy") %>%
-          addPolylines(data=povodi_III, color="#cc0000",  weight = 2.5, opacity = 1,
-                       stroke= TRUE, group = "Povodí 3. řádu") %>%
-#Legenda a ovládání vrstev mapy
-      addLayersControl(overlayGroups = c("Mapový podklad", "Povodí", "Řeky", "Jezera", "Nádrže",
-                                         "Kraje", "Okresy", "Povodí 3. řádu"),
-                     position = "bottomleft",
-                     options = layersControlOptions(collapsed = TRUE)) %>%
-      hideGroup(c("Řeky", "Jezera", "Nádrže", "Kraje", "Okresy", "Povodí 3. řádu"))%>%
-      addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
-              position = "bottomright") 
+                                             textsize = "13px", direction = "auto"))}
+# #Vykreslení zakladních prvků mapy
+#           addPolylines(data=reky, color="#007C8C", weight = 1.5,
+#                  opacity = 1, stroke= TRUE, group = "Řeky") %>%
+#           addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff", 
+#                 weight = 1, opacity = 1, stroke= TRUE, group = "Jezera")%>%
+#           addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
+#                 weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže")%>%
+#           addPolylines(data=kraje, color="#000000",  weight = 2.5, 
+#                        stroke= TRUE, group = "Kraje") %>%
+#           addPolylines(data=okresy, color="#000000",  weight = 2, 
+#                        stroke= TRUE, group = "Okresy") %>%
+#           addPolylines(data=povodi_III, color="#cc0000",  weight = 2.5, opacity = 1,
+#                        stroke= TRUE, group = "Povodí 3. řádu") %>%
+# #Legenda a ovládání vrstev mapy
+#       addLayersControl(overlayGroups = c("Mapový podklad", "Povodí", "Řeky", "Jezera", "Nádrže",
+#                                          "Kraje", "Okresy", "Povodí 3. řádu"),
+#                      position = "bottomleft",
+#                      options = layersControlOptions(collapsed = TRUE)) %>%
+#       hideGroup(c("Řeky", "Jezera", "Nádrže", "Kraje", "Okresy", "Povodí 3. řádu"))%>%
+#       addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
+#               position = "bottomright") 
+ 
+     if("MP" %in% vrstvy){
+      indikatory <-  indikatory %>% addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13))
+      }
 
+    if("R" %in% vrstvy){
+       indikatory <- indikatory %>% addPolylines(data=reky, color="#007C8C", weight = 1.5,
+                 opacity = 1, stroke= TRUE, group = "Řeky")
+       }
+
+    if("J" %in% vrstvy){
+       indikatory <- indikatory %>% addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff",
+                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera")}
+
+    if("N" %in% vrstvy){
+      indikatory <-  indikatory %>% addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff",
+                weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže")}
+
+    if("K" %in% vrstvy){
+      indikatory <-  indikatory %>% addPolylines(data=kraje, color="#000000",  weight = 2.5,
+                       stroke= TRUE, group = "Kraje")}
+
+    if("O" %in% vrstvy){
+       indikatory <- indikatory %>% addPolylines(data=okresy, color="#000000",  weight = 2,
+                       stroke= TRUE, group = "Okresy")}
+
+    if("P3" %in% vrstvy){
+       indikatory <- indikatory %>% addPolylines(data=povodi_III, color="#cc0000",  weight = 2.5, opacity = 1,
+                       stroke= TRUE, group = "Povodí 3. řádu")
+    }
+
+ print(indikatory)
+ 
     })
+
 
 #Zvyraznění současného povodí
 observe({
@@ -837,8 +922,9 @@ observe({
 })
 
 #Reset button
+
 observe({
-    input$reset_button
+    input$reset_button2
     leafletProxy("indikatory") %>% setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom)})
 
 
@@ -854,11 +940,7 @@ Row
 
 renderDygraph({
   
-  if(input$indikatory == "spi"){
-    ts.indikatory <- reac.ind()$spi_f[UPOV_ID == default.shape.ind()] %>% select(value, DTM)
-  }else{
-    ts.indikatory <- reac.ind()$spei_f[UPOV_ID == default.shape.ind()] %>% select(value, DTM)
-  }
+    ts.indikatory <- reac.ind()$ind_dta_f[UPOV_ID == default.shape.ind()] %>% select(value, DTM)
 
 RangeMin <- min(ts.indikatory$value, na.rm = T)-0.5
 RangeMax <- max(ts.indikatory$value, na.rm = T)+0.5
