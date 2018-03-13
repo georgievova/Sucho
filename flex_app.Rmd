@@ -602,6 +602,14 @@ dta_tr <- BM[UPOV_ID == default.shape() &
               model_r=model_r, model_m=model_m, model_s=model_s))
 })
 
+  # model_m <- lm(var~t,data=ts.month)
+  # 
+  # ts.month$lmt <- model_m$fitted
+  # 
+  # ts2 <- plot_ly(data=ts.month, x = ~DTM, y= ~var, name="Casova rada", 
+  #                mode="lines",type = 'scatter', text= paste(ts.month$DTM), line = list(width = 1)) %>%
+  #   layout(title=paste(as.character(title.f()))) %>%
+  #   add_trace(y = ~lmt, name = 'Linearni trend', mode = 'lines') 
 
 ```
 
