@@ -41,3 +41,9 @@ ZM\.Rmd
 process\.png
 
 flex_app\.RData
+
+*.RDataTmp
+
+*.log
+
+*.db
