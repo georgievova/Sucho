@@ -166,6 +166,8 @@ QD <- merge(seznam.st,QD, by="DBCN")
 
 QD <- select(QD, -OBDOBI.S.DATY.DENNICH.PRUTOKU, -NAZEV.STANICE, -TOK, -Plocha..km2.)
 
+mdQD <- readRDS(choose.files())
+
 #Saving
 #--------------------
 saveRDS(QD, "QD.rds")
@@ -385,3 +387,5 @@ saveRDS(chars, file.path(.datadir, "webapp_data/chmu/chars_mm.rds"))
 
 chars <- readRDS(file.path(.datadir, "webapp_data/chmu/chars_mm.rds"))
 CatCa::qmd()
+
+
