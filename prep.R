@@ -166,7 +166,7 @@ QD <- merge(seznam.st,QD, by="DBCN")
 
 QD <- select(QD, -OBDOBI.S.DATY.DENNICH.PRUTOKU, -NAZEV.STANICE, -TOK, -Plocha..km2.)
 
-mdQD <- readRDS(choose.files())
+QD <- readRDS(file.choose())
 
 #Saving
 #--------------------
@@ -389,3 +389,15 @@ chars <- readRDS(file.path(.datadir, "webapp_data/chmu/chars_mm.rds"))
 CatCa::qmd()
 
 
+#13 VALIDACE
+#--------------------
+
+dbcn_to_upov <- readRDS(file.path(.datadir, "chmu/dbcn_uid_mon.rds"))
+avg_u <- readRDS(file.path(.datadir,"uzivani/avg_uziv_denni/BER_0010.rds"))
+
+QD <- merge(QD, dbcn_to_upov, by = 'DBCN')
+saveRDS(QD, file.choose())
+
+mdta_val <- readRDS(file.path(.datadir,"chmu/mdta_2016.rds"))
+mdta_val <- mdta_val[, c(1,3,4,6,7,8)]
+saveRDS(mdta_val, file.path(.datadir, "webapp_data/chmu/mdta_2016.rds"))
