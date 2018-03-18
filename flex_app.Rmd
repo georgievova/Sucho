@@ -45,6 +45,7 @@ kraje <- readRDS(file.path(.datadir, "webapp_data/geo_rds/kraje.rds"))
 okresy <- readRDS(file.path(.datadir, "webapp_data/geo_rds/okresy.rds"))
 povodi_III <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi_III.rds"))
 stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/stanice.rds"))
+sim_stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/E04_Vodomerne_stanice.rds"))
 tabB <- readRDS(file.path(.datadir, "routing/TABB.rds"))
 cp <- readRDS(file.path(.datadir, "webapp_data/to_from/cara_prekroceni_dt.rds"))
 
@@ -54,6 +55,7 @@ pars <- readRDS(file.path(.datadir, "webapp_data/pars/pars.rds"))
 u <- readRDS(file.path(.datadir, "webapp_data/uzivani/06_16/uzivani_na_nahraz_dt.rds"))
 u_leaflet <- readRDS(file.path(.datadir, "webapp_data/uzivani/u_leaflet.rds"))
 QD <- readRDS(file.path(.datadir, "webapp_data/chmu/QD.rds"))
+val_dta_sim <- readRDS(file.path(.datadir, "webapp_data/chmu/val_dta_sim.rds"))
 chars <- readRDS(file.path(.datadir, "webapp_data/chmu/chars_mm.rds"))
 
 # Merging data----------------
@@ -1181,7 +1183,7 @@ renderDygraph({
 ```
 
 
- Výhledové užívání {data-icon="fa-circle-o"}
+ Výhledové užívání {data-icon="fa-chevron-right"}
 ===================================== 
 
 ```{r vyhled_uzivani: reactions}
@@ -1436,6 +1438,8 @@ output$rozvodnice <- renderLeaflet({
 
   rozvodnice <- leaflet() %>%
     addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13)) %>% 
+    addCircleMarkers(data = sim_stanice, lng = sim_stanice@coords[,1], lat = sim_stanice@coords[,2], 
+                     radius = 1, color = "#000099", opacity = 1) %>% 
     addPolylines(data=stanice, color="#CA5557", weight = 2.3, dashArray = "3",  fill = TRUE,
                  opacity = 1, stroke= TRUE, group = "Rozvodnice", layerId = stanice$DBCN,
                  highlightOptions = highlightOptions(color = "red", opacity = 1, fillOpacity = 1,
@@ -1558,10 +1562,10 @@ output$rozvodnice <- renderLeaflet({
 ```
 
 
-Row {data-height=400}
+Row {.tabset data-height=400}
 -------------------------------------
 
-### Grafy {data-width=400}
+### Grafy
 
 ```{r}
 #input$entry.variable4 = c("value", "mean_month", "mean_year")
@@ -1600,7 +1604,7 @@ if(input$validace == "A"){
 })
 ```
 
-### Tabulka {data-width=500}
+### Tabulky
 
 ```{r}
 renderTable({

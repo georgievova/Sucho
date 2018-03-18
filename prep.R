@@ -147,6 +147,7 @@ setwd("..")
 # a <- stanice_0$NAZEV_TOK
 # write.csv(a, "a.csv")
 
+# stanice <- readOGR(file.path(.datadir, "webapp_data/geo/stanice.shp"))
 stanice_0 <- readOGR("data/chmu/156_stanic.shp")
 seznam.st <- read.csv('data/chmu/156_stanic_seznam.csv',encoding = 'UTF-8', header = TRUE, sep = ";", 
                       colClasses = c("factor", "character", "character", "character", "character"))
@@ -166,7 +167,7 @@ QD <- merge(seznam.st,QD, by="DBCN")
 
 QD <- select(QD, -OBDOBI.S.DATY.DENNICH.PRUTOKU, -NAZEV.STANICE, -TOK, -Plocha..km2.)
 
-QD <- readRDS(file.choose())
+# QD <- readRDS(file.choose())
 
 #Saving
 #--------------------
@@ -395,9 +396,11 @@ CatCa::qmd()
 dbcn_to_upov <- readRDS(file.path(.datadir, "chmu/dbcn_uid_mon.rds"))
 avg_u <- readRDS(file.path(.datadir,"uzivani/avg_uziv_denni/BER_0010.rds"))
 
-QD <- merge(QD, dbcn_to_upov, by = 'DBCN')
+QD <- merge(dbcn_to_upov, QD, by = 'DBCN')
+QD <- QD[order(QD$DTM),]
 saveRDS(QD, file.choose())
 
 mdta_val <- readRDS(file.path(.datadir,"chmu/mdta_2016.rds"))
 mdta_val <- mdta_val[, c(1,3,4,6,7,8)]
+mdta_val <- merge(mdta_val, dbcn_to_upov, by = 'DBCN')
 saveRDS(mdta_val, file.path(.datadir, "webapp_data/chmu/mdta_2016.rds"))
