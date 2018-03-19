@@ -300,7 +300,7 @@ for (i in povodi$UPOV_ID) {
  spi <- as.data.table(spi)
  spei <- as.data.table(spei)
  
- .datadir <- "/home/irysek/ownCloud/Shared/BILAN_UPOV/used_data"
+ .datadir <- "/home/irina/ownCloud/Shared/BILAN_UPOV/used_data"
  
  spi <- readRDS(file.path(.datadir, "webapp_data/spi.rds")) 
  spei <- readRDS(file.path(.datadir, "webapp_data/spei.rds")) 

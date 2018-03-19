@@ -10,7 +10,7 @@ runtime: shiny
 ---
 
 ```{r global, include=FALSE}
-
+rm(list = ls())
 library(shiny)
 library(flexdashboard)
 library(leaflet)
@@ -31,9 +31,10 @@ library(rhandsontable)
 # install.packages("home/ownCloud/Shared/BILAN_UPOV/bilan/bilan_2016-10-20.tar.gz",repos=NULL, type="source")
 # library(bilan)
 
-.datadir <- "/home/irina/ownCloud/Shared/BILAN_UPOV/used_data"
+# .datadir <- "/home/irina/ownCloud/Shared/BILAN_UPOV/used_data"
 
-#CatCa::give_paths()
+
+CatCa::give_paths()
 
 BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_data_table.rds"))
 
@@ -44,8 +45,8 @@ nadrze <- readRDS(file.path(.datadir, "webapp_data/geo_rds/nadrze.rds"))
 kraje <- readRDS(file.path(.datadir, "webapp_data/geo_rds/kraje.rds"))
 okresy <- readRDS(file.path(.datadir, "webapp_data/geo_rds/okresy.rds"))
 povodi_III <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi_III.rds"))
-stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/stanice.rds"))
-sim_stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/E04_Vodomerne_stanice.rds"))
+# stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/stanice.rds"))
+stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/E04_Vodomerne_stanice.rds"))
 tabB <- readRDS(file.path(.datadir, "routing/TABB.rds"))
 cp <- readRDS(file.path(.datadir, "webapp_data/to_from/cara_prekroceni_dt.rds"))
 
@@ -54,8 +55,8 @@ popis <- readRDS(file.path(.datadir, "webapp_data/popis.rds"))
 pars <- readRDS(file.path(.datadir, "webapp_data/pars/pars.rds"))
 u <- readRDS(file.path(.datadir, "webapp_data/uzivani/06_16/uzivani_na_nahraz_dt.rds"))
 u_leaflet <- readRDS(file.path(.datadir, "webapp_data/uzivani/u_leaflet.rds"))
-QD <- readRDS(file.path(.datadir, "webapp_data/chmu/QD.rds"))
-val_dta_sim <- readRDS(file.path(.datadir, "webapp_data/chmu/val_dta_sim.rds"))
+# QD <- readRDS(file.path(.datadir, "webapp_data/chmu/QD.rds"))
+dta_val <- readRDS(file.path(.datadir, "webapp_data/chmu/data_validace.rds"))
 chars <- readRDS(file.path(.datadir, "webapp_data/chmu/chars_mm.rds"))
 
 # Merging data----------------
@@ -94,8 +95,7 @@ names(choices2) <- c(
 'ET - územní výpar [mm]',
 'SW - půdní vlhkost (zásoba vody v nenasycené zóně) [mm]')
 
-choices3 <- c("value", "mean_month", "mean_year")
-names(choices3) <- c("Denní průtok", "Měsiční průměr", "Roční průměr")
+choices3 <- c("QMER", "QNEX", "QNEY", "RM")
 
 choices.pars <- as.character(unique(pars$name))
 
@@ -116,7 +116,6 @@ Column {.sidebar data-width=400}
 ```{r ZM sidebar}
 
 #Inputs--------------------
-
 #
 renderUI({
   wellPanel(
@@ -1348,25 +1347,25 @@ Validace {data-icon="fa-clone"}
 
 #Functions--------------------
 
-default.shape3 <- reactive({
-  UPOV_ID.sel <- input$search.id.val
-  return(UPOV_ID.sel)})
+# default.shape3 <- reactive({
+#   UPOV_ID.sel <- input$search.id.val
+#   return(UPOV_ID.sel)})
+# 
+# title.f3.1 <- reactive({
+#   title<- popis$NAZ_UTVAR[popis$UPOV_ID == default.shape3()]
+#   return(title)
+#   })
 
-title.f3.1 <- reactive({
-  title<- popis$NAZ_UTVAR[popis$UPOV_ID == default.shape3()]
-  return(title)
-  })
-
-default.line <- reactive({
-  if(is.null(input$rozvodnice_shape_click$id)){
-  DBCN.sel <- QD$DBCN[1]}
-  else{DBCN.sel <- input$rozvodnice_shape_click$id}
+default.circle_val <- reactive({
+  if(is.null(input$validace_marker_click$id)){
+  DBCN.sel <- dta_val$DBCN[1]}
+  else{DBCN.sel <- input$validace_marker_click$id}
   return(DBCN.sel)})
 
 title.f4 <- reactive({
-  if(is.null(input$rozvodnice_shape_click$id)){
-     title <- stanice$NAZEV_TOK[stanice$DBCN == "003000"]}else{
-     title <- stanice$NAZEV_TOK[stanice$DBCN==input$rozvodnice_shape_click$id]}
+  if(is.null(input$validace_marker_click$id)){
+     title <- dta_val$NAZ[dta_val$DBCN == "171000"]}else{
+     title <- dta_val$NAZ[dta_val$DBCN == input$validace_marker_click$id]}
   return(title)
   })
 
@@ -1383,6 +1382,12 @@ wellPanel(
           radioButtons("validace", label = NULL, choices = c("Denní průtoky" = "A", 
                                                              "Přepínání parametrů" = "B", 
                                                              "m-denní průtoky" = "C")),
+          
+          conditionalPanel(condition = "input.validace == 'A'",
+                           wellPanel(checkboxGroupInput("entry.layer.valA", label = NULL,
+                                                        choices = c("DBCN body" = "DB"), 
+                                                        selected = c("DB"), inline = T))),
+    
           conditionalPanel(condition = "input.validace == 'A'",
                            absolutePanel(class = "panel panel-default", fixed = TRUE,
                                          draggable = FALSE, top = "auto", left = '1%', right = "auto", bottom = '40%',
@@ -1395,23 +1400,33 @@ wellPanel(
   
     conditionalPanel(condition = "input.validace == 'A'",
                      checkboxGroupInput("entry.variable4", "Zvolte:", choices = choices3, 
-                                        selected = c("value", "mean_month"))))
+                                        selected = c("QMER", "RM"))))
                            ),
           conditionalPanel(condition = "input.validace == 'B'",
                                   selectInput("entry.pars", label=NULL,
                                               choices = choices.pars, selected = "Dgm")
                                   # , renderUI({
                                   #   selectizeInput(inputId = "search.id.val","Vyhledávání útvaru",
-                                  #         selected=input$rozvodnice_shape_click$id,
+                                  #         selected=input$validace_shape_click$id,
                                   #         choices = search.choices)})
                            ),
           conditionalPanel(condition = "input.validace == 'C'",
                                   selectInput("entry.mday", label = NULL, choices = choices.mday),
                            renderUI({
                              selectizeInput(inputId = "search.id.val","Vyhledávání útvaru",
-                                          selected=input$rozvodnice_shape_click$id,
+                                          selected=input$validace_shape_click$id,
                                           choices = search.choices)})
                            ))
+
+          hr()
+                           
+          wellPanel(checkboxGroupInput("entry.layer.val", label = "Vrstvy",
+                                                        choices = c("Mapový podklad" = "MP", "Polygony" = "P",
+                                                                    "Řeky" = "R", "Jezera" = "J", "Nádrže" = "N", "Kraje" = "K", 
+                                                                    "Okresy" = "O", "Povodí 3. řádu" = "P3"), 
+                                                        selected = c("MP", "P"), inline = T))
+
+
 ```
 
 
@@ -1425,50 +1440,46 @@ Row {data-height = 600}
 # input$entry.mday <- "Q30d"
 # input$entry.pars <- "Alf"
 
-leafletOutput("rozvodnice")
+leafletOutput("validace")
 
-output$rozvodnice <- renderLeaflet({
+output$validace <- renderLeaflet({
+  
+  vrstvy <- input$entry.layer.val
+  vrstvyQD <- input$entry.layer.valA
+  
+  validace <- leaflet() %>% setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom)
   
   if(input$validace == "A"){
-  labels.lines <- sprintf(
-      "<strong>%s</strong><br/> DBCN:%s <br/> Plocha [km2]: %s",
-      stanice$NAZEV_TOK, stanice$DBCN, round(stanice$AREA,2)) %>% 
+  # label.lines <- sprintf(
+  #     "<strong>%s</strong><br/> UPOV_ID:%s",
+  #     povodi$NAZ_UTVAR, povodi$UPOV_ID) %>% 
+  #     lapply(htmltools::HTML)
+  
+  dta_val2 <- dta_val %>% group_by(NAZ, DBCN, UPOV_ID) %>% summarise(n=n())    
+  
+  label.points <- sprintf(
+      "<strong>%s</strong><br/> DBCN:%s<br/> UPOV_ID:%s",
+      dta_val2$NAZ, dta_val2$DBCN, dta_val2$UPOV_ID) %>% 
       lapply(htmltools::HTML)
   
-
-  rozvodnice <- leaflet() %>%
-    addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13)) %>% 
-    addCircleMarkers(data = sim_stanice, lng = sim_stanice@coords[,1], lat = sim_stanice@coords[,2], 
-                     radius = 1, color = "#000099", opacity = 1) %>% 
-    addPolylines(data=stanice, color="#CA5557", weight = 2.3, dashArray = "3",  fill = TRUE,
-                 opacity = 1, stroke= TRUE, group = "Rozvodnice", layerId = stanice$DBCN,
-                 highlightOptions = highlightOptions(color = "red", opacity = 1, fillOpacity = 1,
-                                                     weight = 2.3,
-                                                     bringToFront = TRUE, sendToBack=TRUE),
-                 label = labels.lines,
-                 labelOptions = labelOptions(clickable = TRUE, 
-                                             style = list("font-weight" = "normal",
-                                             "font-family" = "sans-serif", padding = "3px 8px",
-                                             keepInView = TRUE,
-                                             "border-color" = "rgb(255, 255, 255)"),
-                                             textsize = "13px", direction = "auto")) %>% 
-    addPolylines(data=reky, color="#007C8C", weight = 1,
-                 opacity = 1, stroke= TRUE, group = "Řeky") %>% 
-    addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff", 
-                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera") %>%
-    addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
-                weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže") %>%
-          addPolylines(data=kraje, color="#000000",  weight = 2.5, 
-                       stroke= TRUE, group = "Kraje") %>%
-          addPolylines(data=okresy, color="#000000",  weight = 2, 
-                       stroke= TRUE, group = "Okresy") %>%
-          addPolylines(data=povodi_III, color="#cc0000",  weight = 2.5, opacity = 1,
-                       stroke= TRUE, group = "Povodí 3. řádu") %>%
-#Legenda a ovládání vrstev mapy
-    addLayersControl(overlayGroups = c("Mapový podklad", "Řeky", "Jezera", "Nádrže", "Kraje", "Okresy", "Povodí 3. řádu"),
-                     position = "bottomleft",
-                     options = layersControlOptions(collapsed = TRUE, autoZIndex = FALSE))%>%   
-    hideGroup(c("Kraje", "Okresy", "Povodí 3. řádu"))
+ #Zbarvení povodí dle hodnoty + Legenda
+  
+    # if("P" %in% vrstvy){}
+    # validace <-  validace %>% addPolylines(data=povodi, color="#000000", weight = 1.2, fill = TRUE, fillOpacity = 0.01,
+    #              opacity = 1, stroke= TRUE, group = "UPOV_ID",
+    #              label = label.lines,
+    #              labelOptions = labelOptions(clickable = FALSE, 
+    #                                          style = list("font-weight" = "normal",
+    #                                          "font-family" = "sans-serif", padding = "3px 8px",
+    #                                          keepInView = TRUE,
+    #                                          "border-color" = "rgb(255, 255, 255)"),
+    #                                          textsize = "13px", direction = "auto"))}
+  
+    if("DB" %in% vrstvyQD){
+    validace <- validace %>% addCircleMarkers(data = stanice, lng = stanice@coords[,1], lat = stanice@coords[,2], 
+                                               radius = 3.5, color = "black", fillColor = "steelblue", weight = 0.5, opacity = 1, 
+                                               fillOpacity = 1, popup = label.points, layerId = dta_val$DBCN
+     )}
   
   }else if(input$validace == "B"){
     pars_filtr <- pars %>% filter(name == input$entry.pars)
@@ -1481,83 +1492,100 @@ output$rozvodnice <- renderLeaflet({
       ) %>% lapply(htmltools::HTML)
      pal <- colorBin("YlGnBu", domain = dta$value, pretty = TRUE)
      
-     rozvodnice <- leaflet() %>% 
-     setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom) %>%
-     addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13) )
-  
-    rozvodnice <- rozvodnice %>% addPolygons(data=dta, # layerId = dta$UPOV_ID, 
+         
+    if("P" %in% vrstvy){
+   validace <- validace %>% addPolygons(data=dta, # layerId = dta$UPOV_ID, 
                                              color = "burlywood4", weight = 1.3, smoothFactor = 0,
-                                             opacity = 0.3, fillColor = ~pal(value), 
+                                             opacity = 0.3, fillColor = ~pal(value),
                                              fillOpacity = 0.8, group = "Povodí",
                                 highlightOptions = highlightOptions(color = "#800000", opacity = 0.8,
                                                                     weight = 2.3,
                                                                     bringToFront = TRUE, sendToBack=TRUE),
                                 label = labels,
-                                labelOptions = labelOptions(clickable = TRUE, 
+                                labelOptions = labelOptions(clickable = TRUE,
                                              style = list("font-weight" = "normal",
                                              "font-family" = "sans-serif", padding = "3px 8px",
                                              keepInView = TRUE, noHide = TRUE,
                                              "border-color" = "rgb(255, 255, 255)"),
                                              textsize = "15px", direction = "auto")) %>%
-    addLayersControl(overlayGroups = c("Povodí","Mapový podklad"),
-                     position = "bottomleft",
-                     options = layersControlOptions(collapsed = TRUE, autoZIndex = FALSE)) %>%
-    addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
-              position = "bottomright")
+     addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
+               position = "bottomright")}
+     
+
   }else{
+    
     chars_filtr <- chars %>% select(UPOV_ID, input$entry.mday)
     colnames(chars_filtr)[colnames(chars_filtr) == input$entry.mday] <- "value"
     dta <- (sp::merge(povodi,chars_filtr, by="UPOV_ID"))
-   
+
      labels <- sprintf(
      "<strong>%s</strong><br/>UPOV_ID: %s <br/> Hodnota: %s",
       dta$NAZ_UTVAR, dta$UPOV_ID, round(dta$value,3)) %>% lapply(htmltools::HTML)
      pal <- colorBin("YlGnBu", domain = round(dta$value,3), pretty = TRUE)
-     
-     rozvodnice <- leaflet() %>% 
-     setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom) %>%
-     addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13) )
-  
-    rozvodnice <- rozvodnice %>% addPolygons(data=dta, layerId = dta$UPOV_ID, 
+    
+    if("P" %in% vrstvy){
+     validace <- validace %>% addPolygons(data=dta, layerId = dta$UPOV_ID, 
                                              color = "burlywood4", weight = 1.3, smoothFactor = 0,
-                                             opacity = 0.3, fillColor = ~pal(value), 
+                                             opacity = 0.3, fillColor = ~pal(value),
                                              fillOpacity = 0.8, group = "Povodí",
                                 highlightOptions = highlightOptions(color = "#800000", opacity = 0.8,
                                                                     weight = 2.3,
                                                                     bringToFront = TRUE, sendToBack=TRUE),
                                 label = labels,
-                                labelOptions = labelOptions(clickable = TRUE, 
+                                labelOptions = labelOptions(clickable = TRUE,
                                              style = list("font-weight" = "normal",
                                              "font-family" = "sans-serif", padding = "3px 8px",
                                              keepInView = TRUE, noHide = TRUE,
                                              "border-color" = "rgb(255, 255, 255)"),
                                              textsize = "15px", direction = "auto")) %>%
-                                addPolylines(data=kraje, color="#000000",  weight = 2.5,
-                                             stroke= TRUE, group = "Kraje") %>%
-                                addPolylines(data=okresy, color="#000000",  weight = 2, 
-                                             stroke= TRUE, group = "Okresy") %>%
-                                addPolylines(data=povodi_III, color="#cc0000",  weight = 2.5, opacity = 1,
-                                             stroke= TRUE, group = "Povodí 3. řádu") %>%
-                                addLayersControl(overlayGroups = c("Povodí","Mapový podklad", "Kraje",
-                                                                   "Okresy", "Povodí 3. řádu"),
-                     position = "bottomleft",
-                     options = layersControlOptions(collapsed = TRUE, autoZIndex = FALSE)) %>%
-    hideGroup(c("Kraje", "Okresy", "Povodí 3. řádu"))%>%
-    addLegend(pal = pal, values = round(dta$value,2), opacity = 0.7, title = "Legenda",
-              position = "bottomright")
-    }
+       addLegend(pal = pal, values = round(dta$value,2), opacity = 0.7, title = "Legenda",
+                 position = "bottomright")
+      }
+    
+  }
+ 
+  #Vrstvy mapy
+ 
+    if("MP" %in% vrstvy){
+      validace <-  validace %>% addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13))}
+
+    if("R" %in% vrstvy){
+       validace <- validace %>% addPolylines(data=reky, color="#007C8C", weight = 1.5,
+                 opacity = 1, stroke= TRUE, group = "Řeky")}
+
+    if("J" %in% vrstvy){
+       validace <- validace %>% addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff",
+                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera")}
+
+    if("N" %in% vrstvy){
+      validace <-  validace %>% addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff",
+                weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže")}
+
+    if("K" %in% vrstvy){
+      validace <-  validace %>% addPolylines(data=kraje, color="#000000",  weight = 2.5,
+                       stroke= TRUE, group = "Kraje")}
+
+    if("O" %in% vrstvy){
+       validace <- validace %>% addPolylines(data=okresy, color="#000000",  weight = 2,
+                       stroke= TRUE, group = "Okresy")}
+
+    if("P3" %in% vrstvy){
+       validace <- validace %>% addPolylines(data=povodi_III, color="#cc0000",  weight = 2.5, opacity = 1,
+                       stroke= TRUE, group = "Povodí 3. řádu")}
+ 
+  print(validace)
+  
 })
 
 
-  observe({
-   leafletProxy("rozvodnice") %>%
-    clearGroup("current_shape") %>%
-    addPolylines(data = subset(povodi, UPOV_ID==(if(is.null(input$search.id.val)){"DUN_0010"}else{input$search.id.val})),
-                 group = "current_shape",
-                 color = "#a53333", opacity = 1, weight = 3,
-                 stroke = TRUE)
-    })
-
+  # observe({
+  #  leafletProxy("validace") %>%
+  #   clearGroup("current_shape") %>%
+  #   addPolylines(data = subset(povodi, UPOV_ID==(if(is.null(input$search.id.val)){"DUN_0010"}else{input$search.id.val})),
+  #                group = "current_shape",
+  #                color = "#a53333", opacity = 1, weight = 3,
+  #                stroke = TRUE)
+  #   })
 
 ```
 
@@ -1574,24 +1602,25 @@ renderPlotly({
  
 if(input$validace == "A"){
   
-        ts.QD <- QD %>% filter(DBCN == default.line()) %>% mutate(month = format(DTM, "%m"), year = format(DTM, "%Y")) %>%
-          group_by(year) %>% mutate(mean_year = mean(value, na.rm = TRUE)) %>% ungroup %>% group_by(month, year) %>%
-          mutate(mean_month = mean(value, na.rm=TRUE)) %>% ungroup %>% select(input$entry.variable4, DTM)
+        ts.dta.val <- dta_val %>% filter(DBCN == default.circle_val()) %>% select(input$entry.variable4, DTM)
       
        
-        p <- plot_ly(data=ts.QD, text=paste(ts.QD$DTM), mode="lines", type="scatter", line = list(width = 1)) %>%
+        p <- plot_ly(data=ts.dta.val, text=paste(ts.dta.val$DTM), mode="lines", type="scatter", line = list(width = 1)) %>%
           layout(title=paste(as.character(title.f4())))
         
-        if( "value" %in% input$entry.variable4)
-          {p <- p %>% add_trace(x = ~DTM, y = ~value, name = 'Denni prutoky')} 
+        if( "QMER" %in% input$entry.variable4){
+          p <- p %>% add_trace(x = ~DTM, y = ~QMER, name = 'QMER')} 
         
-        if( "mean_month" %in% input$entry.variable4)
-        {p <- p %>% add_trace(x = ~DTM, y = ~mean_month, name = 'Mesicni prumery')}
+        if( "QNEX" %in% input$entry.variable4){
+          p <- p %>% add_trace(x = ~DTM, y = ~QNEX, name = 'QNEX')}
         
-        if("mean_year" %in% input$entry.variable4)
-          {p <- p %>% add_trace(x = ~DTM, y = ~mean_year, name = 'Rocni prumery')}
+        if("QNEY" %in% input$entry.variable4){
+          p <- p %>% add_trace(x = ~DTM, y = ~QNEY, name = 'QNEY')}
         
-        p
+        if("RM" %in% input$entry.variable4){
+          p <- p %>% add_trace(x = ~DTM, y = ~RM, name = 'RM')}
+        
+        p %>% layout(yaxis = list(title = "value"))
         
   }else if(input$validace == "C") 
       {chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday[-1])
@@ -1609,9 +1638,9 @@ if(input$validace == "A"){
 ```{r}
 renderTable({
 if(input$validace == "A"){
-  QD_filter <- QD %>% filter(DBCN == default.line()) %>% select(value)
-  QD_filter <- psych::describe(QD_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
-  QD_filter <-cbind(name="value",QD_filter[,-1])
+  dta_val_filter <- dta_val %>% filter(DBCN == default.circle_val()) %>% select(QMER, QNEX, QNEY, RM)
+  dta_val_filter <- psych::describe(dta_val_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
+  # dta_val_filter <-cbind(name="value", dta_val_filter[,-1])
   # else if(input$validace == "B"){
 #   pars_filter <- pars %>% filter(name == input$entry.pars) %>% select(current, lower, upper, initial)
 #   pars_filter <- describe(pars_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
