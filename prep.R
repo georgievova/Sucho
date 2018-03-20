@@ -394,7 +394,6 @@ CatCa::qmd()
 #--------------------
 
 dbcn_to_upov <- readRDS(file.path(.datadir, "chmu/dbcn_uid_mon.rds"))
-avg_u <- readRDS(file.path(.datadir,"uzivani/avg_uziv_denni/BER_0010.rds"))
 
 QD <- merge(dbcn_to_upov, QD, by = 'DBCN')
 QD <- QD[order(QD$DTM),]
@@ -404,3 +403,5 @@ mdta_val <- readRDS(file.path(.datadir,"chmu/mdta_2016.rds"))
 mdta_val <- mdta_val[, c(1,3,4,6,7,8)]
 mdta_val <- merge(mdta_val, dbcn_to_upov, by = 'DBCN')
 saveRDS(mdta_val, file.path(.datadir, "webapp_data/chmu/mdta_2016.rds"))
+
+#avg_u <- readRDS(file.path(.datadir,"uzivani/avg_uziv_denni/BER_0010.rds"))
