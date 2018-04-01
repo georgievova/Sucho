@@ -31,10 +31,10 @@ library(rhandsontable)
 # install.packages("home/ownCloud/Shared/BILAN_UPOV/bilan/bilan_2016-10-20.tar.gz",repos=NULL, type="source")
 # library(bilan)
 
- .datadir <- "/home/irina/ownCloud/Shared/BILAN_UPOV/used_data"
+ # .datadir <- "/home/irina/ownCloud/Shared/BILAN_UPOV/used_data"
 
 
-#CatCa::give_paths()
+CatCa::give_paths()
 
 BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_data_table.rds"))
 
@@ -410,9 +410,8 @@ map <-  map %>% addPolygons(data=dta, layerId = dta$UPOV_ID, color = "burlywood4
   
 #Zobrazení horního povodí 
   
-#   if(input$entry.layer == "HP"){ 
-#     
-    horni.povodi <- reactive({
+ 
+horni.povodi <- reactive({
      povodi[povodi$UPOV_ID %in% tabB$FROM[tabB$TO==input$search.id],] })
 
 
@@ -1402,6 +1401,7 @@ default.circle_val <- reactive({
   else{DBCN.sel <- input$validace_marker_click$id}
   return(DBCN.sel)})
 
+
 title.f4 <- reactive({
   if(is.null(input$validace_marker_click$id)){
      title <- dta_val$NAZ[dta_val$DBCN == "171000"]}else{
@@ -1429,7 +1429,7 @@ wellPanel(
           radioButtons("validace", label = NULL, choices = c("Denní průtoky" = "A", 
                                                              "Měsíční průtoky" = "AA",
                                                              "Přepínání parametrů" = "B", 
-                                                             "m-denní průtoky" = "C")),
+                                                             "m-denní průtoky" = "C"), selected = "AA"),
     
     
           conditionalPanel(condition = "input.validace == 'A'",
@@ -1540,12 +1540,17 @@ output$validace <- renderLeaflet({
   
     if("P" %in% vrstvy){
     validace <- validace %>% addCircleMarkers(data = stanice, lng = stanice@coords[,1], lat = stanice@coords[,2], 
-                                               radius = 3.5, color = "black", fillColor = "steelblue", weight = 0.5, opacity = 1, 
-                                               fillOpacity = 1, popup = label.points, layerId = stanice$DBCN) %>%
+                                               radius = 3.5, color = "black", fillColor = "#006600", weight = 0.5, opacity = 1, 
+                                               fillOpacity = 1, layerId = stanice$DBCN) %>% 
+     addPolylines(data = subset(povodi, UPOV_ID %in% tabB$FROM[tabB$TO==stanice$UPOV_ID[stanice$DBCN==default.circle_val()]]),
+                  group = "current_upov",
+                  color = "#00264d", opacity = 0.5, weight = 2) %>% 
       addPolylines(data = subset(povodi,  UPOV_ID==stanice$UPOV_ID[stanice$DBCN==default.circle_val()]),
-                 group = "current_shape",
-                 color = "#a53333", opacity = 1, weight = 3,
-                 stroke = TRUE)
+                  group = "current_upov",
+                  color = "#a53333", opacity = 1, weight = 3) %>% 
+      addPopups(lng=stanice@coords[stanice$DBCN==default.circle_val(),1],
+                lat=stanice@coords[stanice$DBCN==default.circle_val(),2], 
+                label.points[stanice$DBCN == default.circle_val()])
     }
   
   }else if(input$validace == "B"){
@@ -1640,32 +1645,10 @@ output$validace <- renderLeaflet({
        validace <- validace %>% addPolylines(data=povodi_III, color="#cc0000",  weight = 2.5, opacity = 1,
                        stroke= TRUE, group = "Povodí 3. řádu")}
  
-  print(validace)
+
+print(validace)
   
 })
-
-
-  observe({
-    click <- input$validace_shape_click
-    x <- subset(povodi,  UPOV_ID==stanice$UPOV_ID[stanice$DBCN==click])
-    # x2 <- subset(stanice, DBCN == default.circle_val())
-   leafletProxy("validace") %>% 
-    # clearBounds() %>% 
-    clearGroup("current_upov") %>%
-    addPolylines(data = x,
-                 group = "current_upov",
-                 color = "#a53333", opacity = 1, weight = 3) 
-   
-   # setView(lng=x@polygons[[1]]@labpt[1],
-   #         lat=x@polygons[[1]]@labpt[2], 
-   #         zoom=input$validace_zoom)
-   # leafletProxy("validace") %>% 
-   #   setView(lng=x@polygons[[1]]@labpt[1],lat=x@polygons[[1]]@labpt[2], zoom=18) 
-   # %>% 
-   #   addCircleMarkers(data = x2, lng = x2@coords[,1], lat = x2@coords[,2], 
-   #                                             radius = 6, color = "black", fillColor = "red", weight = 1, opacity = 1, 
-   #                                             fillOpacity = 1, popup = label.points, layerId = stanice$DBCN, group="current_shape") 
-    })
 
 ```
 
