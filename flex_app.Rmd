@@ -97,6 +97,12 @@ names(choices2) <- c(
 
 choices3 <- c("QMER", "QNEX", "QNEY", "RM")
 
+choices.QD <- c("value", "mean_month", "mean_year")
+names(choices.QD) <- c("Denni prutoky", "Mesicni prutoky", "Rocni prutoky")
+
+choices.routed <- c("TRM_mm_d", "RM_month", "RM_year")
+names(choices.routed) <- c("Simulovane prutoky", "Simulovane mesicni prutoky", "Simulovane rocni prutoky")
+
 choices.pars <- as.character(unique(pars$name))
 
 choices.mday <- c( "Qa", "Q30d", "Q60d", "Q90d", "Q120d", "Q150d", "Q180d", "Q210d", 
@@ -1390,6 +1396,10 @@ default.line <- reactive({
   else{DBCN.sel <- input$validace_shape_click$id}
   return(DBCN.sel)})
 
+selected.shape.A <- reactive({
+     UPOV_ID.sel <- stanice$UPOV_ID[stanice$DBCN == default.line()]
+     return(UPOV_ID.sel)}) 
+
 title.f3.1 <- reactive({
   title<- popis$NAZ_UTVAR[popis$UPOV_ID == default.shape3()]
   return(title)
@@ -1429,22 +1439,26 @@ wellPanel(
           radioButtons("validace", label = NULL, choices = c("Denní průtoky" = "A", 
                                                              "Měsíční průtoky" = "AA",
                                                              "Přepínání parametrů" = "B", 
-                                                             "m-denní průtoky" = "C"), selected = "AA"),
+                                                             "m-denní průtoky" = "C")),
     
     
           conditionalPanel(condition = "input.validace == 'A'",
                   absolutePanel(class = "panel panel-default", fixed = TRUE,
-                                         draggable = FALSE, top = "auto", left = '1%', right = "auto", bottom = '40%',
-                                         width = '13%', height = "2%",
-                                         style = "opacity: 1; style = z-index: 400",
+                                draggable = FALSE, top = "auto", left = '1%', 
+                                right = "auto", bottom = '40%',
+                                width = '13%', height = "2%",
+                                style = "opacity: 1; style = z-index: 400",
                                          HTML('<button data-toggle="collapse" data-target="#box8" 
                                               class="choose">Výběr časových řad</button>'),
                                          tags$div(id = 'box8', class="collapse", style = "max-height: 200px;
                                                   overflow-y:scroll"),
                               conditionalPanel(condition = "input.validace == 'A'",
-                                               checkboxGroupInput("entry.variable4", "Zvolte:", 
-                                                                  choices = c("value", "mean_month", "mean_year"), 
-                                                                  selected = c("value", "mean_month"))))),
+                                               checkboxGroupInput("entry.variable4", "Zvolte pozorovana data:", 
+                                                           choices = choices.QD, 
+                                                           selected = c("value", "mean_month")),
+                                               checkboxGroupInput("entry.variable5", "Zvolte simulovana data:", 
+                                                           choices = choices.routed, 
+                                                           selected = c("TRM_mm_d"))))),
   
     
           conditionalPanel(condition = "input.validace == 'AA'",
@@ -1457,7 +1471,7 @@ wellPanel(
                                          tags$div(id = 'box8', class="collapse", style = "max-height: 200px;
                                                   overflow-y:scroll"),
                                 conditionalPanel(condition = "input.validace == 'AA'",
-                                                 checkboxGroupInput("entry.variable5", "Zvolte:", 
+                                                 checkboxGroupInput("entry.variable6", "Zvolte:", 
                                                                     choices = choices3,
                                                                     selected = c("QMER", "RM"))))),
 
@@ -1481,7 +1495,8 @@ wellPanel(
                            
           wellPanel(checkboxGroupInput("entry.layer.val", label = "Vrstvy",
                                                         choices = c("Mapový podklad" = "MP", "Data" = "P",
-                                                                    "Řeky" = "R", "Jezera" = "J", "Nádrže" = "N", "Kraje" = "K", 
+                                                                    "Řeky" = "R", "Jezera" = "J", 
+                                                                    "Nádrže" = "N", "Kraje" = "K", 
                                                                     "Okresy" = "O", "Povodí 3. řádu" = "P3"), 
                                                         selected = c("MP", "P"), inline = T))
 
@@ -1668,60 +1683,98 @@ renderPlotly({
   
   if(input$validace == "A"){
     
-  # d <- dir(file.path(.datadir, "routed-0_bilan_bez_VN"))
-  # routed_0_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
-  # routed_0_dir <- readRDS(file.path(.datadir,"routed-0_bilan_bez_VN", routed_0_dir$source[routed_0_dir$UPOV_ID==default.shape3()]))
-  # 
-  # ts.year <- dta_bd %>%  select(input$variable_trend, DTM) %>% mutate(m = month(as.Date(DTM)))
-  # colnames(ts.year)[1] <- "var" 
-  # ts.year$t <- (1:length(ts.year$var))
-
+      
+  # d <- dir(file.path(.datadir, "res"))
+  # bilan_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
+  # dta_bd <- readRDS(file.path(.datadir,"res", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
     
-    ts.QD <- QD %>% filter(DBCN == default.line()) %>% mutate(month = format(DTM, "%m"), year = format(DTM, "%Y")) %>%
-          group_by(year) %>% mutate(mean_year = mean(value, na.rm = TRUE)) %>% ungroup %>% group_by(month, year) %>%
-          mutate(mean_month = mean(value, na.rm=TRUE)) %>% ungroup %>% select(input$entry.variable4, DTM)
+  d <- dir(file.path(.datadir, "routed-0_bilan_bez_VN"))
+  routed0_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
+  routed <- readRDS(file.path(.datadir,"routed-0_bilan_bez_VN",
+                                   routed0_dir$source[routed0_dir$UPOV_ID==selected.shape.A()]))
+  routed <- routed[,c("DTM", "TRM_mm_d")]
+
+   ts.routed <- routed %>% 
+      mutate(month = format(DTM, "%m"), year = format(DTM, "%Y")) %>% 
+      group_by(year) %>% mutate(RM_year = mean(TRM_mm_d, na.rm = TRUE)) %>% ungroup %>%
+      group_by(month, year) %>% mutate(RM_month = mean(TRM_mm_d, na.rm=TRUE)) %>% ungroup %>%
+      select(input$entry.variable5, DTM)
+    
+    ts.QD <- QD %>% filter(DBCN == default.line()) %>% 
+      mutate(month = format(DTM, "%m"), year = format(DTM, "%Y")) %>% 
+      group_by(year) %>% mutate(mean_year = mean(value, na.rm = TRUE)) %>% ungroup %>%
+      group_by(month, year) %>% mutate(mean_month = mean(value, na.rm=TRUE)) %>% ungroup %>%
+      select(input$entry.variable4, DTM)
         
-        p1 <- plot_ly(data=ts.QD, text=paste(ts.QD$DTM), mode="lines", type="scatter", line = list(width = 1)) %>%
+        p1 <- plot_ly(mode="lines", type="scatter", line = list(width = 1)) %>%
           layout(title=paste(as.character(title.f5())))
         
         if( "value" %in% input$entry.variable4){
-          p1 <- p1 %>% add_trace(x = ~DTM, y = ~value, name = 'Denni prutoky')} 
+          p1 <- p1 %>%  add_trace(data=ts.QD, text=paste(ts.QD$DTM), x = ~DTM, y = ~value, 
+                                  name = 'Denni prutoky')} 
         
         if( "mean_month" %in% input$entry.variable4){
-          p1 <- p1 %>% add_trace(x = ~DTM, y = ~mean_month, name = 'Mesicni prumery')}
+          p1 <- p1 %>% add_trace(data=ts.QD, text=paste(ts.QD$DTM), x = ~DTM, y = ~mean_month, 
+                                 name = 'Mesicni prumery prutoku')}
         
         if("mean_year" %in% input$entry.variable4){
-          p1 <- p1 %>% add_trace(x = ~DTM, y = ~mean_year, name = 'Rocni prumery')}
+          p1 <- p1 %>% add_trace(data=ts.QD, text=paste(ts.QD$DTM), x = ~DTM, y = ~mean_year, 
+                                 name = 'Rocni prumery prutoku')}
+        
+        if("TRM_mm_d" %in% input$entry.variable5){
+          p1 <- p1 %>% add_trace(data=ts.routed, text=paste(routed$DTM), x = ~DTM, y = ~TRM_mm_d, 
+                                 name = 'Simulovane prutoky')}
+        
+        
+        if("RM_month" %in% input$entry.variable5){
+          p1 <- p1 %>% add_trace(data=ts.routed, text=paste(routed$DTM), x = ~DTM, y = ~RM_month, 
+                                 name = 'Simulovane mesicni prutoky')}
+        
+        
+        if("RM_year" %in% input$entry.variable5){
+          p1 <- p1 %>% add_trace(data=ts.routed, text=paste(routed$DTM), x = ~DTM, y = ~RM_year, 
+                                 name = 'Simulovane rocni prutoky')}
         
         p1
   
   }else if(input$validace == "AA"){
   
-        ts.dta.val <- dta_val %>% filter(DBCN == default.circle_val()) %>% select(input$entry.variable5, DTM)
+        ts.dta.val <- dta_val %>% filter(DBCN == default.circle_val()) %>% select(input$entry.variable6, DTM)
 
-        p <- plot_ly(data=ts.dta.val, text=paste(ts.dta.val$DTM), mode="lines", type="scatter", line = list(width = 1)) %>%
-          layout(title=paste(as.character(title.f4())))
+        p <- plot_ly(data=ts.dta.val, text=paste(ts.dta.val$DTM), 
+                     mode="lines", type="scatter", line = list(width = 1)) %>%
+             layout(title=paste(as.character(title.f4())))
         
-        if( "QMER" %in% input$entry.variable5){
+        if( "QMER" %in% input$entry.variable6){
           p <- p %>% add_trace(x = ~DTM, y = ~QMER, name = 'QMER')} 
         
-        if( "QNEX" %in% input$entry.variable5){
+        if( "QNEX" %in% input$entry.variable6){
           p <- p %>% add_trace(x = ~DTM, y = ~QNEX, name = 'QNEX')}
         
-        if("QNEY" %in% input$entry.variable5){
+        if("QNEY" %in% input$entry.variable6){
           p <- p %>% add_trace(x = ~DTM, y = ~QNEY, name = 'QNEY')}
         
-        if("RM" %in% input$entry.variable5){
+        if("RM" %in% input$entry.variable6){
           p <- p %>% add_trace(x = ~DTM, y = ~RM, name = 'RM')}
         
         p %>% layout(yaxis = list(title = "value"))
         
-}else if(input$validace == "C") 
-      {chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday[-1])
-         chars_filter <- data.frame(value = t(chars_filter), m = c(seq(30,330,30),355,364))
+}else if(input$validace == "C"){
+  chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday[-1])
+  chars_filter <- data.frame(value = t(chars_filter), m = c(seq(30,330,30),355,364))
+         
+  d <- dir(file.path(.datadir, "routed-0_bilan_bez_VN"))
+  routed0_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
+  routed <- readRDS(file.path(.datadir,"routed-0_bilan_bez_VN",
+                                   routed0_dir$source[routed0_dir$UPOV_ID==default.shape3()]))
+  routed <- routed[,c("DTM", "TRM_mm_d")]
+  routed.qm <- CatCa::mdq(routed$TRM_mm_d, return = 'data.table')
    
-   p2 <- plot_ly(data=chars_filter, x=~m, y=~value, type="scatter", mode="lines") %>%
-          layout(title=paste(as.character(title.f3.1())))
+   p2 <- plot_ly(type="scatter", mode="lines", text=paste(routed.qm$LAB)) %>%
+     layout(title=paste(as.character(title.f3.1())))
+   
+   p2 <- p2 %>% add_trace(data=chars_filter, x=~m, y=~value, name = 'Pozorovana data')
+   p2 <- p2 %>% add_trace(data=routed.qm, x=~M, y=~qm, name = 'Simulovana data')
    p2
   }
 })
@@ -1748,6 +1801,7 @@ if(input$validace == "A"){
     t2c <- hydroGOF::gof(dta_val$RM, dta_val$QMER)
   colnames(t2c) <- "QMER"
   t2 <- as.data.frame(t(cbind(t2a, t2b, t2c)))
+  print(t2)
  
   # x <- rbind(c(colnames(t1),rep(" ",9)),cbind(t1,matrix(rep(NA, 4*9), nrow=4)))
   # colnames(x) <- colnames(t2)
@@ -1759,7 +1813,16 @@ if(input$validace == "A"){
 #   pars_filter <- describe(pars_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
 #   print(cbind(name=rownames(pars_filter),pars_filter[,-1]), digits=3)
 } else if(input$validace == "C"){
-  chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday)
+  chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday[-1])
+  
+  d <- dir(file.path(.datadir, "routed-0_bilan_bez_VN"))
+  routed0_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
+  routed <- readRDS(file.path(.datadir,"routed-0_bilan_bez_VN",
+                                   routed0_dir$source[routed0_dir$UPOV_ID==default.shape3()]))
+  routed <- routed[,c("DTM", "TRM_mm_d")]
+  routed.qm <- CatCa::mdq(routed$TRM_mm_d, return = 'vector')
+  
+  table <- rbind(chars_filter, routed.qm)
   }
 }, digits = 3, spacing = 'xs')
 ```
