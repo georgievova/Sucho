@@ -828,7 +828,7 @@ actionButton("reset_button2", "Reset", icon("arrows"),
 
 
 #Reactions--------------------
-reac.ind<- eventReactive(input$go2,{ 
+reac.ind <- eventReactive(input$go2,{ 
   
  vrstvy <- input$entry.layer.ind
 
@@ -1455,7 +1455,7 @@ wellPanel(
                               conditionalPanel(condition = "input.validace == 'A'",
                                                checkboxGroupInput("entry.variable4", "Zvolte pozorovana data:", 
                                                            choices = choices.QD, 
-                                                           selected = c("value", "mean_month")),
+                                                           selected = c("value")),
                                                checkboxGroupInput("entry.variable5", "Zvolte simulovana data:", 
                                                            choices = choices.routed, 
                                                            selected = c("TRM_mm_d"))))),
@@ -1785,7 +1785,7 @@ renderPlotly({
 ```{r}
 renderTable({
 if(input$validace == "A"){
-  QD_filter <- QD %>% filter(DBCN == default.line()) %>% select(value)
+  QD_filter <- QD %>% filter(DBCN == default.line()) %>% select(value) %>% unlist
   QD_filter <- psych::describe(QD_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
   QD_filter <-cbind(name="value",QD_filter[,-1])
 }else if(input$validace == "AA"){
@@ -1823,8 +1823,9 @@ if(input$validace == "A"){
   routed.qm <- CatCa::mdq(routed$TRM_mm_d, return = 'vector')
   
   table <- rbind(chars_filter, routed.qm)
+  rownames(table) <- c("Pozorovana data", "Simulovana data")
   }
-}, digits = 3, spacing = 'xs')
+}, digits = 3, spacing = 'xs', rownames = TRUE)
 ```
 
 
