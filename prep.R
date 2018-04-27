@@ -132,7 +132,7 @@ BM <- as.data.table(BM)
 
 saveRDS(BM, file.path(.datadir, 'webapp_data/mbilan/bilan_month.rds'))
 saveRDS(BM.long, file.path(.datadir, 'webapp_data/mbilan/bilan_month_long.rds'))
-saveRDS(BMt, file.path(.datadir, 'webapp_data/mbilan/bilan_month_data_table.rds'))
+saveRDS(BM, file.path(.datadir, 'webapp_data/mbilan/bilan_month_data_table.rds'))
 
 #3 Denní průtoky
 #--------------------
@@ -405,3 +405,29 @@ mdta_val <- merge(mdta_val, dbcn_to_upov, by = 'DBCN')
 saveRDS(mdta_val, file.path(.datadir, "webapp_data/chmu/mdta_2016.rds"))
 
 #avg_u <- readRDS(file.path(.datadir,"uzivani/avg_uziv_denni/BER_0010.rds"))
+
+
+#14 simulovana mesicni data validace
+#--------------------
+
+list_of_files <- dir(file.path(.datadir, "routed-0_bilan_bez_VN/"))
+
+dta <- c()  
+
+for(i in list_of_files){
+  x <- readRDS(file.path(.datadir, "routed-0_bilan_bez_VN/",i))
+  upov_name <- gsub(".rds","",i)
+  x$UPOV_ID <- upov_name
+  dta <- rbind(dta,x)
+  print(paste("scream ",round(which(i== list_of_files)/length(list_of_files),4)*100,"%"))
+}
+
+saveRDS(dta, file.path(.datadir,"used_data/webapp_data/chmu/dta_routed0.rds"))
+
+dta$m <- as.factor(substr(dta$DTM,6,7))
+dta$y <- as.factor(substr(dta$DTM,1,4))
+
+dta_m <- dta %>% group_by(m,y,UPOV_ID) %>% summarise(RM = mean(TRM_mm_d)) %>% mutate(DTM = as.Date(paste(y,m,"15",sep="-")))
+new_dta_m <- merge(mdta_val, dta_m, by=c("DTM","UPOV_ID"))
+
+saveRDS(new_dta_m, file.path(.datadir, "webapp_data/chmu/data_validace.rds"))
