@@ -2,7 +2,7 @@
 title: "HAMR"
 output: 
   flexdashboard::flex_dashboard:
-    logo: img/logos_trans_black.png
+    logo: img/logos_trans_white.png
     orientation: rows
     vertical_layout: fill
     css: 'styles.css'
@@ -17,24 +17,25 @@ library(leaflet)
 library(dplyr)
 library(dygraphs)
 library(ggplot2)
-#library(gridExtra)
 library(data.table)
+library(plotly)
+library(DT)
+#library(gridExtra)
 #library(sp)
 #library(rgeos)
 #library(datasets)
 #library(psych)
-library(plotly)
-library(DT) # An R interface to the DataTables library
-library(parallel) #Parallel detectCores() error
-library(rhandsontable)
+
+#library(rhandsontable)
+
+#library(parallel) #Parallel detectCores() error
 #devtools::install_github("KVHEM/CatCa")
-# install.packages("home/ownCloud/Shared/BILAN_UPOV/bilan/bilan_2016-10-20.tar.gz",repos=NULL, type="source")
-# library(bilan)
+#CatCa::give_paths()
 
- # .datadir <- "/home/irina/ownCloud/Shared/BILAN_UPOV/used_data"
+.datadir <- "C:\\Users\\irina\\ownCloud\\Shared\\BILAN_UPOV\\used_data"
+#.datadir <- getwd()
 
 
-CatCa::give_paths()
 
 BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_data_table.rds"))
 
@@ -58,6 +59,7 @@ u_leaflet <- readRDS(file.path(.datadir, "webapp_data/uzivani/u_leaflet.rds"))
 QD <- readRDS(file.path(.datadir, "webapp_data/chmu/QD.rds"))
 dta_val <- readRDS(file.path(.datadir, "webapp_data/chmu/data_validace.rds"))
 chars <- readRDS(file.path(.datadir, "webapp_data/chmu/chars_mm.rds"))
+chars_sim <- readRDS(file.path(.datadir, "webapp_data/chmu/chars_mm_sim.rds"))
 
 # Merging data----------------
 povodi <- sp::merge(povodi, popis, by='UPOV_ID')
@@ -105,12 +107,10 @@ names(choices.routed) <- c("Simulovane prutoky", "Simulovane mesicni prutoky", "
 
 choices.pars <- as.character(unique(pars$name))
 
-choices.mday <- c( "Qa", "Q30d", "Q60d", "Q90d", "Q120d", "Q150d", "Q180d", "Q210d", 
+choices.mday <- c("Q30d", "Q60d", "Q90d", "Q120d", "Q150d", "Q180d", "Q210d", 
                   "Q240d", "Q270d", "Q300d", "Q330d", "Q355d", "Q364d")
 mesice <- c("Leden", "Únor", "Březen", "Duben", "Květen", "Červen",
             "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec")
-
-#knitr::opts_chunk(cache.path='/home/owc/-hanel/KVHEM/-projekty/2017 SUCHO/Sucho/.ch/')
 ```
 
 Základní mapa {data-icon="fa-map-o"}
@@ -188,11 +188,12 @@ wellPanel(HTML('<div class="help-tip">
                 "Nádrže" = "N", "Kraje" = "K", "Okresy" = "O", "Povodí 3. řádu" = "P3"), 
     selected = c("MP", "P"),
     inline = T))
-  
-  hr()
 
 #         HTML('<button data-toggle="collapse" data-target="#box3" class="btn-block btn-primary">Filtování dle hodnoty</button>'),
 #         tags$div()
+
+hr()
+
 
 div(style="display:inline-block",
     actionButton("reset_button", "Reset", icon("arrows"),
@@ -200,7 +201,6 @@ div(style="display:inline-block",
     actionButton("go1", "Zobrazit", icon("check"),
                  style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
 )
-  
 
 
 ```
@@ -773,31 +773,29 @@ Column {.sidebar data-width=400}
 
 renderUI({
   wellPanel(
-      HTML('<div class="help-tip">
-           <p>Vyhledat můžete jak dle názvu, tak dle UPOV_ID.</p>
-            </div>'),
       selectizeInput(inputId = "search.id.ind","Vyhledávání útvaru",
                            selected=input$indikatory_shape_click$id,
                            choices = search.choices)
       )
   })
 
-wellPanel(HTML('<div class="help-tip">
-               <p>Volba indikátoru, kroku a datumu.</p></div>'),
-
-  radioButtons("indikatory", label=NULL, choices = c("SPI" = "spi","SPEI" = "spei"), 
+wellPanel(
+  radioButtons("indikatory", label=NULL, choices = c("PDSI" = "pdsi", "scPDSI" = "scpdsi", "SPEI" = "spei", "SPI" = "spi"), 
             # "PDSI" = "C", "SGI" = "D", "SRI" = "E", "Nedostatkové objemy" = "F"),
-             selected = "spei"),
+             selected = "pdsi"),
   selectInput("krok", label = NULL, choices = c("1 měsíc" = 1, "3 měsíce" = 3,
                                                 "6 měsíců" = 6, "12 měsíců" = 12), selected = 3),
-  dateInput("entry.date.ind", label = NULL, "yyyy-mm-dd", language = "cs",
-                           value = as.Date("1985-01-01"), startview = "decade",
-                           min = as.Date("1961-01-01"), max = as.Date("2015-12-01")),
-  conditionalPanel(condition = "input.indikatory == 'A'",
+  
+  conditionalPanel(condition = "input.indikatory == 'spi'",
                selectInput("entry.variable.ind", label=NULL, selected = "P",
                                       choices = c('P', 'R', 'RM', 'BF'))
-               )
-  )
+               ),
+  
+    dateInput("entry.date.ind", label = NULL, "yyyy-mm-dd", language = "cs",
+                           value = as.Date("1985-01-01"), startview = "decade",
+                           min = as.Date("1961-01-01"), max = as.Date("2015-12-01"))
+)
+
 
 wellPanel(checkboxGroupInput("entry.layer.ind", label = "Vrstvy",
     choices = c("Mapový podklad" = "MP", "Povodí" ="P", "Řeky" = "R", "Jezera" = "J", 
@@ -806,13 +804,13 @@ wellPanel(checkboxGroupInput("entry.layer.ind", label = "Vrstvy",
     inline = T))
 
 
-actionButton("go2", "Zobrazit", icon("check"), 
-    style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
+div(style="display:inline-block",
+    actionButton("reset_button", "Reset", icon("arrows"),
+                 style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
+    actionButton("go", "Zobrazit", icon("check"),
+                 style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
+)
 
-hr()
-
-actionButton("reset_button2", "Reset", icon("arrows"), 
-    style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
 
 ```
 
@@ -828,13 +826,14 @@ actionButton("reset_button2", "Reset", icon("arrows"),
 
 
 #Reactions--------------------
-reac.ind <- eventReactive(input$go2,{ 
+reac.ind <- eventReactive(input$go,{ 
   
  vrstvy <- input$entry.layer.ind
-
+ 
+ if(input$indikatory %in% c("spi", "spei")){
  ind_dta <- readRDS(file.path(.datadir,"webapp_data/indikatory", paste0(input$indikatory, "_", input$krok, ".rds")))
-  
-  ind_dta_f <- c()
+ }else{
+  ind_dta <- readRDS(file.path(.datadir,"indikatory", paste0(input$indikatory, ".rds")))}
 
 #Dlouhodobé průměry (celé období/vybrané období)
 if(input$indikatory == "spi"){
@@ -865,10 +864,8 @@ if(input$indikatory == "spi"){
 
 ```
 
-
 Row 
 -------------------------------------
-
 
 ```{r indikatory: mapa}
 #Functions--------------------
@@ -926,29 +923,10 @@ output$indikatory<-renderLeaflet({
                                              "font-family" = "sans-serif", padding = "3px 8px",
                                              keepInView = TRUE, noHide = FALSE,
                                              "border-color" = "rgb(255, 255, 255)"),
-                                             textsize = "13px", direction = "auto"))}
-# #Vykreslení zakladních prvků mapy
-#           addPolylines(data=reky, color="#007C8C", weight = 1.5,
-#                  opacity = 1, stroke= TRUE, group = "Řeky") %>%
-#           addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff", 
-#                 weight = 1, opacity = 1, stroke= TRUE, group = "Jezera")%>%
-#           addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
-#                 weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže")%>%
-#           addPolylines(data=kraje, color="#000000",  weight = 2.5, 
-#                        stroke= TRUE, group = "Kraje") %>%
-#           addPolylines(data=okresy, color="#000000",  weight = 2, 
-#                        stroke= TRUE, group = "Okresy") %>%
-#           addPolylines(data=povodi_III, color="#cc0000",  weight = 2.5, opacity = 1,
-#                        stroke= TRUE, group = "Povodí 3. řádu") %>%
-# #Legenda a ovládání vrstev mapy
-#       addLayersControl(overlayGroups = c("Mapový podklad", "Povodí", "Řeky", "Jezera", "Nádrže",
-#                                          "Kraje", "Okresy", "Povodí 3. řádu"),
-#                      position = "bottomleft",
-#                      options = layersControlOptions(collapsed = TRUE)) %>%
-#       hideGroup(c("Řeky", "Jezera", "Nádrže", "Kraje", "Okresy", "Povodí 3. řádu"))%>%
-#       addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
-#               position = "bottomright") 
- 
+                                             textsize = "13px", direction = "auto"))%>%
+         addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
+                    position = "bottomright")}
+
      if("MP" %in% vrstvy){
       indikatory <-  indikatory %>% addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13))
       }
@@ -998,16 +976,15 @@ observe({
 #Reset button
 
 observe({
-    input$reset_button2
+    input$reset_button
     leafletProxy("indikatory") %>% setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom)})
 
 
-leafletOutput("indikatory")
+leafletOutput("indikatory")  
   
 ```
 
-
-Row
+Row 
 -------------------------------------
 
 ```{r indikatory: TS}
@@ -1122,8 +1099,8 @@ labels.points <- sprintf(
   
   
    if("MP" %in% vrstvy){
-  uzivani <- uzivani %>% addProviderTiles(providers$Esri.WorldTopoMap, group = "Mapový podklad",
-                                                  options = tileOptions(minZoom=7, maxZoom=20))}
+  uzivani <- uzivani %>% addTiles(group = "Mapový podklad",
+                                  options = tileOptions(minZoom=7, maxZoom=20))}
   
   if("R" %in% vrstvy){
   uzivani <- uzivani %>% addPolylines(data=reky, color="#007C8C", weight = 1.5,
@@ -1201,180 +1178,183 @@ renderDygraph({
 ```
 
 
- Výhledové užívání {data-icon="fa-chevron-right"}
-===================================== 
 
 ```{r vyhled_uzivani: reactions}
-
-#Reactions--------------------
-
-povodi.uv <- reactive({
-  povodi[povodi$UPOV_ID==input$search.id.uv, ]
-})
-
-pal_2 <- colorFactor("Paired", domain = u_leaflet$JEV, na.color = "#ffffff")
-
-#Functions--------------------
-
-default.shape_uv <- reactive({
-  UPOV_ID.sel <- input$search.id.uv
-  #print(input$uzivani_shape_click$id)
-  return(UPOV_ID.sel)})
-
-title_uv <- reactive({
-  title<- popis$NAZ_UTVAR[popis$UPOV_ID == default.shape_uv()]
-  return(title)
-  })
-
-title_bod_uv <- reactive({
-  title <- u$NAZICO[u$NAZICO == default.circle_uv()]
-  return(title)
-})
-
-default.circle_uv <- reactive({
-  if(is.null(input$vyhled_uzivani_marker_click$id)){
-  NAZICO.sel <- u_leaflet$NAZICO[1]}
-  else{NAZICO.sel<-input$vyhled_uzivani_marker_click$id}
-  return(NAZICO.sel)})
+#  Výhledové užívání {data-icon="fa-chevron-right"}
+# ===================================== 
+# 
+# #Reactions--------------------
+# 
+# povodi.uv <- reactive({
+#   povodi[povodi$UPOV_ID==input$search.id.uv, ]
+# })
+# 
+# pal_2 <- colorFactor("Paired", domain = u_leaflet$JEV, na.color = "#ffffff")
+# 
+# #Functions--------------------
+# 
+# default.shape_uv <- reactive({
+#   UPOV_ID.sel <- input$search.id.uv
+#   #print(input$uzivani_shape_click$id)
+#   return(UPOV_ID.sel)})
+# 
+# title_uv <- reactive({
+#   title<- popis$NAZ_UTVAR[popis$UPOV_ID == default.shape_uv()]
+#   return(title)
+#   })
+# 
+# title_bod_uv <- reactive({
+#   title <- u$NAZICO[u$NAZICO == default.circle_uv()]
+#   return(title)
+# })
+# 
+# default.circle_uv <- reactive({
+#   if(is.null(input$vyhled_uzivani_marker_click$id)){
+#   NAZICO.sel <- u_leaflet$NAZICO[1]}
+#   else{NAZICO.sel<-input$vyhled_uzivani_marker_click$id}
+#   return(NAZICO.sel)})
 
 ```
 
 
-Row {data-height=500}
--------------------------------------
 
-### Sidepanel {data-width=150}
 
 ```{r vyhled_uzivani: sidepanel}
-wellPanel(
-renderUI({selectizeInput(inputId = "search.id.uv", label = NULL,
-                         selected=input$vyhled_uzivani_shape_click$id, choices = search.choices)}),
-hr(),
-checkboxGroupInput("entry.layer_uv", label = "Vrstvy",
-                                                        choices = c("Mapový podklad" = "MP", "Polygony" = "P", "Odběratele" = "O",
-                                                                    "Řeky" = "R", "Jezera" = "J", "Nádrže" = "N"), 
-                                                        selected = c("MP", "P", "O"), inline = T))
+# Row {data-height=500}
+# -------------------------------------
+# 
+# ### Sidepanel {data-width=150}
+# wellPanel(
+# renderUI({selectizeInput(inputId = "search.id.uv", label = NULL,
+#                          selected=input$vyhled_uzivani_shape_click$id, choices = search.choices)}),
+# hr(),
+# checkboxGroupInput("entry.layer_uv", label = "Vrstvy",
+#                                                         choices = c("Mapový podklad" = "MP", "Polygony" = "P", "Odběratele" = "O",
+#                                                                     "Řeky" = "R", "Jezera" = "J", "Nádrže" = "N"), 
+#                                                         selected = c("MP", "P", "O"), inline = T))
 
 ```
 
 
-### Mapa {data-width=850}
+
 
 ```{r vyhled_uzivani: mapa}
+# ### Mapa {data-width=850}
+# output$vyhled_uzivani <- renderLeaflet({
+# 
+#   vrstvy <- input$entry.layer_uv
+#   
+# labels.points <- sprintf(
+#     "<strong>%s</strong><br/>Povodí: %s<br/>Jev: %s<br/>ICOC: %s",
+#     u_leaflet$NAZICO, u_leaflet$POVODI, u_leaflet$JEV, u_leaflet$ICOC) %>%
+#     lapply(htmltools::HTML)
+#   
+# 
+#   povodiv <- base::subset(povodi,UPOV_ID != input$search.id.uv)
+# 
+#     labels <- sprintf(
+#       "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s",
+#       povodiv$NAZ_UTVAR, povodiv$KTG_UPOV, povodiv$U_PMU, povodiv$UPOV_ID) %>% lapply(htmltools::HTML)
+# 
+#   if(length(labels)==0){labels <- c(" ")}
+# 
+# # centr <- getSpPPolygonsLabptSlots(povodi.ds())
+# # leaflet() %>% setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
+#     
+#   centr <- rgeos::gCentroid(povodi.uv(), byid = TRUE)
+#     
+#   vyhled_uzivani <- leaflet() %>% setView(lng=centr@coords[1], lat = centr@coords[2], zoom=12) 
+#   
+#   if("MP" %in% vrstvy){
+#   vyhled_uzivani <- vyhled_uzivani %>% addTiles(group = "Mapový podklad",
+#                                                 options = tileOptions(minZoom=7, maxZoom=20))}
+#   
+#   if("R" %in% vrstvy){
+#   vyhled_uzivani <- vyhled_uzivani %>% addPolylines(data=reky, color="#007C8C", weight = 1.5,
+#                  opacity = 1, stroke= TRUE, group = "Řeky") }
+#   
+#   if("J" %in% vrstvy){
+#   vyhled_uzivani <- vyhled_uzivani %>% addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff",
+#                 weight = 1, opacity = 1, stroke= TRUE, group = "Jezera") }
+#   
+#   if("N" %in% vrstvy){
+#   vyhled_uzivani <- vyhled_uzivani %>% addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
+#                 weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže") }
+#   
+#   if("O" %in% vrstvy){
+#    vyhled_uzivani <- vyhled_uzivani %>% addCircleMarkers(data=u_leaflet, radius = 6.5, color = "black", 
+#                                                          fillColor = pal_2(u_leaflet$JEV),
+#                                                          weight = 0.5, opacity = 0.7, fillOpacity = 1, layerId = u_leaflet$NAZICO,
+#                                                          popup = labels.points, clusterOptions = markerClusterOptions()) %>% 
+#      addLegend(pal = pal_2, values = u_leaflet$JEV, opacity = 0.7, title = "Legenda",
+#                position = "bottomright")  }
+#   
+#   if("P" %in% vrstvy){
+#    vyhled_uzivani <- vyhled_uzivani %>% addPolygons(data=povodiv, color = "#000000", fillColor = "#708090", 
+#                                                     weight = 2, opacity = 0.4, smoothFactor = 0,
+#                                                     layerId = povodi$UPOV_ID,
+#                                                     label = labels,
+#                                                     labelOptions = labelOptions(clickable = TRUE, noHide = TRUE,
+#                                                                                 style = list("font-weight" = "normal",
+#                                                                                              "font-family" = "sans-serif", 
+#                                                                                              padding = "3px 8px",
+#                                                                                              keepInView = TRUE,
+#                                                                                              "border-color" = "#F5F5F5"),
+#                                                                                 textsize = "13px", direction = "auto")) }
+#     
+#     print(vyhled_uzivani)
+# })
+# 
+# leafletOutput("vyhled_uzivani")
+# ```
+# 
+# 
+# ```{r vyhled_uzivani: tab}
+# Row {data-height=500}
+# -------------------------------------
+# 
+# ### Tabulka {data-width=350}
+# 
+# # DF <- u[NAZICO == default.circle_uv()] %>% group_by(JEV) %>% select(value, ROK, MESIC, UPOV_ID, JEV)
+# # DF <- DF[DF$ROK %in% DF$ROK[nrow(DF)] & DF$MESIC %in% c(DF$MESIC[nrow(DF)], as.character(as.numeric(DF$MESIC[nrow(DF)]-1))),]
+# # DF = data.frame()
+# 
+#   # d <- dir(file.path(.datadir, "uzivani/avg_uziv_denni"))
+#   # uv_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
+#   # dta_uv <- readRDS(file.path(.datadir, "uzivani/avg_uziv_denni", uv_dir$source[uv_dir$UPOV_ID==default.shape_uv()]))
+#   # 
+#   # vektor <- c("mesice", unique(dta_uv$MON))
+#   # 
+#   # DF <- dta_uv %>% group_by(JEV) %>% select(MEAN)
+#   # 
+#   
+# 
+# DF = data.frame(integer = 1:10,
+#                    numeric = rnorm(10),
+#                    logical = rep(TRUE, 10), 
+#                    character = LETTERS[1:10],
+#                    factor = factor(letters[1:10], levels = letters[10:1], 
+#                                    ordered = TRUE),
+#                    factor_allow = factor(letters[1:10], levels = letters[10:1], 
+#                                          ordered = TRUE),
+#                    date = seq(from = Sys.Date(), by = "days", length.out = 10),
+#                    stringsAsFactors = FALSE)
+# 
+# rhandsontable::rhandsontable(DF) %>% hot_col("factor_allow", allowInvalid = TRUE)
 
-output$vyhled_uzivani <- renderLeaflet({
-
-  vrstvy <- input$entry.layer_uv
-  
-labels.points <- sprintf(
-    "<strong>%s</strong><br/>Povodí: %s<br/>Jev: %s<br/>ICOC: %s",
-    u_leaflet$NAZICO, u_leaflet$POVODI, u_leaflet$JEV, u_leaflet$ICOC) %>%
-    lapply(htmltools::HTML)
-  
-
-  povodiv <- base::subset(povodi,UPOV_ID != input$search.id.uv)
-
-    labels <- sprintf(
-      "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s",
-      povodiv$NAZ_UTVAR, povodiv$KTG_UPOV, povodiv$U_PMU, povodiv$UPOV_ID) %>% lapply(htmltools::HTML)
-
-  if(length(labels)==0){labels <- c(" ")}
-
-# centr <- getSpPPolygonsLabptSlots(povodi.ds())
-# leaflet() %>% setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
-    
-  centr <- rgeos::gCentroid(povodi.uv(), byid = TRUE)
-    
-  vyhled_uzivani <- leaflet() %>% setView(lng=centr@coords[1], lat = centr@coords[2], zoom=12) 
-  
-  if("MP" %in% vrstvy){
-  vyhled_uzivani <- vyhled_uzivani %>% addProviderTiles(providers$Esri.WorldTopoMap, group = "Mapový podklad",
-                                                  options = tileOptions(minZoom=7, maxZoom=20))}
-  
-  if("R" %in% vrstvy){
-  vyhled_uzivani <- vyhled_uzivani %>% addPolylines(data=reky, color="#007C8C", weight = 1.5,
-                 opacity = 1, stroke= TRUE, group = "Řeky") }
-  
-  if("J" %in% vrstvy){
-  vyhled_uzivani <- vyhled_uzivani %>% addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff",
-                weight = 1, opacity = 1, stroke= TRUE, group = "Jezera") }
-  
-  if("N" %in% vrstvy){
-  vyhled_uzivani <- vyhled_uzivani %>% addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
-                weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže") }
-  
-  if("O" %in% vrstvy){
-   vyhled_uzivani <- vyhled_uzivani %>% addCircleMarkers(data=u_leaflet, radius = 6.5, color = "black", 
-                                                         fillColor = pal_2(u_leaflet$JEV),
-                                                         weight = 0.5, opacity = 0.7, fillOpacity = 1, layerId = u_leaflet$NAZICO,
-                                                         popup = labels.points, clusterOptions = markerClusterOptions()) %>% 
-     addLegend(pal = pal_2, values = u_leaflet$JEV, opacity = 0.7, title = "Legenda",
-               position = "bottomright")  }
-  
-  if("P" %in% vrstvy){
-   vyhled_uzivani <- vyhled_uzivani %>% addPolygons(data=povodiv, color = "#000000", fillColor = "#708090", 
-                                                    weight = 2, opacity = 0.4, smoothFactor = 0,
-                                                    layerId = povodi$UPOV_ID,
-                                                    label = labels,
-                                                    labelOptions = labelOptions(clickable = TRUE, noHide = TRUE,
-                                                                                style = list("font-weight" = "normal",
-                                                                                             "font-family" = "sans-serif", 
-                                                                                             padding = "3px 8px",
-                                                                                             keepInView = TRUE,
-                                                                                             "border-color" = "#F5F5F5"),
-                                                                                textsize = "13px", direction = "auto")) }
-    
-    print(vyhled_uzivani)
-})
-
-leafletOutput("vyhled_uzivani")
 ```
 
-Row {data-height=500}
--------------------------------------
 
-### Tabulka {data-width=350}
-
-```{r vyhled_uzivani: tab}
-# DF <- u[NAZICO == default.circle_uv()] %>% group_by(JEV) %>% select(value, ROK, MESIC, UPOV_ID, JEV)
-# DF <- DF[DF$ROK %in% DF$ROK[nrow(DF)] & DF$MESIC %in% c(DF$MESIC[nrow(DF)], as.character(as.numeric(DF$MESIC[nrow(DF)]-1))),]
-# DF = data.frame()
-
-  # d <- dir(file.path(.datadir, "uzivani/avg_uziv_denni"))
-  # uv_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
-  # dta_uv <- readRDS(file.path(.datadir, "uzivani/avg_uziv_denni", uv_dir$source[uv_dir$UPOV_ID==default.shape_uv()]))
-  # 
-  # vektor <- c("mesice", unique(dta_uv$MON))
-  # 
-  # DF <- dta_uv %>% group_by(JEV) %>% select(MEAN)
-  # 
-  
-
-DF = data.frame(integer = 1:10,
-                   numeric = rnorm(10),
-                   logical = rep(TRUE, 10), 
-                   character = LETTERS[1:10],
-                   factor = factor(letters[1:10], levels = letters[10:1], 
-                                   ordered = TRUE),
-                   factor_allow = factor(letters[1:10], levels = letters[10:1], 
-                                         ordered = TRUE),
-                   date = seq(from = Sys.Date(), by = "days", length.out = 10),
-                   stringsAsFactors = FALSE)
-
-rhandsontable::rhandsontable(DF) %>% hot_col("factor_allow", allowInvalid = TRUE)
-
-```
-
-### Graf {data-width=650}
 
 ```{r vyhled_uzivani:: TS odberatel}
-renderDygraph({
-  ts.uzivani.uv <- u[NAZICO == default.circle_uv()] %>% dcast(DTM~JEV)
-  ts.uzivani.uv <- xts::xts(ts.uzivani.uv, order.by = ts.uzivani.uv$DTM)
-  #ts.uzivani <- ts(ts.uzivani, start = decimal_date(as.Date("2006-12-01")), frequency = 1)
-
-  dygraph(ts.uzivani.uv, main = paste(as.character(default.circle_uv())))
-})
+### Graf {data-width=650}
+# renderDygraph({
+#   ts.uzivani.uv <- u[NAZICO == default.circle_uv()] %>% dcast(DTM~JEV)
+#   ts.uzivani.uv <- xts::xts(ts.uzivani.uv, order.by = ts.uzivani.uv$DTM)
+#   #ts.uzivani <- ts(ts.uzivani, start = decimal_date(as.Date("2006-12-01")), frequency = 1)
+# 
+#   dygraph(ts.uzivani.uv, main = paste(as.character(default.circle_uv())))
+# })
 ```
 
 
@@ -1478,10 +1458,7 @@ wellPanel(
  conditionalPanel(condition = "input.validace == 'B'",
                                   selectInput("entry.pars", label=NULL,
                                               choices = choices.pars, selected = "Dgm")
-                                  # , renderUI({
-                                  #   selectizeInput(inputId = "search.id.val","Vyhledávání útvaru",
-                                  #         selected=input$validace_shape_click$id,
-                                  #         choices = search.choices)})
+
                            ),
           conditionalPanel(condition = "input.validace == 'C'",
                                   selectInput("entry.mday", label = NULL, choices = choices.mday),
@@ -1510,9 +1487,6 @@ Row {data-height = 600}
 ### Mapa 
 
 ```{r validace: mapa}
-# input <- c()
-# input$entry.mday <- "Q30d"
-# input$entry.pars <- "Alf"
 
 leafletOutput("validace")
 
@@ -1521,7 +1495,7 @@ output$validace <- renderLeaflet({
   vrstvy <- input$entry.layer.val
   vrstvyQD <- input$entry.layer.valA
   
-  validace <- leaflet() # addTiles(options = tileOptions(minZoom = 4, maxZoom = 7)) #%>% setView(lng=15,lat=50, zoom=5) 
+  validace <- leaflet()
   
     if(input$validace == "A"){
 
@@ -1581,7 +1555,7 @@ output$validace <- renderLeaflet({
      
          
     if("P" %in% vrstvy){
-   validace <- validace %>% addPolygons(data=dta, # layerId = dta$UPOV_ID, 
+   validace <- validace %>% addPolygons(data=dta,
                                              color = "burlywood4", weight = 1.3, smoothFactor = 0,
                                              opacity = 0.3, fillColor = ~pal(value),
                                              fillOpacity = 0.8, group = "Povodí",
@@ -1677,17 +1651,11 @@ Row {.tabset data-height=400}
 ### Grafy
 
 ```{r}
-#input$entry.variable4 = c("value", "mean_month", "mean_year")
 
 renderPlotly({
   
   if(input$validace == "A"){
-    
-      
-  # d <- dir(file.path(.datadir, "res"))
-  # bilan_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
-  # dta_bd <- readRDS(file.path(.datadir,"res", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
-    
+
   d <- dir(file.path(.datadir, "routed-0_bilan_bez_VN"))
   routed0_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
   routed <- readRDS(file.path(.datadir,"routed-0_bilan_bez_VN",
@@ -1760,21 +1728,17 @@ renderPlotly({
         p %>% layout(yaxis = list(title = "value"))
         
 }else if(input$validace == "C"){
-  chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday[-1])
+  chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday)
   chars_filter <- data.frame(value = t(chars_filter), m = c(seq(30,330,30),355,364))
          
-  d <- dir(file.path(.datadir, "routed-0_bilan_bez_VN"))
-  routed0_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
-  routed <- readRDS(file.path(.datadir,"routed-0_bilan_bez_VN",
-                                   routed0_dir$source[routed0_dir$UPOV_ID==default.shape3()]))
-  routed <- routed[,c("DTM", "TRM_mm_d")]
-  routed.qm <- CatCa::mdq(routed$TRM_mm_d, return = 'data.table')
+  chars_sim_filter <- chars_sim %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday)
+  chars_sim_filter <- data.frame(value = t(chars_sim_filter), m = c(seq(30,330,30),355,364))
    
-   p2 <- plot_ly(type="scatter", mode="lines", text=paste(routed.qm$LAB)) %>%
+   p2 <- plot_ly(type="scatter", mode="lines") %>%
      layout(title=paste(as.character(title.f3.1())))
    
    p2 <- p2 %>% add_trace(data=chars_filter, x=~m, y=~value, name = 'Pozorovana data')
-   p2 <- p2 %>% add_trace(data=routed.qm, x=~M, y=~qm, name = 'Simulovana data')
+   p2 <- p2 %>% add_trace(data=chars_sim_filter, x=~m, y=~value, name = 'Simulovana data')
    p2
   }
 })
@@ -1803,27 +1767,14 @@ if(input$validace == "A"){
   t2 <- as.data.frame(t(cbind(t2a, t2b, t2c)))
   print(t2)
  
-  # x <- rbind(c(colnames(t1),rep(" ",9)),cbind(t1,matrix(rep(NA, 4*9), nrow=4)))
-  # colnames(x) <- colnames(t2)
-  # print(rbind(t2, x))
-  
-  # dta_val_filter <-cbind(name="value", dta_val_filter[,-1])
-  # else if(input$validace == "B"){
-#   pars_filter <- pars %>% filter(name == input$entry.pars) %>% select(current, lower, upper, initial)
-#   pars_filter <- describe(pars_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
-#   print(cbind(name=rownames(pars_filter),pars_filter[,-1]), digits=3)
 } else if(input$validace == "C"){
-  chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday[-1])
+  chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday)
   
-  d <- dir(file.path(.datadir, "routed-0_bilan_bez_VN"))
-  routed0_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
-  routed <- readRDS(file.path(.datadir,"routed-0_bilan_bez_VN",
-                                   routed0_dir$source[routed0_dir$UPOV_ID==default.shape3()]))
-  routed <- routed[,c("DTM", "TRM_mm_d")]
-  routed.qm <- CatCa::mdq(routed$TRM_mm_d, return = 'vector')
+  chars_sim_filter <- chars_sim %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday)
   
-  table <- rbind(chars_filter, routed.qm)
+  table <- rbind(chars_filter, chars_sim_filter)
   rownames(table) <- c("Pozorovana data", "Simulovana data")
+  print(table)
   }
 }, digits = 3, spacing = 'xs', rownames = TRUE)
 ```
