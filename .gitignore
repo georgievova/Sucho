@@ -49,3 +49,9 @@ flex_app\.RData
 *.db
 
 manual/screenshots_2017/
+
+prohlizecka/
+
+*.db-shm
+
+*.db-wal

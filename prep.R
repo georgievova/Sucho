@@ -6,7 +6,7 @@ require(stringr)
 require(dplyr)
 
 #1 Prostorová data
-setwd()
+setwd("C://Users//irina//ownCloud//Shared//BILAN_UPOV")
 #Loading
 #--------------------
 povodi_0 <- readOGR('data/geo/E_HEIS$UPV_HLGP#P2$wm.shp', 'E_HEIS$UPV_HLGP#P2$wm')
@@ -17,7 +17,7 @@ nadrze_0 <- readOGR('data/geo/nadrze.shp')
 #Preparation of data
 #--------------------
 povodi_0 <- spTransform(povodi_0, CRS("+init=epsg:4326"))
-povodi <- ms_simplify(povodi_0, keep_shapes = TRUE, keep = 0.05)
+povodi <- ms_simplify(povodi_0, keep_shapes = TRUE, keep = 0.01)
 #--------------------
 proj4string(reky_0) <- CRS("+title=Krovak JTSK +proj=krovak +lat_0=49.5 +lon_0=24.83333333333333 +alpha=30.28813975277778 +k=0.9999 +x_0=0 +y_0=0 +ellps=bessel +units=m +towgs84=570.8,85.7,462.8,4.998,1.587,5.261,3.56 +no_defs <>")
 reky_0 <- spTransform(reky_0, CRS("+init=epsg:4326"))
@@ -50,7 +50,7 @@ okresy <- ms_simplify(okresy_0, keep_shapes = TRUE, keep = 0.10)
 # writeSpatialShape(reky,"data/prep/reky")
 # writeSpatialShape(jezera,"data/prep/jezera")
 
-writeOGR(povodi, "data/prep", "povodi", driver="ESRI Shapefile", encoding  = "UTF-8")
+writeOGR(povodi, "C://Users//irina//ownCloud//Shared//BILAN_UPOV//used_data//webapp_data//geo", "povodi", driver="ESRI Shapefile", encoding  = "UTF-8")
 writeOGR(reky, "data/prep", "reky", driver="ESRI Shapefile", encoding  = "UTF-8")
 writeOGR(jezera, "data/prep", "jezera", driver="ESRI Shapefile", encoding  = "UTF-8")
 writeOGR(nadrze, "data/prep", "nadrze", driver="ESRI Shapefile", encoding  = "UTF-8")
