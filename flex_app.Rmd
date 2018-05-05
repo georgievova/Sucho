@@ -787,7 +787,7 @@ help_text_vzorec <- c(
 renderUI({
   wellPanel(
       selectizeInput(inputId = "search.id.ind","Vyhledávání útvaru",
-                           selected=input$indikatory_shape_click$id,
+                           selected=input$indikator_shape_click$id,
                            choices = search.choices)
       )
   })
@@ -841,9 +841,9 @@ wellPanel(checkboxGroupInput("entry.layer.ind", label = "Vrstvy",
 
 
 div(style="display:inline-block",
-    actionButton("reset_button", "Reset", icon("arrows"),
+    actionButton("reset_button2", "Reset", icon("arrows"),
                  style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
-    actionButton("go", "Zobrazit", icon("check"),
+    actionButton("go2", "Zobrazit", icon("check"),
                  style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
 )
 
@@ -862,7 +862,7 @@ div(style="display:inline-block",
 
 
 #Reactions--------------------
-reac.ind <- eventReactive(input$go,{ 
+reac.ind <- eventReactive(input$go2,{ 
   
  vrstvy <- input$entry.layer.ind
  
@@ -948,7 +948,7 @@ default.shape.ind <- reactive({
 
 #Leaflet--------------------
 
-output$indikatory<-renderLeaflet({
+output$indikator <-renderLeaflet({
 
     reac.ind_app <- reac.ind()
     dta <- reac.ind_app$dta
@@ -1028,7 +1028,7 @@ output$indikatory<-renderLeaflet({
 
 #Zvyraznění současného povodí
 observe({
-   leafletProxy("indikatory") %>%
+   leafletProxy("indikator") %>%
     clearGroup("current_shape") %>% 
     addPolylines(data = subset(povodi,
                                UPOV_ID==(if(is.null(input$search.id.ind)){"HSL_1190"}else{input$search.id.ind})),
@@ -1040,11 +1040,11 @@ observe({
 #Reset button
 
 observe({
-    input$reset_button
-    leafletProxy("indikatory") %>% setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom)})
+    input$reset_button2
+    leafletProxy("indikator") %>% setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom)})
 
 
-leafletOutput("indikatory")  
+leafletOutput("indikator")  
   
 ```
 
