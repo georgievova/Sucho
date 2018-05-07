@@ -1129,9 +1129,13 @@ checkboxGroupInput("entry.layer_u", label = "Vrstvy",
                                                                     "Řeky" = "R", "Jezera" = "J", "Nádrže" = "N"), 
                                                         selected = c("MP", "P", "O")))
 
-# absolutePanel(wellPanel(HTML(paste("POD - odběr z podzemních vod",
-#          "POV - evidované odběry z povrchových vod",
-#          "VYP - vypouštění", sep="<br/>"))))
+wellPanel(HTML(paste("<div style='font-size:.85em'>",paste("<b>POD</b> - odběr z podzemních vod",
+          "<b>POV</b> - odběr z povrchových vod",
+          "<b>VYP</b> - vypouštění do povrchových vod", "<b>VYZ</b> - vypouštění do podzemních vod", sep="<br/>")
+          ,"</div>")
+          ), 
+          hr(), 
+          HTML(paste("Jednotky: <b>tis.m3/měsíc</b>")))
 
 ```
 
