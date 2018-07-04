@@ -129,7 +129,7 @@ Column {.sidebar data-width=400}
 
 #heslo
 
-credentials <- list("admin" = "hamr2018")
+credentials <- as.data.frame(read.csv(file.path(.datadir,"hesla.csv"), header = T, sep = ";"))
 USER <- reactiveValues(Logged = FALSE)
 
 renderUI({
@@ -151,11 +151,11 @@ renderUI({
           
        
 observeEvent(input$login, {
-    if (isTRUE(credentials[[input$username]]==input$password)){
+    if (isTRUE(credentials$heslo[credentials$login==input$username] == input$password)){
       USER$Logged <- TRUE
-      shinyalert("Done!", "Now you are logged in", type = "success")
+      shinyalert("Hotovo!", "Přihlašení proběhlo uspěšně.", type = "success")
     } else {
-      shinyalert("Oops!", "Invalid user name or password", type = "error")
+      shinyalert("Pozor!", "Neplatné uživatelské jméno či heslo.", type = "error")
     }
   })
                  
@@ -1570,8 +1570,9 @@ wellPanel(
 
                            ),
           conditionalPanel(condition = "input.validace == 'C'",
-                                  selectInput("entry.mday", label = NULL, choices = choices.mday),
+                           selectInput("entry.mday", label = NULL, choices = choices.mday),
                            renderUI({
+                             if(!isTRUE(USER$Logged)){useShinyalert()}
                              selectizeInput(inputId = "search.id.val","Vyhledávání útvaru",
                                           selected=input$validace_shape_click$id,
                                           choices = search.choices)})
@@ -1712,7 +1713,8 @@ output$validace <- renderLeaflet({
                  position = "bottomright")
       }
     
-  } else if(input$validace == "C" & !isTRUE(USER$Logged)){}
+  } else if(input$validace == "C" & !isTRUE(USER$Logged)){
+    shinyalert("Omlouváme se,", "ale pro přistup k těmto datům se musíte přihlásit.", type = "info")}
  
   #Vrstvy mapy
  
