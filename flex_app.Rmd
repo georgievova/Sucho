@@ -33,7 +33,7 @@ library(shinyalert)
 #devtools::install_github("KVHEM/CatCa")
 #CatCa::give_paths()
 
-.datadir <- "C:\\Users\\Georgievova\\Documents\\hamr_data_new"
+.datadir <- "S:\\SOUKROMÉ ADRESÁŘE\\Irina\\sucho_data"
 #.datadir <- "C:\\Users\\irina\\ownCloud\\Shared\\BILAN_UPOV\\used_data"
 #.datadir <- getwd()
 
