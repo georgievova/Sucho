@@ -81,14 +81,15 @@ writeSpatialShape(povodi_III,"data/prep/povodi_III")
 
 #Loading
 #--------------------
-r = readRDS('BER_0010.rds')
+.datadir <- "C:\\Users\\irina\\Disk Google\\1_CZU\\Sucho\\data\\bilan_ts"
+r = readRDS(file.path(.datadir, 'BER_0010.rds'))
 
 #Preparation of data
 #--------------------
 i ='BER_0010.rds'
 M = list()
-for (i in dir()){
-  r = readRDS(i)
+for (i in dir(.datadir)){
+  r = readRDS(file.path(.datadir,i))
   mr = melt(r, id.vars = 'DTM')
   m1 = mr[variable!='T', .(value = sum(value)), by = .(year(DTM), month(DTM), variable)]
   m2 = mr[variable=='T', .(value = mean(value)), by = .(year(DTM), month(DTM), variable)]
@@ -97,8 +98,11 @@ for (i in dir()){
   M[[length(M)+1]] = m
 }
 
-names(M) = gsub('\\.rds', '', dir())
+names(M) = gsub('\\.rds', '', dir(.datadir))
 BM = rbindlist(M, idcol = 'UPOV_ID')
+
+.datadir <- "C:\\Users\\irina\\Disk Google\\1_CZU\\Sucho\\data"
+saveRDS(BM, file.path(.datadir, "mbilan\\bilan_month_dt_2018.rds"))
 
 #Saving
 #--------------------
@@ -373,7 +377,8 @@ cp_final <- cp %>% ungroup() %>% select(UPOV_ID, variable, p_year, p_month, p_se
 
 saveRDS(cp_final, file.path(.datadir, "webapp_data/to_from/cara_prekroceni.rds"))
 
-cp <- as.data.table(cp)
+cp <- as.data.table(cp_final)
+saveRDS(cp, "C:\\Users\\irina\\ownCloud\\Shared\\BILAN_UPOV\\used_data\\webapp_data\\to_from\\cara_prekroceni_dt_2018.rds")
 saveRDS(cp, file.path(.datadir, "webapp_data/to_from/cara_prekroceni_dt.rds"))
 
 #12 m-denní prutoky (chars)

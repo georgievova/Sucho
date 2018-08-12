@@ -33,13 +33,13 @@ library(shinyalert)
 #devtools::install_github("KVHEM/CatCa")
 #CatCa::give_paths()
 
-.datadir <- "C:\\Users\\Georgievova\\Documents\\hamr_data_new"
-#.datadir <- "C:\\Users\\irina\\ownCloud\\Shared\\BILAN_UPOV\\used_data"
+# .datadir <- "C:\\Users\\Georgievova\\Documents\\hamr_data_new"
+.datadir <- "C:\\Users\\irina\\ownCloud\\Shared\\BILAN_UPOV\\used_data"
 #.datadir <- getwd()
 
 
 
-BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_data_table.rds"))
+BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_dt_2018.rds"))
 
 povodi <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi.rds"))
 reky <- readRDS(file.path(.datadir, "webapp_data/geo_rds/reky.rds"))
@@ -51,7 +51,7 @@ povodi_III <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi_III.rds"))
 QD_stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/stanice.rds"))
 stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/E04_Vodomerne_stanice.rds"))
 tabB <- readRDS(file.path(.datadir, "routing/TABB.rds"))
-cp <- readRDS(file.path(.datadir, "webapp_data/to_from/cara_prekroceni_dt.rds"))
+cp <- readRDS(file.path(.datadir, "webapp_data/to_from/cara_prekroceni_dt_2018.rds"))
 
 popis <- readRDS(file.path(.datadir, "webapp_data/popis.rds"))
 
@@ -129,7 +129,7 @@ Column {.sidebar data-width=400}
 
 #heslo
 
-credentials <- as.data.frame(read.csv(file.path(.datadir,"hesla.csv"), header = T, sep = ";"))
+credentials <- as.data.frame(read.csv(file.path(.datadir,"webapp_data/hesla.csv"), header = T, sep = ";"))
 USER <- reactiveValues(Logged = FALSE)
 
 renderUI({
@@ -183,26 +183,26 @@ wellPanel(HTML('<div class="help-tip">
              "Měsíční průměry" = "B", "Roční průměry" = "C"),
              selected = "A"),
 
-  conditionalPanel(condition = "input.kartogram == 'A'",
-               radioButtons("DP", label=NULL, selected = "DP1",
-                                      choices = c("Celé období" = "DP1", "Volba období" = "DP2")),
-                      conditionalPanel(condition = "input.DP == 'DP1'"),
-                      conditionalPanel(condition = "input.DP == 'DP2'",
-                                  selectInput("entry.period", label = NULL,
-                                              choices = list("1961-1990" = "1", "1971-2000" = "2",
-                                                            "1981 - 2010" = "3"), selected = "1")
-                                  )
-               ),
+  # conditionalPanel(condition = "input.kartogram == 'A'",
+  #              radioButtons("DP", label=NULL, selected = "DP1",
+  #                                     choices = c("Celé období" = "DP1", "Volba období" = "DP2")),
+  #                     conditionalPanel(condition = "input.DP == 'DP1'"),
+  #                     conditionalPanel(condition = "input.DP == 'DP2'",
+  #                                 selectInput("entry.period", label = NULL,
+  #                                             choices = list("1961-1990" = "1", "1971-2000" = "2",
+  #                                                           "1981 - 2010" = "3"), selected = "1")
+  #                                 )
+  #              ),
   conditionalPanel(condition = "input.kartogram == 'B'",
                   
                  dateInput("entry.date", label = NULL, "yyyy-mm-dd", language = "cs",
-                           value = as.Date("1961-01-01"), startview = "decade",
-                           min = as.Date("1961-01-01"), max = as.Date("2015-12-01"))
+                           value = as.Date("2018-06-01"), startview = "decade",
+                           min = as.Date("1982-11-01"), max = as.Date("2018-06-01"))
                  ),
   conditionalPanel(condition = "input.kartogram == 'C'",
             
                  selectInput("entry.yearC", label = "Zvolte rok:",
-                             choices = seq(1961,2015,1))
+                             choices = seq(1982,2018,1))
                  )
   )
 
@@ -267,21 +267,22 @@ reac<- eventReactive(input$go1,{
 
 #Dlouhodobé průměry (celé období/vybrané období)
   if(input$kartogram == "A"){
-  if(input$DP == "DP1"){
+  # if(input$DP == "DP1"){
     bilance_filtr <- bilance[year==2000 & month==1]
     colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
         colnames(bilance_filtr)[colnames(bilance_filtr)=="mean_ep"] <- "value"
     dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
-  }else if(input$DP == "DP2"){
-        if(input$entry.period == "1"){period=seq(1961,1990,1)
-        }else if(input$entry.period == "2"){period = seq(1971,2000,1) 
-        }else if(input$entry.period == "3"){period = seq(1981,2010,1)}
-       bilance_filtr <- bilance[year %in% period] %>% group_by(UPOV_ID) %>% summarise(mean.period = mean(value))
-       colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
-       colnames(bilance_filtr)[colnames(bilance_filtr)=="mean.period"] <- "value"
-       dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
+  # }else if(input$DP == "DP2"){
+  #       if(input$entry.period == "1"){period=seq(1961,1990,1)
+  #       }else if(input$entry.period == "2"){period = seq(1971,2000,1) 
+  #       }else if(input$entry.period == "3"){period = seq(1981,2010,1)}
+  #      bilance_filtr <- bilance[year %in% period] %>% group_by(UPOV_ID) %>% summarise(mean.period = mean(value))
+  #      colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
+  #      colnames(bilance_filtr)[colnames(bilance_filtr)=="mean.period"] <- "value"
+  #      dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
 #Měsíční průměry
-  }}else if(input$kartogram == "B"){
+  # }
+    }else if(input$kartogram == "B"){
     bilance_filtr <- bilance[year == year(input$entry.date) & month==month(input$entry.date)]
     dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
 #Roční průměry
