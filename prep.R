@@ -71,6 +71,12 @@ povodi_III <- ms_simplify(povodi_III_0, keep_shapes = TRUE, keep = 0.10)
 
 writeSpatialShape(povodi_III,"data/prep/povodi_III")
 
+.datadir <- "s:\\SOUKROMÉ ADRESÁŘE\\Irina\\sucho_data\\webapp_data"
+hranice <- readOGR(file.path(.datadir, "geo\\CZE_adm0.shp"))
+hranice <- spTransform(hranice, CRS("+init=epsg:4326"))
+hranice <- rmapshaper::ms_simplify(hranice, keep_shapes = TRUE, keep = 0.10)
+saveRDS(hranice, file.path(.datadir, "geo_rds\\hranice.rds"))
+
 # leaflet() %>%
 #   addTiles() %>% 
 #   addPolygons(data=kraje, color="#000000", fillColor = "#595959", 
