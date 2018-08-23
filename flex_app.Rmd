@@ -33,7 +33,6 @@ library(shinyalert)
 #devtools::install_github("KVHEM/CatCa")
 #CatCa::give_paths()
 
-# .datadir <- "C:\\Users\\Georgievova\\Documents\\hamr_data_new"
 .datadir <- "C:\\Users\\irina\\ownCloud\\Shared\\BILAN_UPOV\\used_data"
 #.datadir <- getwd()
 
@@ -215,8 +214,8 @@ wellPanel(HTML('<div class="help-tip">
       sliderInput("entry.range", label = "Filtrace dle hodnoty",
                   min = floor(reac()$def_min), 
                   max = ceiling(reac()$def_max),
-                  value = c(floor(reac()$inputed_min),
-                            ceiling(reac()$inputed_max)))
+                  value = c(floor(reac()$def_min),
+                            ceiling(reac()$def_max)))
     )
             })
   
@@ -287,7 +286,9 @@ reac<- eventReactive(input$go1,{
     dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
 #Roční průměry
   }else if(input$kartogram == "C"){
-    bilance_filtr <- bilance[year==input$entry.yearC & month==1]
+    # bilance_filtr <- bilance[year==input$entry.yearC & month==11]
+    bilance_filtr <- bilance[year==input$entry.yearC,]
+    bilance_filtr <- bilance_filtr[!duplicated(UPOV_ID),]
     colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
     colnames(bilance_filtr)[colnames(bilance_filtr)=="annual.avg"] <- "value"
     dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))}
