@@ -33,7 +33,8 @@ library(shinyalert)
 #devtools::install_github("KVHEM/CatCa")
 #CatCa::give_paths()
 
-.datadir <- "C:\\Users\\irina\\ownCloud\\Shared\\BILAN_UPOV\\used_data"
+# .datadir <- "C:\\Users\\irina\\ownCloud\\Shared\\BILAN_UPOV\\used_data"
+.datadir <- "S:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
 #.datadir <- getwd()
 
 
@@ -215,9 +216,12 @@ wellPanel(HTML('<div class="help-tip">
                   min = floor(reac()$def_min), 
                   max = ceiling(reac()$def_max),
                   value = c(floor(reac()$def_min),
-                            ceiling(reac()$def_max)))
+                            ceiling(reac()$def_max))),
+      textOutput("filtrInfo")
     )
             })
+  
+  output$filtrInfo <- renderText(paste0("Použitý filtr:", round(reac()$inputed_min), "-", round(reac()$inputed_max)))
   
   hr()
   
