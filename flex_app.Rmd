@@ -21,6 +21,7 @@ library(data.table)
 library(plotly)
 library(DT)
 library(shinyalert)
+library(rhandsontable)
 #library(gridExtra)
 #library(sp)
 #library(rgeos)
@@ -1128,18 +1129,12 @@ Užívání {data-icon="fa-circle-o"}
 
 ```{r uzivani: reactions}
 
-#Reactions--------------------
-
-povodi.ds <- reactive({
-  povodi[povodi$UPOV_ID==input$search.id.u, ]
-})
-
-pal_2 <- colorFactor("Paired", domain = u_leaflet$JEV, na.color = "#ffffff")
-
 #Functions--------------------
 
 default.shape2 <- reactive({
+   if(is.null(input$search.id.u)){UPOV_ID.sel <- as.character(search.choices[1])}else{
   UPOV_ID.sel <- input$search.id.u
+   }
   #print(input$uzivani_shape_click$id)
   return(UPOV_ID.sel)})
 
@@ -1153,6 +1148,14 @@ default.circle <- reactive({
   NAZICO.sel <- u_leaflet$NAZICO[1]}
   else{NAZICO.sel<-input$uzivani_marker_click$id}
   return(NAZICO.sel)})
+
+#Reactions--------------------
+
+povodi.ds <- reactive({
+  povodi[povodi$UPOV_ID==default.shape2(), ]
+})
+
+pal_2 <- colorFactor("Paired", domain = u_leaflet$JEV, na.color = "#ffffff")
 
 ```
 
@@ -1170,7 +1173,9 @@ hr(),
 checkboxGroupInput("entry.layer_u", label = "Vrstvy",
                                                         choices = c("Mapový podklad" = "MP", "Polygony" = "P", "Odběratele" = "O",
                                                                     "Řeky" = "R", "Jezera" = "J", "Nádrže" = "N"), 
-                                                        selected = c("MP", "P", "O")))
+                                                        selected = c("MP", "P", "O")),
+hr(),
+checkboxInput("uziv_tab_user", label = "Zadání vlastních hodnot", value = FALSE))
 
 wellPanel(HTML(paste("<div style='font-size:.85em'>",paste("<b>POD</b> - odběr z podzemních vod",
           "<b>POV</b> - odběr z povrchových vod",
@@ -1186,8 +1191,6 @@ wellPanel(HTML(paste("<div style='font-size:.85em'>",paste("<b>POD</b> - odběr 
 
 ```{r uzivani: mapa}
 
-
-
 output$uzivani <- renderLeaflet({
 
 labels.points <- sprintf(
@@ -1196,7 +1199,7 @@ labels.points <- sprintf(
     lapply(htmltools::HTML)
   
 
-  povodif <- base::subset(povodi,UPOV_ID != input$search.id.u)
+  povodif <- base::subset(povodi,UPOV_ID != default.shape2())
 
     labels <- sprintf(
       "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> ID: %s",
@@ -1253,6 +1256,97 @@ labels.points <- sprintf(
 
 
 leafletOutput("uzivani")
+
+```
+
+```{r uzivani: popups}
+
+tab <- t(data.frame(hodnota = rep(0,12), row.names = 1:12))
+hnds_table <- reactiveVal(tab)
+
+changes <- reactive({
+  
+  if(is.null(input$hotable)){
+    tab <- tab
+    return(tab=tab)
+  }else{
+      tab <- as.data.frame(hot_to_r(input$hotable))
+    }
+
+    hnds_table(tab)
+    
+    return(tab)
+})
+
+
+output$hotable <- renderRHandsontable({
+  rhandsontable(hnds_table())
+})
+
+tableModal <- function(done = FALSE){
+  modalDialog(
+    title = "Vyplňte hodnoty", 
+    rHandsontableOutput("hotable"),
+    
+    if(done)
+    div(tags$b("Odesláno", style = "color: green")),
+    
+    if(!done)
+    div(tags$b("Zatím neodesláno", style = "color: blue")),
+    
+    footer = tagList(modalButton("Zavřit"),
+                     actionButton("send", "Odeslat")),
+    easyClose = TRUE, fade = TRUE, size = "l"
+  )
+}
+
+
+passwordModal <- function(failed = FALSE) {
+      modalDialog(
+        title = "",
+        textInput("heslo_uzivani", "Přihlaste se", value = "", width = NULL, placeholder = NULL),
+    
+        if(failed)
+          div(tags$b("Neplatné heslo", style = "color: red;")),
+
+        footer = tagList(modalButton("Zavřit"),
+                         actionButton("ok", "OK")),
+        easyClose = TRUE, fade = TRUE
+      )
+}
+
+
+
+observeEvent(input$uzivani_marker_click, {
+  if(input$uziv_tab_user == TRUE){
+  showModal(passwordModal())}
+  })
+
+observeEvent(input$ok, {
+      if(input$heslo_uzivani %in% credentials$heslo){
+        removeModal()
+        showModal(tableModal())
+        }else{
+        showModal(passwordModal(failed = TRUE))
+      }
+    })
+
+observeEvent(input$send, {
+
+  write.table(changes(), file.path(.datadir, "webapp_data/icoc_values", 
+                                   paste0(u_leaflet$ICOC[u_leaflet$NAZICO ==input$uzivani_marker_click$id],
+                                          ".csv")))
+  showModal(tableModal(done = TRUE))
+   
+    })
+
+
+# .datadir, "/webapp_data/icoc_values/", 
+# output$save <- downloadHandler(
+#       filename = function(){paste0(u_leaflet$ICOC[u_leaflet$NAZICO ==input$uzivani_marker_click$id], ".csv")},
+#       content = function(file){
+#         write.csv(changes(), file, row.names = F, na="NA")}
+# )
 
 ```
 
