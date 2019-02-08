@@ -442,3 +442,65 @@ dta_m <- dta %>% group_by(m,y,UPOV_ID) %>% summarise(RM = mean(TRM_mm_d)) %>% mu
 new_dta_m <- merge(mdta_val, dta_m, by=c("DTM","UPOV_ID"))
 
 saveRDS(new_dta_m, file.path(.datadir, "webapp_data/chmu/data_validace.rds"))
+
+#15 update -> vyhledove uzivani 
+#--------------------
+
+require(dplyr)
+require(data.table)
+
+.datadir <- "S:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
+
+vhb <- readxl::read_xlsx(file.path(.datadir, "webapp_data/uzivani/vhb_2017.xlsx"))
+
+vhb_val <- vhb %>% select(ICOC, JEV, POVODI, NAZICO, X, Y, starts_with("MVM"))
+
+vhb_val = melt(vhb_val, id.vars = c("ICOC", "JEV", "POVODI", "NAZICO", "X", "Y"))
+
+vhb_val$variable <- gsub("MVM*", "", vhb_val$variable)
+
+vhb_val$DTM <- paste0("01", stringr::str_sub(paste0("00", vhb_val$variable),-2,-1), "2017")
+vhb_val$DTM <- as.Date(vhb_val$DTM, format = "%d%m%Y")
+
+vhb_val$ROK <- 2017
+colnames(vhb_val)[7] <- "MESIC"
+
+vhb_val$X <- as.numeric(vhb_val$X)
+vhb_val$Y <- as.numeric(vhb_val$Y)
+vhb_val$ICOC <- as.numeric(vhb_val$ICOC)
+
+vhb_val <- vhb_val %>% group_by(ICOC) %>% mutate(mean.X = mean(X, na.rm = T), mean.Y = mean(Y, na.rm = T)) %>% ungroup
+vhb_val$X[is.na(vhb_val$X)] <- vhb_val$mean.X[is.na(vhb_val$X)]
+vhb_val$Y[is.na(vhb_val$Y)] <- vhb_val$mean.Y[is.na(vhb_val$Y)]
+
+vhb_val <- vhb_val[!is.na(vhb_val$X)|!is.na(vhb_val$Y),] #vynechani bodu s neznamymi souradnicemi 
+
+uz_up <- readRDS(file.path(.datadir, "webapp_data/uzivani/uzivani_upovid.rds"))
+prop <- uz_up %>% select(ICOC, UPOV_ID)
+prop2 <- prop[!duplicated(ICOC),]
+
+vhb_val <- left_join(vhb_val, prop2, by="ICOC")
+
+vhb_val <- vhb_val %>% select(ICOC, JEV, POVODI, NAZICO, X, Y, UPOV_ID, ROK, MESIC, value, DTM, mean.X, mean.Y)
+
+saveRDS(vhb_val, file.path(.datadir, "webapp_data/uzivani/u_2017.rds"))
+
+u_6_16 <- readRDS(file.path(.datadir, "webapp_data/uzivani/06_16/uzivani_na_nahraz_dt.rds"))
+
+u_6_17 <- bind_rows(u_6_16, vhb_val)
+
+u_6_17 <- as.data.table(u_6_17)
+saveRDS(u_6_17, file.path(.datadir, "webapp_data/uzivani/uzivani_06_17_dt.rds"))
+
+#16 uivani - pasport 
+#--------------------
+.datadir <- "S:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
+
+vhb <- readxl::read_xlsx(file.path(.datadir, "webapp_data/uzivani/vhb_2017.xlsx"))
+
+vhb_p <- vhb %>% select(ICOC, JEV, NAZICO, VLASTNIK, PROVOZOVATEL, OBEC, HG_RAJON,
+                        CHP, TOK, PMM3_ROK, PMM3_MES, VHPOV_VYDAL, DATUM, DAT_PL_DO)
+
+vhb_p$ICOC <- as.numeric(vhb_p$ICOC)
+
+saveRDS(vhb_p, file.path(.datadir, "webapp_data/uzivani/uzivani_pas.rds"))
