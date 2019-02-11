@@ -1385,7 +1385,7 @@ Row {data-heigth=400}
 
 ```{r uzivani: tab:odberatel}
 renderDataTable({
-  subtotal <- u[UPOV_ID == default.shape2()] %>% replace(is.na(.), 0) %>% group_by(NAZICO, JEV) %>% summarise(suma = sum(value)) %>% select(NAZICO, JEV, suma)}, class = 'compact cell-border', colnames = c("Odběratel", "Jev", "Suma"), options = list(scrollY = "300px", lengthMenu = c(100,200)))
+  subtotal <- u[UPOV_ID == default.shape2()] %>% replace(is.na(.), 0) %>% group_by(NAZICO, JEV) %>% summarise(suma = sum(value)) %>% select(NAZICO, JEV, suma)}, class = 'compact cell-border', colnames = c("Odběratel", "Jev", "Suma"), options = list(scrollY = "300px", lengthMenu = c(100,200), language = list(search = 'Hledat:', lengthMenu = 'Zobrazit_MENU_položek')))
 ```
 
 
@@ -1551,7 +1551,9 @@ output$odbery <- renderTable({
 }, digits = 3, spacing = 'xs', rownames = FALSE, colnames = FALSE)
 
 
-tab <- as.data.frame(t(data.frame(hodnota = rep(0,8), row.names = 1:8)))
+tab <- as.data.frame(t(data.frame(hodnota = rep(0,8), 
+                                  datum = seq(from = Sys.Date(), by = "weeks", length.out = 8), 
+                                  row.names = 1:8)))
 hnds_table_v <- reactiveVal(tab)
 
 changes_v <- reactive({
@@ -1570,8 +1572,21 @@ changes_v <- reactive({
 
 
 output$hotable_v <- renderRHandsontable({
-  rhandsontable(hnds_table_v(), height = 70)
-})
+  
+  
+  rhandsontable(hnds_table_v(), stretchH = "all", height = 130) %>% hot_row(2, readOnly = TRUE)# %>% 
+#     hot_cols(render = "
+#            function (instance, td, row, col, prop, value, cellProperties) {
+#              Handsontable.renderers.NumericRenderer.apply(this, arguments);
+#              if (col == 0) {
+#               td.style.background = '';
+#              } else if (col > hr) {
+#               td.style.background = 'pink';
+#              } else if (value < hr) {
+#               td.style.background = 'lightgreen';
+#              }
+#            }")
+ })
 
 
 wellPanel(
