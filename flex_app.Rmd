@@ -1189,7 +1189,7 @@ checkboxGroupInput("entry.layer_u", label = "Vrstvy",
                                                                     "Řeky" = "R", "Jezera" = "J", "Nádrže" = "N"), 
                                                         selected = c("MP", "P", "O")),
 hr(),
-checkboxInput("uziv_tab_user", label = "Zadání vlastních hodnot", value = FALSE))
+checkboxInput("uziv_tab_user", label = div(tags$b("Zadání vlastních hodnot", style = "color: #001a33")), value = FALSE))
 
 wellPanel(HTML(paste("<div style='font-size:.85em'>",paste("<b>POD</b> - odběr z podzemních vod",
           "<b>POV</b> - odběr z povrchových vod",
@@ -1319,7 +1319,7 @@ tableModal <- function(done = FALSE){
 passwordModal <- function(failed = FALSE) {
       modalDialog(
         title = "",
-        textInput("heslo_uzivani", "Přihlaste se", value = "", width = NULL, placeholder = NULL),
+        passwordInput("heslo_uzivani", "Přihlaste se", value = "", width = NULL, placeholder = NULL), #textInput
     
         if(failed)
           div(tags$b("Neplatné heslo", style = "color: red;")),
@@ -1552,35 +1552,35 @@ output$odbery <- renderTable({
 
 
 tab <- as.data.frame(t(data.frame(hodnota = rep(0,8), row.names = 1:8)))
-hnds_table <- reactiveVal(tab)
+hnds_table_v <- reactiveVal(tab)
 
-changes <- reactive({
+changes_v <- reactive({
   
-  if(is.null(input$hotable)){
+  if(is.null(input$hotable_v)){
     tab <- tab
     return(tab=tab)
   }else{
-      tab <- as.data.frame(hot_to_r(input$hotable))
+      tab <- as.data.frame(hot_to_r(input$hotable_v))
     }
 
-    hnds_table(tab)
+    hnds_table_v(tab)
     
     return(tab)
 })
 
 
-output$hotable <- renderRHandsontable({
-  rhandsontable(hnds_table())
+output$hotable_v <- renderRHandsontable({
+  rhandsontable(hnds_table_v(), height = 70)
 })
 
 
 wellPanel(
   br(),
-  HTML(paste("<b>Odebrané a povolené množství 2017</b>")),
+  HTML(paste("<b>Odebrané množství 2017</b>")),
   tableOutput("odbery"),
   br(),
   HTML(paste("<b>Požadavek</b>")),
-  rHandsontableOutput("hotable"),
+  rHandsontableOutput("hotable_v"),
   br(), style = "padding: 3px;")
 
 ```
