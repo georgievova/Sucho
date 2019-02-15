@@ -36,8 +36,8 @@ library(mapview)
 #devtools::install_github("KVHEM/CatCa")
 #CatCa::give_paths()
 
-# .datadir <- "C:/Users/irina/ownCloud/Shared/BILAN_UPOV/used_data"
-.datadir <- "S:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
+.datadir <- "C:/Users/irina/ownCloud/Shared/BILAN_UPOV/used_data"
+# .datadir <- "S:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
 #.datadir <- getwd()
 
 
@@ -1540,20 +1540,17 @@ Row {data-height=500}
 
 output$odbery <- renderTable({
   u_odber <- u %>% filter(NAZICO == default.circle_uv(), ROK == 2017) %>% select(MESIC, value)
-  # u_povol <- u_pas %>% filter(NAZICO == default.circle_uv()) %>% select(PMM3_ROK, PMM3_MES) %>% mutate(RM=sum(u_odber$value))
   
   if(nrow(u_odber) > 0){
-  # u_povol <- data.frame(MESIC = colnames(u_povol), value = c(u_povol$PMM3_ROK, u_povol$PMM3_MES, u_povol$RM))
   u_odber <- rbind(u_odber, data.frame(MESIC = "RM", value = sum(u_odber$value)))
   u_odber <- as.data.frame(t(u_odber))
   u_odber
   }else{print("Nejsou informace")}
 }, digits = 3, spacing = 'xs', rownames = FALSE, colnames = FALSE)
 
-
+date <- seq(from = Sys.Date(), by = "weeks", length.out = 8)
 tab <- as.data.frame(t(data.frame(hodnota = rep(0,8), 
-                                  datum = seq(from = Sys.Date(), by = "weeks", length.out = 8), 
-                                  row.names = 1:8)))
+                                  row.names = format(date, "%d.%m.%Y"))))
 hnds_table_v <- reactiveVal(tab)
 
 changes_v <- reactive({
@@ -1566,26 +1563,55 @@ changes_v <- reactive({
     }
 
     hnds_table_v(tab)
+
     
     return(tab)
 })
 
 
+true_to_java <- function(x){
+  if(x){
+    return("true")
+  }else{
+    return("false")
+  }
+}
+
 output$hotable_v <- renderRHandsontable({
+  u_val1 <- u %>% filter(NAZICO == default.circle_uv(), ROK == 2017) %>% select(MESIC, value) %>%
+                  filter(MESIC %in% unique(as.character(month(date[1:4])))) %>% summarise(value=mean(value))
+  # 
+  u_val2 <- u %>% filter(NAZICO == default.circle_uv(), ROK == 2017) %>% select(MESIC, value) %>%
+                  filter(MESIC %in% unique(as.character(month(date[5:8])))) %>% summarise(value=mean(value))
   
+  dt <- changes_v()
   
-  rhandsontable(hnds_table_v(), stretchH = "all", height = 130) %>% hot_row(2, readOnly = TRUE)# %>% 
-#     hot_cols(render = "
-#            function (instance, td, row, col, prop, value, cellProperties) {
-#              Handsontable.renderers.NumericRenderer.apply(this, arguments);
-#              if (col == 0) {
-#               td.style.background = '';
-#              } else if (col > hr) {
-#               td.style.background = 'pink';
-#              } else if (value < hr) {
-#               td.style.background = 'lightgreen';
-#              }
-#            }")
+  true1 <- sum(dt[1,1:4], na.rm = T) > u_val1$value
+  true2 <- sum(dt[1,5:8], na.rm = T) > u_val2$value
+
+  true2 <- true_to_java(true2)
+  true1 <- true_to_java(true1)
+  
+  rdtext <- paste0("function (instance, td, row, col, prop, value, cellProperties) {
+             Handsontable.renderers.NumericRenderer.apply(this, arguments);
+             if(col < 4){
+                 if(",true1,") {
+                    td.style.background = 'pink';
+                 }else if('false' && value != 0){
+                    td.style.background = 'lightgreen';
+                 }
+              }else{
+                if(",true2,") {
+                  td.style.background = 'pink';
+                }else if('false' && value != 0){
+                    td.style.background = 'lightgreen';
+                }
+              }
+             }")
+  
+
+  rhandsontable(dt, stretchH = "all", height = 130,  rowHeaderWidth = 95)  %>%
+  hot_cols(renderer = rdtext, format="0.00e+0")
  })
 
 
