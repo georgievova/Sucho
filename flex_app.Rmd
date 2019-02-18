@@ -36,8 +36,8 @@ library(mapview)
 #devtools::install_github("KVHEM/CatCa")
 #CatCa::give_paths()
 
-.datadir <- "C:/Users/irina/ownCloud/Shared/BILAN_UPOV/used_data"
-# .datadir <- "S:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
+# .datadir <- "C:/Users/irina/ownCloud/Shared/BILAN_UPOV/used_data"
+.datadir <- "S:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
 #.datadir <- getwd()
 
 
@@ -370,7 +370,10 @@ title.f <- reactive({
   })
 
 default.shape <- reactive({
-  UPOV_ID.sel <- input$search.id
+  if(is.null(input$search.id)){
+    UPOV_ID.sel <- "BER_0010"
+  }else{
+    UPOV_ID.sel <- input$search.id}
   return(UPOV_ID.sel)})
 
   initial_lat = 49.7437572
@@ -818,7 +821,8 @@ renderDataTable({
         sum.tab("měsíc", model_m)) #%>% formatRound(columns = c(3,4,5),3))
   
   # capture.output(print(summary(model_r)))
-  },class = 'compact cell-border', rownames = FALSE, options = list(scrollY = "300px", pageLength = 25, lengthMenu = c(25)))
+  },class = 'compact cell-border', rownames = FALSE, options = list(scrollY = "300px", pageLength = 25, lengthMenu = c(25), language = list(search = 'Hledat:', lengthMenu = '', paginate = list(previous = 'Předchozí', `next` = 'Další'), 
+                info = 'Zobrazeno je _END_ z celkem _TOTAL_ záznamů')))
 ```
 
 Indikátory sucha {data-icon="fa-tint"}
@@ -832,7 +836,7 @@ Column {.sidebar data-width=400}
 help_text_vzorec <- c(
   spi = "",
   spei = "",
-  pdsi = "",
+  # pdsi = "",
   scpdsi = "",
   PP = "$$PP = \\frac{PET}{P}$$",
   WQ90 = "$$WQ90 = \\frac{POV+POD+MZP}{Q90}$$",
@@ -851,23 +855,29 @@ renderUI({
   })
 
 wellPanel(
-  radioButtons("indikatory", label=NULL, choices = c("PDSI" = "pdsi", "scPDSI" = "scpdsi", "SPEI" = "spei", "SPI" = "spi", 
+  radioButtons("indikatory", label=NULL, choices = c(#"PDSI" = "pdsi", 
+                                                     "scPDSI" = "scpdsi", "SPEI" = "spei", "SPI" = "spi", 
                                                      "PP", "WQ90", "WPP", "WQ90_", "WPP_",
                                                      "průměry zranitelnosti" = "prum"), 
             # "PDSI" = "C", "SGI" = "D", "SRI" = "E", "Nedostatkové objemy" = "F"),
-             selected = "pdsi"),
+             selected = "scpdsi"),
 
-  conditionalPanel(condition = "input.indikatory == 'spi' || input.indikatory == 'pdsi'",
+  conditionalPanel(condition = "input.indikatory == 'spi' || input.indikatory == 'spei'",  #|| input.indikatory == 'pdsi'",
   selectInput("krok", label = NULL, choices = c("1 měsíc" = 1, "3 měsíce" = 3,
                                                 "6 měsíců" = 6, "12 měsíců" = 12), selected = 3)),
   conditionalPanel(condition = "input.indikatory == 'spi'",
                selectInput("entry.variable.ind", label=NULL, selected = "P",
                                       choices = c('P', 'R', 'RM', 'BF'))),
   
-  conditionalPanel(condition = "input.indikatory == 'spi'",
+  conditionalPanel(condition = "input.indikatory == 'spi' || input.indikatory == 'spei'|| input.indikatory == 'scpdsi'",
     dateInput("entry.date.ind", label = NULL, "yyyy-mm-dd", language = "cs",
                            value = as.Date("1985-01-01"), startview = "decade",
-                           min = as.Date("1961-01-01"), max = as.Date("2015-12-01"))))
+                           min = as.Date("1961-01-01"), max = as.Date("2018-06-01")), #2015-12-01
+    hr(),
+    HTML(paste("<b>SPI & SPEI: </b> 1961-01-01 až 2018-06-01 <br> <b>scPDSI: </b> 1961-01-01 až 2015-12-01"))
+    
+  )
+)
 
 
 
@@ -926,7 +936,7 @@ reac.ind <- eventReactive(input$go2,{
  
  if(input$indikatory %in% c("spi", "spei")){
  ind_dta <- readRDS(file.path(.datadir,"webapp_data/indikatory", paste0(input$indikatory, "_", input$krok, ".rds")))
- }else if(input$indikatory %in% c("pdsi", "scpdsi")){
+ }else if(input$indikatory %in% c( "scpdsi")){ #"pdsi",
   ind_dta <- readRDS(file.path(.datadir,"indikatory", paste0(input$indikatory, ".rds")))
  }else{
     ind_dta <- IND %>% select(UPOV_ID, value = input$indikatory)
@@ -936,7 +946,7 @@ reac.ind <- eventReactive(input$go2,{
 if(input$indikatory == "spi"){
     ind_dta_f <- ind_dta[variable == input$entry.variable.ind]
     dta <- (sp::merge(povodi,ind_dta_f[year == year(input$entry.date.ind) & month==month(input$entry.date.ind)], by="UPOV_ID"))
-    }else if(input$indikatory %in% c("spei", "pdsi", "scpdsi")){
+    }else if(input$indikatory %in% c("spei", "scpdsi")){ #"pdsi",
     ind_dta_f <- ind_dta
     dta <- (sp::merge(povodi,ind_dta_f[year == year(input$entry.date.ind) & month==month(input$entry.date.ind)], by="UPOV_ID"))
     }else{
@@ -993,8 +1003,15 @@ Row
 #Functions--------------------
 
 default.shape.ind <- reactive({
-  UPOV_ID.sel <- input$search.id.ind
+  if(is.null(input$search.id.ind)){
+    UPOV_ID.sel <- "BER_0010"
+  }else{
+    UPOV_ID.sel <- input$search.id.ind}
   return(UPOV_ID.sel)})
+
+# default.shape.ind <- reactive({
+#   UPOV_ID.sel <- input$search.id.ind
+#   return(UPOV_ID.sel)})
 
   initial_lat = 49.7437572
   initial_lng = 15.3386383
@@ -1089,7 +1106,7 @@ observe({
    leafletProxy("indikator") %>%
     clearGroup("current_shape") %>% 
     addPolylines(data = subset(povodi,
-                               UPOV_ID==(if(is.null(input$search.id.ind)){"HSL_1190"}else{input$search.id.ind})),
+                               UPOV_ID==(if(is.null(input$search.id.ind)){"BER_0010"}else{input$search.id.ind})),
                  group = "current_shape",
                  color = "#a53333", opacity = 1, weight = 3,
                  stroke = TRUE) 
@@ -1112,27 +1129,43 @@ Row
 ```{r indikatory: TS}
 
 renderDygraph({
-  
-  if(input$indikatory %in% c("spi", "spei", "pdsi", "scpdsi")){
-  
+
+  if(input$indikatory %in% c("spi", "spei", "scpdsi")){ #"pdsi", 
+
     ts.indikatory <- reac.ind()$ind_dta_f[UPOV_ID == default.shape.ind()] %>% select(value, DTM)
+    
+    if(nrow(ts.indikatory) != 0){
 
-RangeMin <- min(ts.indikatory$value, na.rm = T)-0.5
-RangeMax <- max(ts.indikatory$value, na.rm = T)+0.5
+        RangeMin <- min(ts.indikatory$value, na.rm = T)-0.5
+        RangeMax <- max(ts.indikatory$value, na.rm = T)+0.5
+        
+        ts.indikatory$value[is.na(ts.indikatory$value)]<-0
+        
+        ts.indikatory <- xts::xts(ts.indikatory, order.by = ts.indikatory$DTM)
+        
+        dygraph(ts.indikatory,
+                main = paste(as.character(popis$NAZ_UTVAR[popis$UPOV_ID==default.shape.ind()])),
+                xlab = "Čas") %>%
+          dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>%
+          dyLimit(0, strokePattern = "solid", color = "black") %>%
+          dyOptions(colors = "gray", fillGraph = TRUE, fillAlpha = 0.4) %>%
+          dyLegend(width = 400, show = "always", hideOnMouseOut = FALSE)
+        
+    }else{
+      
+        ts.indikatory <- data.frame(DTM = seq(Sys.Date()-4, Sys.Date(), 1), value = rep(0,5))
+        ts.indikatory <- xts::xts(ts.indikatory, order.by = ts.indikatory$DTM)
+        
+        dygraph(ts.indikatory, xlab = "Čas", 
+                main = paste(as.character(popis$NAZ_UTVAR[popis$UPOV_ID==default.shape.ind()]))) %>%
+          dySeries("value", label = "Nejsou záznamy") %>%
+          dyOptions(colors = "gray", fillGraph = TRUE, fillAlpha = 0.4) %>%
+          dyLegend(width = 400, show = "always", hideOnMouseOut = FALSE)
+        
+      }
 
-ts.indikatory$value[is.na(ts.indikatory$value)]<-0
-
-ts.indikatory <- xts::xts(ts.indikatory, order.by = ts.indikatory$DTM)
-
-dygraph(ts.indikatory,
-          main = paste(as.character(popis$NAZ_UTVAR[popis$UPOV_ID==default.shape.ind()])),
-          xlab = "Čas") %>% 
-    dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>% 
-    dyLimit(0, strokePattern = "solid", color = "black") %>% 
-    dyOptions(colors = "gray", fillGraph = TRUE, fillAlpha = 0.4) %>% 
-    dyLegend(show = "always", hideOnMouseOut = FALSE)
 }else{}
-  
+
 })
 
 ```
@@ -1370,7 +1403,7 @@ observeEvent(input$send, {
 ```{r uzivani: casova rada}
 renderDygraph({
   ts.uzivani <-  u[UPOV_ID == default.shape2()] %>% group_by(JEV, DTM) %>%
-                       summarise(sum = sum(value)) %>% ungroup %>% dcast(DTM~JEV)
+                       summarise(sum = sum(value)) %>% ungroup %>% dcast(DTM~JEV, value.var = "sum")
   ts.uzivani <- xts::xts(ts.uzivani, order.by = ts.uzivani$DTM)
   #ts.uzivani <- ts(ts.uzivani, start = decimal_date(as.Date("2006-12-01")), frequency = 1)
 
@@ -1393,7 +1426,7 @@ renderDataTable({
 
 ```{r uzivani: TS odberatel}
 renderDygraph({
-  ts.uzivani <-  u[NAZICO == default.circle()] %>% dcast(DTM~JEV)
+  ts.uzivani <-  u[NAZICO == default.circle()] %>% dcast(DTM~JEV) 
   ts.uzivani <- xts::xts(ts.uzivani, order.by = ts.uzivani$DTM)
   #ts.uzivani <- ts(ts.uzivani, start = decimal_date(as.Date("2006-12-01")), frequency = 1)
 
@@ -1610,8 +1643,9 @@ output$hotable_v <- renderRHandsontable({
              }")
   
 
-  rhandsontable(dt, stretchH = "all", height = 130,  rowHeaderWidth = 95)  %>%
-  hot_cols(renderer = rdtext, format="0.00e+0")
+  rhandsontable(dt, stretchH = "all", height = 130,  rowHeaderWidth = 95, readOnly = FALSE)  %>%
+    # hot_col("value", type = "numeric") %>% 
+    hot_cols(renderer = rdtext, format="0.00e+0")
  })
 
 
@@ -1647,7 +1681,10 @@ Validace {data-icon="fa-clone"}
 #Functions--------------------
 
 default.shape3 <- reactive({
-  UPOV_ID.sel <- input$search.id.val
+  if(is.null(input$search.id.val)){
+    UPOV_ID.sel <- "BER_0010"
+  }else{
+    UPOV_ID.sel <- input$search.id.val}
   return(UPOV_ID.sel)})
 
 default.line <- reactive({
@@ -1863,7 +1900,7 @@ output$validace <- renderLeaflet({
      labels <- sprintf(
      "<strong>%s</strong><br/>UPOV_ID: %s <br/> Hodnota: %s",
       dta$NAZ_UTVAR, dta$UPOV_ID, round(dta$value,3)) %>% lapply(htmltools::HTML)
-     pal <- colorBin("YlGnBu", domain = round(dta$value,3), pretty = TRUE)
+     pal <- colorBin("Set3", domain = round(dta$value,3), pretty = TRUE) #YlGnBu(9) Paired(12)
     
     if("P" %in% vrstvy){ #addPolygons
      validace <- validace %>% addFeatures(data=dta, layerId = dta$UPOV_ID, 
@@ -1940,6 +1977,9 @@ renderPlotly({
 
   d <- dir(file.path(.datadir, "routed-0_bilan_bez_VN"))
   routed0_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
+  
+  if(length(selected.shape.A())!=0){
+  
   routed <- readRDS(file.path(.datadir,"routed-0_bilan_bez_VN",
                                    routed0_dir$source[routed0_dir$UPOV_ID==selected.shape.A()]))
   routed <- routed[,c("DTM", "TRM_mm_d")]
@@ -1985,7 +2025,7 @@ renderPlotly({
           p1 <- p1 %>% add_trace(data=ts.routed, text=paste(routed$DTM), x = ~DTM, y = ~RM_year, 
                                  name = 'Simulovane rocni prutoky')}
         
-        p1
+        p1}else{}
   
   }else if(input$validace == "AA"){
   
@@ -2032,7 +2072,7 @@ renderPlotly({
 renderTable({
 if(input$validace == "A"){
   QD_filter <- QD %>% filter(DBCN == default.line()) %>% select(value) %>% unlist
-  QD_filter <- psych::describe(QD_filter, skew = F, IQR = T, quant = c(0.5, 0.75))
+  QD_filter <- suppressWarnings(psych::describe(QD_filter, skew = F, IQR = T, quant = c(0.5, 0.75)))
   QD_filter <-cbind(name="value",QD_filter[,-1])
 }else if(input$validace == "AA"){
   t1 <- dta_val %>% filter(DBCN == default.circle_val()) %>% select(QMER, QNEX, QNEY, RM)
@@ -2040,14 +2080,15 @@ if(input$validace == "A"){
   t1 <- as.data.frame(t1)
   t1$vars <- rownames(t1)
   rownames(t1) <- NULL
-  t2a <- hydroGOF::gof(dta_val$RM, dta_val$QNEX)
+  t2a <- suppressWarnings(hydroGOF::gof(dta_val$RM, dta_val$QNEX))
   colnames(t2a) <- "QNEX"
-  t2b <- hydroGOF::gof(dta_val$RM, dta_val$QNEY)
+  t2b <- suppressWarnings(hydroGOF::gof(dta_val$RM, dta_val$QNEY))
   colnames(t2b) <- "QNEY"
-    t2c <- hydroGOF::gof(dta_val$RM, dta_val$QMER)
+  t2c <- suppressWarnings(hydroGOF::gof(dta_val$RM, dta_val$QMER))
   colnames(t2c) <- "QMER"
   t2 <- as.data.frame(t(cbind(t2a, t2b, t2c)))
-  print(t2)
+  # print(t2)
+  t2
  
 } else if(input$validace == "C" & isTRUE(USER$Logged)){
   chars_filter <- chars %>% filter(UPOV_ID == default.shape3()) %>% select(choices.mday)
