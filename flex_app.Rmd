@@ -36,8 +36,9 @@ library(mapview)
 #devtools::install_github("KVHEM/CatCa")
 #CatCa::give_paths()
 
+.datadir <- "/home/irina/ownCloud/Shared/BILAN_UPOV/used_data"
 # .datadir <- "C:/Users/irina/ownCloud/Shared/BILAN_UPOV/used_data"
-.datadir <- "S:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
+# .datadir <- "S:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
 #.datadir <- getwd()
 
 
@@ -2097,7 +2098,7 @@ if(input$validace == "A"){
   
   table <- rbind(chars_filter, chars_sim_filter)
   rownames(table) <- c("Pozorovana data", "Simulovana data")
-  print(table)
+  table
 } else if(input$validace == "C" & !isTRUE(USER$Logged)){}
 }, digits = 3, spacing = 'xs', rownames = TRUE)
 ```
