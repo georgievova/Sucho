@@ -504,3 +504,31 @@ vhb_p <- vhb %>% select(ICOC, JEV, NAZICO, VLASTNIK, PROVOZOVATEL, OBEC, HG_RAJO
 vhb_p$ICOC <- as.numeric(vhb_p$ICOC)
 
 saveRDS(vhb_p, file.path(.datadir, "webapp_data/uzivani/uzivani_pas.rds"))
+
+#17 indikatory 2018
+#--------------------
+
+.dir1 <- "C:/Users/Georgievova/Documents/indikatory_new"
+
+spi <- readRDS(file.path(.dir1, "spi.rds"))
+
+spei <- readRDS(file.path(.dir1, "spei.Rds"))
+
+spi <- select(spi, -IID)
+spei <- select(spei, -IID)
+
+spi <- as.data.table(spi)
+spei <- as.data.table(spei)
+
+
+for(i in unique(spi$scale)){
+  x <- spi[scale == i]
+  saveRDS(x,
+          paste0("s:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data/webapp_data/indikatory_updt/", "spi_", i, ".rds"))
+}
+
+for(i in unique(spei$scale)){
+  x <- spei[scale == i]
+  saveRDS(x,
+          paste0("s:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data/webapp_data/indikatory_updt/", "spei_", i, ".rds"))
+}
