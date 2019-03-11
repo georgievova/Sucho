@@ -532,3 +532,39 @@ for(i in unique(spei$scale)){
   saveRDS(x,
           paste0("s:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data/webapp_data/indikatory_updt/", "spei_", i, ".rds"))
 }
+
+#18 geo to st_read_rds
+#--------------------
+
+require(sf)
+require(rgdal)
+
+.datadir <- "S:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
+  
+povodi <- st_read(file.path(.datadir, "webapp_data/geo/povodi.shp"), quiet = TRUE)
+reky <- st_read(file.path(.datadir, "webapp_data/geo/reky.shp"), quiet = TRUE)
+jezera <- st_read(file.path(.datadir, "webapp_data/geo/jezera.shp"), quiet = TRUE)
+nadrze <- st_read(file.path(.datadir, "webapp_data/geo/nadrze.shp"), quiet = TRUE)
+kraje <- st_read(file.path(.datadir, "webapp_data/geo/kraje.shp"), quiet = TRUE)
+okresy <- st_read(file.path(.datadir, "webapp_data/geo/okresy.shp"), quiet = TRUE)
+povodi_III <- st_read(file.path(.datadir, "webapp_data/geo/povodi.shp"), quiet = TRUE)
+
+QD_stanice <- readOGR(file.path(.datadir, "webapp_data/geo/stanice.shp"))
+saveRDS(QD_stanice, file.path(.datadir, "webapp_data/geo_rds/stanice.rds"))
+
+QD_stanice <- st_read(file.path(.datadir, "webapp_data/geo/stanice.shp"), quiet = TRUE)
+# QD_stanice <- st_zm(QD_stanice, drop = T, what = "ZM")
+
+saveRDS(povodi, file.path(.datadir, "webapp_data/st_read_rds/povodi.rds"))
+saveRDS(reky, file.path(.datadir, "webapp_data/st_read_rds/reky.rds"))
+saveRDS(jezera, file.path(.datadir, "webapp_data/st_read_rds/jezera.rds"))
+saveRDS(nadrze, file.path(.datadir, "webapp_data/st_read_rds/nadrze.rds"))
+saveRDS(kraje, file.path(.datadir, "webapp_data/st_read_rds/kraje.rds"))
+saveRDS(okresy, file.path(.datadir, "webapp_data/st_read_rds/okresy.rds"))
+saveRDS(povodi_III, file.path(.datadir, "webapp_data/st_read_rds/povodi_III.rds"))
+saveRDS(QD_stanice, file.path(.datadir, "webapp_data/st_read_rds/stanice.rds"))
+
+
+
+
+

@@ -22,10 +22,10 @@ library(plotly)
 library(DT)
 library(shinyalert)
 library(rhandsontable)
-library(sf)
-library(mapview)
+# library(sf)
+# library(mapview)
 #library(gridExtra)
-#library(sp)
+# library(sp)
 #library(rgeos)
 #library(datasets)
 #library(psych)
@@ -36,33 +36,28 @@ library(mapview)
 #devtools::install_github("KVHEM/CatCa")
 #CatCa::give_paths()
 
-.datadir <- "/home/irina/ownCloud/Shared/BILAN_UPOV/used_data"
+# .datadir <- "/home/irina/ownCloud/Shared/BILAN_UPOV/used_data"
 # .datadir <- "C:/Users/irina/ownCloud/Shared/BILAN_UPOV/used_data"
-# .datadir <- "S:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
+.datadir <- "S:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
 #.datadir <- getwd()
 
 
 
 BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_dt_2018.rds"))
 
-# povodi <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi.rds"))
-# reky <- readRDS(file.path(.datadir, "webapp_data/geo_rds/reky.rds"))
-# jezera <- readRDS(file.path(.datadir, "webapp_data/geo_rds/jezera.rds"))
-# nadrze <- readRDS(file.path(.datadir, "webapp_data/geo_rds/nadrze.rds"))
-# kraje <- readRDS(file.path(.datadir, "webapp_data/geo_rds/kraje.rds"))
-# okresy <- readRDS(file.path(.datadir, "webapp_data/geo_rds/okresy.rds"))
+povodi <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/povodi.rds"))
+reky <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/reky.rds"))
+jezera <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/jezera.rds"))
+nadrze <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/nadrze.rds"))
+kraje <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/kraje.rds"))
+okresy <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/okresy.rds"))
 povodi_III <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi_III.rds"))
+# povodi_III <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/povodi_III.rds"))
 
-povodi <- st_read(file.path(.datadir, "webapp_data/geo/povodi.shp"), quiet = TRUE)
-reky <- st_read(file.path(.datadir, "webapp_data/geo/reky.shp"), quiet = TRUE)
-jezera <- st_read(file.path(.datadir, "webapp_data/geo/jezera.shp"), quiet = TRUE)
-nadrze <- st_read(file.path(.datadir, "webapp_data/geo/nadrze.shp"), quiet = TRUE)
-kraje <- st_read(file.path(.datadir, "webapp_data/geo/kraje.shp"), quiet = TRUE)
-okresy <- st_read(file.path(.datadir, "webapp_data/geo/okresy.shp"), quiet = TRUE)
-# povodi_III <- st_read(file.path(.datadir, "webapp_data/geo/povodi.shp"), quiet = TRUE)
 
-QD_stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/stanice.rds"))
-# QD_stanice <- st_read(file.path(.datadir, "webapp_data/geo/stanice.shp"), quiet = TRUE)
+# QD_stanice <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/stanice.rds"))
+# QD_stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/stanice.rds"))
+QD_stanice <- sf::st_read(file.path(.datadir, "webapp_data/geo/stanice.shp"), quiet = TRUE)
 
 stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/E04_Vodomerne_stanice.rds"))
 tabB <- readRDS(file.path(.datadir, "routing/TABB.rds"))
@@ -266,12 +261,12 @@ div(style="display:inline-block",
 ```{r ZM Reactions}
 
 #help-------------------------
-#default.shape <- function(){return("DUN_0010")}
-#input<-c()
-#input$entry.variable = "P"
-#input$entry.year = 1968
-#input$entry.month = 2
-#input$entry.number = 15
+# default.shape <- function(){return("DUN_0010")}
+# input<-c()
+# input$entry.variable = "P"
+# input$entry.year = 1968
+# input$entry.month = 2
+# input$entry.number = 15
 # input$entry.layer <- c("P")
 
 #Reactions--------------------
@@ -418,7 +413,7 @@ output$map<-renderLeaflet({
  
     
     if("P" %in% vrstvy){ #addPolygons
-map <-  map %>% addFeatures(data=dta, layerId = dta$UPOV_ID, color = "black",
+map <-  map %>% addPolygons(data=dta, layerId = dta$UPOV_ID, color = "black",
                              weight = 1.5, opacity = 0.45, smoothFactor = 0,
                              fillColor = ~pal(value), fillOpacity = 0.8,
                              group = "Povodí", stroke = T,
@@ -445,28 +440,29 @@ map <-  map %>% addFeatures(data=dta, layerId = dta$UPOV_ID, color = "black",
       }
 
     if("R" %in% vrstvy){ #addPolylines
-       map <- map %>% addFeatures(data=reky, color="#007C8C", weight = 1.5,
+       map <- map %>% addPolylines(data=reky, color="#007C8C", weight = 1.5,
                  opacity = 1, stroke= TRUE, group = "Řeky")
        }
 
     if("J" %in% vrstvy){ #addPolygons
-       map <- map %>% addFeatures(data=jezera, color="#007C8C", fillColor = "#0099ff",
+       map <- map %>% addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff",
                 weight = 1, opacity = 1, stroke= TRUE, group = "Jezera")}
 
     if("N" %in% vrstvy){ #addPolygons
-      map <-  map %>% addFeatures(data=nadrze, color="#007C8C", fillColor = "#0099ff",
+      map <-  map %>% addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff",
                 weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže")}
 
     if("K" %in% vrstvy){ #addPolylines
-      map <-  map %>% addFeatures(data=kraje, color="#000000",  weight = 2.5, fill=F,
+      map <-  map %>% addPolylines(data=kraje, color="#000000",  weight = 2.5, fill=F,
                        stroke= TRUE, group = "Kraje")}
 
     if("O" %in% vrstvy){ #addPolylines
-       map <- map %>% addFeatures(data=okresy, color="#000000",  weight = 2, fill=F,
+       map <- map %>% addPolylines(data=okresy, color="#000000",  weight = 2, fill=F,
                        stroke= TRUE, group = "Okresy")}
 
     if("P3" %in% vrstvy){ #addPolylines
-       map <- map %>% addPolylines(data=povodi_III, color="#cc0000",  weight = 2.5, opacity = 1,
+       map <- map %>% addPolylines(data=povodi_III,
+                                   color="#cc0000",  weight = 2.5, opacity = 1,
                        stroke= TRUE, group = "Povodí 3. řádu")
     }
 
@@ -1062,7 +1058,7 @@ output$indikator <-renderLeaflet({
 #Zbarvení povodí dle hodnoty
    
    if("P" %in% vrstvy){ #addPolygons
-       indikatory <- indikatory %>% addFeatures(data=dta, layerId = dta$UPOV_ID, color = "black",
+       indikatory <- indikatory %>% addPolygons(data=dta, layerId = dta$UPOV_ID, color = "black",
                              weight = 1.5, opacity = 0.45, smoothFactor = 0,
                              fillColor = ~pal(value), fillOpacity = 0.5,
                              group = "Povodí",
@@ -1086,24 +1082,24 @@ output$indikator <-renderLeaflet({
       }
 
     if("R" %in% vrstvy){ #addPolylines
-       indikatory <- indikatory %>% addFeatures(data=reky, color="#007C8C", weight = 1.5,
+       indikatory <- indikatory %>% addPolylines(data=reky, color="#007C8C", weight = 1.5,
                  opacity = 1, stroke= TRUE, group = "Řeky")
        }
 
     if("J" %in% vrstvy){ #addPolygons
-       indikatory <- indikatory %>% addFeatures(data=jezera, color="#007C8C", fillColor = "#0099ff",
+       indikatory <- indikatory %>% addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff",
                 weight = 1, opacity = 1, stroke= TRUE, group = "Jezera")}
 
     if("N" %in% vrstvy){ #addPolygons
-      indikatory <-  indikatory %>% addFeatures(data=nadrze, color="#007C8C", fillColor = "#0099ff",
+      indikatory <-  indikatory %>% addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff",
                 weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže")}
 
     if("K" %in% vrstvy){ #addPolylines
-      indikatory <-  indikatory %>% addFeatures(data=kraje, color="#000000",  weight = 2.5, fill=F,
+      indikatory <-  indikatory %>% addPolylines(data=kraje, color="#000000",  weight = 2.5, fill=F,
                        stroke= TRUE, group = "Kraje")}
 
     if("O" %in% vrstvy){ #addPolylines
-       indikatory <- indikatory %>% addFeatures(data=okresy, color="#000000",  weight = 2, fill=F,
+       indikatory <- indikatory %>% addPolylines(data=okresy, color="#000000",  weight = 2, fill=F,
                        stroke= TRUE, group = "Okresy")}
 
     if("P3" %in% vrstvy){
@@ -1284,15 +1280,15 @@ labels.points <- sprintf(
                                   options = tileOptions(minZoom=7, maxZoom=20))}
   
   if("R" %in% vrstvy){ #addPolylines
-  uzivani <- uzivani %>% addFeatures(data=reky, color="#007C8C", weight = 1.5,
+  uzivani <- uzivani %>% addPolylines(data=reky, color="#007C8C", weight = 1.5,
                  opacity = 1, stroke= TRUE, group = "Řeky") }
   
   if("J" %in% vrstvy){ #addPolygons
-  uzivani <- uzivani %>% addFeatures(data=jezera, color="#007C8C", fillColor = "#0099ff",
+  uzivani <- uzivani %>% addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff",
                 weight = 1, opacity = 1, stroke= TRUE, group = "Jezera") }
   
   if("N" %in% vrstvy){ #addPolygons
-  uzivani <- uzivani %>% addFeatures(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
+  uzivani <- uzivani %>% addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff", 
                 weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže") }
   
   if("O" %in% vrstvy){
@@ -1303,7 +1299,7 @@ labels.points <- sprintf(
               position = "topright")  }
   
   if("P" %in% vrstvy){ #addPolygons
-   uzivani <- uzivani %>% addFeatures(data=povodif, color = "#000000", fillColor = "#708090", weight = 2, opacity = 0.4, smoothFactor = 0,
+   uzivani <- uzivani %>% addPolygons(data=povodif, color = "#000000", fillColor = "#708090", weight = 2, opacity = 0.4, smoothFactor = 0,
                 layerId = povodi$UPOV_ID,
                 label = labels,
                 labelOptions = labelOptions(clickable = TRUE, noHide = FALSE,
@@ -1564,7 +1560,7 @@ labels.points <- sprintf(
                position = "bottomright")  }
   
     if("P" %in% vrstvy){
-    vyhled_uzivani <- vyhled_uzivani %>% addFeatures(data=povodiv, color = "#000000", fillColor = "#708090", weight = 2, opacity = 0.4, smoothFactor = 0,
+    vyhled_uzivani <- vyhled_uzivani %>% addPolygons(data=povodiv, color = "#000000", fillColor = "#708090", weight = 2, opacity = 0.4, smoothFactor = 0,
                                        layerId = povodi$UPOV_ID,
                                        label = labels,
                                        labelOptions = labelOptions(clickable = TRUE, noHide = FALSE,
@@ -1834,7 +1830,7 @@ output$validace <- renderLeaflet({
 
       labels.lines <- sprintf(
       "<strong>%s</strong><br/> DBCN:%s <br/> Plocha [km2]: %s",
-      QD_stanice$NAZEV_TOK, QD_stanice$DBCN, round(QD_stanice$AREA,2)) %>% 
+      QD_stanice$NAZEV_TOK, QD_stanice$DBCN, round(QD_stanice$AREA,2)) %>%
       lapply(htmltools::HTML)
       
       
@@ -1888,7 +1884,7 @@ output$validace <- renderLeaflet({
      
          
     if("P" %in% vrstvy){ #addPolygons
-   validace <- validace %>% addFeatures(data=dta,
+   validace <- validace %>% addPolygons(data=dta,
                                              color = "burlywood4", weight = 1.3, smoothFactor = 0,
                                              opacity = 0.3, fillColor = ~pal(value),
                                              fillOpacity = 0.8, group = "Povodí",
@@ -1918,7 +1914,7 @@ output$validace <- renderLeaflet({
      pal <- colorBin("Set3", domain = round(dta$value,3), pretty = TRUE) #YlGnBu(9) Paired(12)
     
     if("P" %in% vrstvy){ #addPolygons
-     validace <- validace %>% addFeatures(data=dta, layerId = dta$UPOV_ID, 
+     validace <- validace %>% addPolygons(data=dta, layerId = dta$UPOV_ID, 
                                              color = "burlywood4", weight = 1.3, smoothFactor = 0,
                                              opacity = 0.3, fillColor = ~pal(value),
                                              fillOpacity = 0.8, group = "Povodí",
@@ -1945,23 +1941,23 @@ output$validace <- renderLeaflet({
       validace <-  validace %>% addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13))}
 
     if("R" %in% vrstvy){ #addPolylines
-       validace <- validace %>% addFeatures(data=reky, color="#007C8C", weight = 1.5,
+       validace <- validace %>% addPolylines(data=reky, color="#007C8C", weight = 1.5,
                  opacity = 1, stroke= TRUE, group = "Řeky")}
 
     if("J" %in% vrstvy){ #addPolygons
-       validace <- validace %>% addFeatures(data=jezera, color="#007C8C", fillColor = "#0099ff",
+       validace <- validace %>% addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff",
                 weight = 1, opacity = 1, stroke= TRUE, group = "Jezera")}
 
     if("N" %in% vrstvy){ #addPolygons
-      validace <-  validace %>% addFeatures(data=nadrze, color="#007C8C", fillColor = "#0099ff",
+      validace <-  validace %>% addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff",
                 weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže")}
 
     if("K" %in% vrstvy){ #addPolylines
-      validace <-  validace %>% addFeatures(data=kraje, color="#000000",  weight = 2.5, fill = F,
+      validace <-  validace %>% addPolylines(data=kraje, color="#000000",  weight = 2.5, fill = F,
                        stroke= TRUE, group = "Kraje")}
 
     if("O" %in% vrstvy){ #addPolylines
-       validace <- validace %>% addFeatures(data=okresy, color="#000000",  weight = 2, fill = F,
+       validace <- validace %>% addPolylines(data=okresy, color="#000000",  weight = 2, fill = F,
                        stroke= TRUE, group = "Okresy")}
 
     if("P3" %in% vrstvy){
