@@ -1,0 +1,348 @@
+Indikátory sucha {data-icon="fa-tint"}
+===================================== 
+  
+  Column {.sidebar data-width=400}
+-----------------------------------------------------------------------
+  
+  ```{r indikatory: sidebar}
+
+help_text_vzorec <- c(
+  spi = "",
+  spei = "",
+  # pdsi = "",
+  scpdsi = "",
+  PP = "$$PP = \\frac{PET}{P}$$",
+  WQ90 = "$$WQ90 = \\frac{POV+POD+MZP}{Q90}$$",
+  WPP = "$$WPP = \\frac{POV+POD+MZP}{P-PET}$$",
+  WQ90_ = "$$WQ90\\_ = \\frac{POV+POD-VYP+MZP}{Q90}$$",
+  WPP_ = "$$WPP\\_ = \\frac{POV+POD-VYP+MZP}{P-PET}$$ ",
+  prum = "prùmìr indexù PP, WPP_ a WQ90_")
+
+
+renderUI({
+  wellPanel(
+    selectizeInput(inputId = "search.id.ind","Vyhledávání útvaru",
+                   selected=input$indikator_shape_click$id,
+                   choices = search.choices)
+  )
+})
+
+wellPanel(
+  radioButtons("indikatory", label=NULL, choices = c("PDSI" = "pdsi", 
+                                                     "scPDSI" = "scpdsi", "SPEI" = "spei", "SPI" = "spi", 
+                                                     "PP", "WQ90", "WPP", "WQ90_", "WPP_",
+                                                     "prùmìry zranitelnosti" = "prum"), 
+               # "PDSI" = "C", "SGI" = "D", "SRI" = "E", "Nedostatkové objemy" = "F"),
+               selected = "scpdsi"),
+  
+  conditionalPanel(condition = "input.indikatory == 'spi' || input.indikatory == 'spei' || input.indikatory == 'pdsi'",
+                   selectInput("krok", label = NULL, choices = c("1 mìsíc" = 1, "3 mìsíce" = 3,
+                                                                 "6 mìsícù" = 6, "12 mìsícù" = 12), selected = 3)),
+  conditionalPanel(condition = "input.indikatory == 'spi'",
+                   selectInput("entry.variable.ind", label=NULL, selected = "P",
+                               choices = c('P', 'R', 'RM', 'BF'))),
+  
+  conditionalPanel(condition = "input.indikatory == 'spi' || input.indikatory == 'spei'|| input.indikatory == 'scpdsi'",
+                   dateInput("entry.date.ind", label = NULL, "yyyy-mm-dd", language = "cs",
+                             value = as.Date("1985-01-01"), startview = "decade",
+                             min = as.Date("1961-01-01"), max = as.Date("2018-06-01")), #2015-12-01
+                   hr(),
+                   HTML(paste("<b>SPI & SPEI: </b> 1961-01-01 až 2018-06-01 <br> <b>scPDSI: </b> 1961-01-01 až 2015-12-01"))
+                   
+  )
+)
+
+
+
+renderUI({
+  if(input$indikatory %in% c("PP","WQ90","WPP","WPP_","prum","WQ90_")){
+    wellPanel(
+      withMathJax(help_text_vzorec[input$indikatory]),
+      hr(),
+      HTML(paste("PET - potenciální evapotranspirace",
+                 "P - srážky",
+                 "POV - odbìry z povrchových vod",
+                 "POD - odbìry z podzemních vod",
+                 "VYP - vypouštìní (databáze VÚV TGM, v.v.i.)",
+                 "MZP - minimální zùstatkový prùtok",
+                 "Q90 - 90% kvantil prùtoku", sep = "<br>"))
+    )
+  }
+  
+  
+})
+
+
+
+wellPanel(checkboxGroupInput("entry.layer.ind", label = "Vrstvy",
+                             choices = c("Mapový podklad" = "MP", "Povodí" ="P", "Øeky" = "R", "Jezera" = "J", 
+                                         "Nádrže" = "N", "Kraje" = "K", "Okresy" = "O", "Povodí 3. øádu" = "P3"), 
+                             selected = c("MP", "P"),
+                             inline = T))
+
+
+div(style="display:inline-block",
+    actionButton("reset_button2", "Reset", icon("arrows"),
+                 style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
+    actionButton("go2", "Zobrazit", icon("check"),
+                 style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
+)
+
+
+```
+
+```{r indikatory: Reactions}
+
+#help-------------------------
+# default.shape.ind <- function(){return("DUN_0010")}
+# input<-c()
+# input$indikatory = "spi"
+# input$entry.variable.ind = "P"
+# input$krok = 3
+# input$entry.date.ind <- as.Date("1961-01-01")
+
+
+#Reactions--------------------
+reac.ind <- eventReactive(input$go2,{ 
+  
+  vrstvy <- input$entry.layer.ind
+  
+  if(input$indikatory %in% c("spi", "spei")){
+    ind_dta <- readRDS(file.path(.datadir,"webapp_data/indikatory_2015", paste0(input$indikatory, "_", input$krok, ".rds")))
+  }else if(input$indikatory %in% c("scpdsi", "pdsi")){ #"pdsi",
+    ind_dta <- readRDS(file.path(.datadir,"indikatory", paste0(input$indikatory, ".rds")))
+  }else{
+    ind_dta <- IND %>% select(UPOV_ID, value = input$indikatory)
+  }
+  
+  #Dlouhodobé prùmìry (celé období/vybrané období)
+  if(input$indikatory == "spi"){
+    ind_dta_f <- ind_dta[ind_dta$variable == input$entry.variable.ind, ]
+    dta <- (sp::merge(povodi, ind_dta_f[ind_dta_f$year == year(input$entry.date.ind) & ind_dta_f$month==month(input$entry.date.ind), ],
+                      by="UPOV_ID"))
+  }else if(input$indikatory %in% c("spei", "scpdsi", "pdsi")){ #"pdsi",
+    ind_dta_f <- ind_dta
+    dta <- (sp::merge(povodi,ind_dta_f[ind_dta_f$year == year(input$entry.date.ind) & ind_dta_f$month==month(input$entry.date.ind), ],
+                      by="UPOV_ID"))
+  }else{
+    ind_dta_f <- ind_dta
+    dta <- sp::merge(povodi, ind_dta, by="UPOV_ID")
+  }
+  
+  #Vytvaøení palet
+  # (2,0 až inf) - tmave modra
+  # (1,4 až 2,0) - modra
+  # (0,5 až 1,4) - svetle zelena
+  # (-0,5 až 0,5) - neutralni
+  # (-0,5 až -1,4) - zluto oranzova (+-)
+  # (-1,4 až -2,0) - cervena
+  # (- 2,0 až -inf) - tmave èervena
+  
+  mojePaleta <- c("#800000", "#ff0000", "#feb316", "#eafe9a", "#99ff66", "#0066ff", "#000066")
+  
+  if(input$indikatory %in% c("spi", "spei", "pdsi", "scpdsi")){
+    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(Inf, 2, 1.4, 0.5, -0.5, -1.4, -2, -Inf),  
+                    na.color = "#999999")
+  }else if(input$indikatory == "PP"){
+    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(1000, 1, 0.9, 0.6, -1000),  
+                    na.color = "#999999")
+  }else if(input$indikatory == "WPP"){
+    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(1000, 5, 3, 1, 0),  
+                    na.color = "#999999")
+  }else if(input$indikatory == "WQ90"){
+    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(1000, 10, 5, 2, 0),  
+                    na.color = "#999999")
+  }else if(input$indikatory == "WPP_"){
+    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(1000, 5, 1, 0, -100),  
+                    na.color = "#999999")
+  }else if(input$indikatory == "WQ90_"){
+    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(1000, 10, 2, 0, -1000),  
+                    na.color = "#999999")
+  }else if(input$indikatory == "prum"){
+    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(4.5, 3.5, 2.5, 1.5, 0.5),  
+                    na.color = "#999999")
+  }
+  
+  
+  
+  return(list(vrstvy = vrstvy, dta=dta, ind_dta_f = ind_dta_f, pal = pal))
+}, ignoreNULL = FALSE, ignoreInit = FALSE)
+
+
+```
+
+Row 
+-------------------------------------
+  
+  ```{r indikatory: mapa}
+#Functions--------------------
+
+default.shape.ind <- reactive({
+  if(is.null(input$search.id.ind)){
+    UPOV_ID.sel <- "BER_0010"
+  }else{
+    UPOV_ID.sel <- input$search.id.ind}
+  return(UPOV_ID.sel)})
+
+# default.shape.ind <- reactive({
+#   UPOV_ID.sel <- input$search.id.ind
+#   return(UPOV_ID.sel)})
+
+initial_lat = 49.7437572
+initial_lng = 15.3386383
+initial_zoom = 7
+
+
+
+#Outputs
+
+#Leaflet--------------------
+
+output$indikator <-renderLeaflet({
+  
+  reac.ind_app <- reac.ind()
+  dta <- reac.ind_app$dta
+  pal <- reac.ind_app$pal
+  
+  vrstvy <- reac.ind_app$vrstvy
+  
+  # Creating labels--------------------
+  
+  labels <- sprintf(
+    "<strong>%s</strong><br/>Kategorie: %s<br/>Stav: %s <br/> UPOV_ID: %s <br/> Hodnota: %s",
+    dta$NAZ_UTVAR, dta$KTG_UPOV, dta$U_PMU, dta$UPOV_ID, round(dta$value,2)
+  ) %>% lapply(htmltools::HTML)
+  
+  
+  if(length(labels)==0){labels <- c(" ")}
+  
+  
+  indikatory <- leaflet() %>% 
+    setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom)
+  #Zbarvení povodí dle hodnoty
+  
+  if("P" %in% vrstvy){ #addPolygons
+    indikatory <- indikatory %>% addPolygons(data=dta, layerId = dta$UPOV_ID, color = "black",
+                                             weight = 1.5, opacity = 0.45, smoothFactor = 0,
+                                             fillColor = ~pal(value), fillOpacity = 0.5,
+                                             group = "Povodí",
+                                             highlightOptions = highlightOptions(color = "#a53333",
+                                                                                 opacity = 1,
+                                                                                 fillOpacity = 0,
+                                                                                 weight = 2.3,
+                                                                                 bringToFront = TRUE, sendToBack = TRUE),
+                                             label = labels,
+                                             labelOptions = labelOptions(clickable = TRUE,
+                                                                         style = list("font-weight" = "normal",
+                                                                                      "font-family" = "sans-serif", padding = "3px 8px",
+                                                                                      keepInView = TRUE, noHide = FALSE,
+                                                                                      "border-color" = "rgb(255, 255, 255)"),
+                                                                         textsize = "13px", direction = "auto"))%>%
+      addLegend(pal = pal, values = dta$value, opacity = 0.7, title = "Legenda",
+                position = "bottomright")}
+  
+  if("MP" %in% vrstvy){
+    indikatory <-  indikatory %>% addTiles(group = "Mapový podklad", options = tileOptions(minZoom=7, maxZoom=13))
+  }
+  
+  if("R" %in% vrstvy){ #addPolylines
+    indikatory <- indikatory %>% addPolylines(data=reky, color="#007C8C", weight = 1.5,
+                                              opacity = 1, stroke= TRUE, group = "Øeky")
+  }
+  
+  if("J" %in% vrstvy){ #addPolygons
+    indikatory <- indikatory %>% addPolygons(data=jezera, color="#007C8C", fillColor = "#0099ff",
+                                             weight = 1, opacity = 1, stroke= TRUE, group = "Jezera")}
+  
+  if("N" %in% vrstvy){ #addPolygons
+    indikatory <-  indikatory %>% addPolygons(data=nadrze, color="#007C8C", fillColor = "#0099ff",
+                                              weight = 1, opacity = 1, stroke= TRUE, group = "Nádrže")}
+  
+  if("K" %in% vrstvy){ #addPolylines
+    indikatory <-  indikatory %>% addPolylines(data=kraje, color="#000000",  weight = 2.5, fill=F,
+                                               stroke= TRUE, group = "Kraje")}
+  
+  if("O" %in% vrstvy){ #addPolylines
+    indikatory <- indikatory %>% addPolylines(data=okresy, color="#000000",  weight = 2, fill=F,
+                                              stroke= TRUE, group = "Okresy")}
+  
+  if("P3" %in% vrstvy){
+    indikatory <- indikatory %>% addPolylines(data=povodi_III, color="#cc0000",  weight = 2.5, opacity = 1,
+                                              stroke= TRUE, group = "Povodí 3. øádu")
+  }
+  
+  print(indikatory)
+  
+})
+
+
+#Zvyraznìní souèasného povodí
+observe({
+  leafletProxy("indikator") %>%
+    clearGroup("current_shape") %>% 
+    addPolylines(data = subset(povodi,
+                               UPOV_ID==(if(is.null(input$search.id.ind)){"BER_0010"}else{input$search.id.ind})),
+                 group = "current_shape",
+                 color = "#a53333", opacity = 1, weight = 3,
+                 stroke = TRUE) 
+})
+
+#Reset button
+
+observe({
+  input$reset_button2
+  leafletProxy("indikator") %>% setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom)})
+
+
+leafletOutput("indikator")  
+
+```
+
+Row 
+-------------------------------------
+  
+  ```{r indikatory: TS}
+
+renderDygraph({
+  
+  if(input$indikatory %in% c("spi", "spei", "scpdsi", "pdsi")){ #"pdsi", 
+    
+    ind_dta_f <- reac.ind()$ind_dta_f
+    
+    ts.indikatory <- ind_dta_f[ind_dta_f$UPOV_ID == default.shape.ind(), ] %>% select(value, DTM)
+    
+    if(nrow(ts.indikatory) != 0){
+      
+      RangeMin <- min(ts.indikatory$value, na.rm = T)-0.5
+      RangeMax <- max(ts.indikatory$value, na.rm = T)+0.5
+      
+      ts.indikatory$value[is.na(ts.indikatory$value)]<-0
+      
+      ts.indikatory <- xts::xts(ts.indikatory, order.by = ts.indikatory$DTM)
+      
+      dygraph(ts.indikatory,
+              main = paste(as.character(popis$NAZ_UTVAR[popis$UPOV_ID==default.shape.ind()])),
+              xlab = "Èas") %>%
+        dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>%
+        dyLimit(0, strokePattern = "solid", color = "black") %>%
+        dyOptions(colors = "gray", fillGraph = TRUE, fillAlpha = 0.4) %>%
+        dyLegend(width = 400, show = "always", hideOnMouseOut = FALSE)
+      
+    }else{
+      
+      ts.indikatory <- data.frame(DTM = seq(Sys.Date()-4, Sys.Date(), 1), value = rep(0,5))
+      ts.indikatory <- xts::xts(ts.indikatory, order.by = ts.indikatory$DTM)
+      
+      dygraph(ts.indikatory, xlab = "Èas", 
+              main = paste(as.character(popis$NAZ_UTVAR[popis$UPOV_ID==default.shape.ind()]))) %>%
+        dySeries("value", label = "Nejsou záznamy") %>%
+        dyOptions(colors = "gray", fillGraph = TRUE, fillAlpha = 0.4) %>%
+        dyLegend(width = 400, show = "always", hideOnMouseOut = FALSE)
+      
+    }
+    
+  }else{}
+  
+})
+
+```

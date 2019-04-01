@@ -39,11 +39,14 @@ library(rhandsontable)
 # .datadir <- "/home/irina/ownCloud/Shared/BILAN_UPOV/used_data"
 # .datadir <- "C:/Users/irina/ownCloud/Shared/BILAN_UPOV/used_data"
 .datadir <- "S:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
+.dirM <- "M:/SC_Data2"
 #.datadir <- getwd()
 
+# BM_p <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_dt_2018.rds"))
 
+BM <- readRDS(file.path(.datadir, "webapp_data/bilan_n/bilan_month_dt.rds"))
 
-BM <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_dt_2018.rds"))
+BM_week <- readRDS(file.path(.dirM, "week_stable.rds"))
 
 povodi <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/povodi.rds"))
 reky <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/reky.rds"))
@@ -65,7 +68,7 @@ cp <- readRDS(file.path(.datadir, "webapp_data/to_from/cara_prekroceni_dt_2018.r
 
 popis <- readRDS(file.path(.datadir, "webapp_data/popis.rds"))
 
-IND <- readRDS(file.path(.datadir, "indikatory/IND.rds"))
+# IND <- readRDS(file.path(.datadir, "indikatory/IND.rds"))
 
 pars <- readRDS(file.path(.datadir, "webapp_data/pars/pars.rds"))
 u <- readRDS(file.path(.datadir, "webapp_data/uzivani/uzivani_06_17_dt.rds"))
@@ -213,7 +216,7 @@ wellPanel(HTML('<div class="help-tip">
   conditionalPanel(condition = "input.kartogram == 'C'",
             
                  selectInput("entry.yearC", label = "Zvolte rok:",
-                             choices = seq(1982,2018,1))
+                             choices = seq(min(BM$year),max(BM$year),1))
                  )
   )
 
@@ -268,13 +271,14 @@ div(style="display:inline-block",
 # input$entry.month = 2
 # input$entry.number = 15
 # input$entry.layer <- c("P")
+# input$entry.date <- as.Date('2010-01-01')
 
 #Reactions--------------------
 reac<- eventReactive(input$go1,{ 
  
   vrstvy <- input$entry.layer
 
-  bilance <-  BM[variable == input$entry.variable]
+  bilance <-  BM[BM$variable == input$entry.variable,]
   
   bilance_filtr <- c()
   dta <- c()
@@ -282,7 +286,7 @@ reac<- eventReactive(input$go1,{
 #Dlouhodobé průměry (celé období/vybrané období)
   if(input$kartogram == "A"){
   # if(input$DP == "DP1"){
-    bilance_filtr <- bilance[year==2000 & month==1]
+    bilance_filtr <- bilance[bilance$year==2010 & bilance$month==1,]
     colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
         colnames(bilance_filtr)[colnames(bilance_filtr)=="mean_ep"] <- "value"
     dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
@@ -297,13 +301,13 @@ reac<- eventReactive(input$go1,{
 #Měsíční průměry
   # }
     }else if(input$kartogram == "B"){
-    bilance_filtr <- bilance[year == year(input$entry.date) & month==month(input$entry.date)]
+    bilance_filtr <- bilance[bilance$year == year(input$entry.date) & bilance$month==month(input$entry.date),]
     dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))
 #Roční průměry
   }else if(input$kartogram == "C"){
     # bilance_filtr <- bilance[year==input$entry.yearC & month==11]
-    bilance_filtr <- bilance[year==input$entry.yearC,]
-    bilance_filtr <- bilance_filtr[!duplicated(UPOV_ID),]
+    bilance_filtr <- bilance[bilance$year==input$entry.yearC,]
+    bilance_filtr <- bilance_filtr[!duplicated(bilance_filtr$UPOV_ID),]
     colnames(bilance_filtr)[colnames(bilance_filtr)=="value"] <- "monthly.avg"
     colnames(bilance_filtr)[colnames(bilance_filtr)=="annual.avg"] <- "value"
     dta <- (sp::merge(povodi,bilance_filtr, by="UPOV_ID"))}
@@ -519,9 +523,9 @@ Row {.tabset}
 ```{r cr denni data}
 renderDygraph({
   
-  d <- dir(file.path(.datadir, "res"))
+  d <- dir(file.path(.dirM, "data/BILout"))
   bilan_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
-  dta_bd <- readRDS(file.path(.datadir,"res", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
+  dta_bd <- readRDS(file.path(.dirM, "data/BILout", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
   
   ts.bilance <- dta_bd %>%  select(input$entry.variable_d, DTM)
 
@@ -546,13 +550,43 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
 ```
 
 
+### Tydenní data
+
+```{r cr tydenni data}
+
+renderDygraph({
+  
+  ts.bilance <- BM_week[BM_week$IID == default.shape() & BM_week$variable == input$entry.variable3,] %>% select(value, DTM) 
+  
+  RangeMin <- min(ts.bilance$value)-0.5
+  RangeMax <- max(ts.bilance$value)+0.5
+  
+  ts.bilance <- xts::xts(ts.bilance, order.by = ts.bilance$DTM)
+
+  dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas") %>%
+  dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>%  
+  dyRangeSelector() %>% 
+   dyCrosshair(direction = "vertical")
+})
+
+absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
+                  draggable = FALSE, top = '52.7%', left = "auto", right = '0.5%', bottom = "auto",
+                  width = '15%',
+                  style = "opacity: 0.9; style = z-index: 400",
+    HTML('<button data-toggle="collapse" data-target="#box4" class="choose">Výběr časových řad</button>'),
+        tags$div(id = 'box4', class="collapse", style = "max-height: 250px; overflow-y:scroll",
+                 checkboxGroupInput("entry.variable3", "Zvolte:", choices = choices, selected = c("RM"))))
+
+```
+
+
 ### Měsíční data
 
 ```{r cr mesicni data}
 
 renderDygraph({
   
-  ts.bilance <- BM[UPOV_ID == default.shape() & variable == input$entry.variable2] %>% select(value, DTM) 
+  ts.bilance <- BM[BM$UPOV_ID == default.shape() & BM$variable == input$entry.variable2,] %>% select(value, DTM) 
   
   RangeMin <- min(ts.bilance$value)-0.5
   RangeMax <- max(ts.bilance$value)+0.5
@@ -576,14 +610,13 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
 ```
 
 
-
 ### Čára překročení
 
 ```{r cara prekroceni}
 
 renderPlot({
 
-  cp_c <- cp[UPOV_ID == default.shape() & variable == input$variable_cp] %>%
+  cp_c <- cp[cp$UPOV_ID == default.shape() & cp$variable == input$variable_cp,] %>%
     select(value, p_year) %>% arrange(value)
 
  g1<- ggplot(cp_c, aes(p_year, value)) + geom_line()+
@@ -592,7 +625,7 @@ renderPlot({
                         theme(plot.title = element_text(hjust = 0.5))
 
 
- cp_s <- cp[UPOV_ID == default.shape() & variable == input$variable_cp] %>% group_by(seasons) %>%
+ cp_s <- cp[cp$UPOV_ID == default.shape() & cp$variable == input$variable_cp,] %>% group_by(seasons) %>%
     select(p_season, value, seasons) %>% arrange(value)
 
  g2<-ggplot(cp_s, aes(p_season, value)) + geom_line(aes(group=seasons, colour=seasons)) +
@@ -602,7 +635,7 @@ renderPlot({
     g2$labels$colour <- "Legenda"
 
 
- cp_m <- cp[UPOV_ID == default.shape() & variable == input$variable_cp] %>% group_by(month2) %>%
+ cp_m <- cp[cp$UPOV_ID == default.shape() & cp$variable == input$variable_cp,] %>% group_by(month2) %>%
  select(p_month, value, month2) %>% arrange(value)
 
  g3<- ggplot(cp_m, aes(p_month, value)) + geom_line(aes(group=month2, colour=month2))+
@@ -633,19 +666,19 @@ absolutePanel(class = "panel panel-default", fixed = TRUE,
 ### Trendy
 
 ```{r ZM trendy: reactions}
-#input <-c()
-#input$variable_trend <- "RM"
-#input$date_trend <- c(1990,2015)
-#default.shape <- function(){"BER_0010"}
+# input <-c()
+# input$variable_trend <- "RM"
+# input$date_trend <- c(1990,2015)
+# default.shape <- function(){"BER_0010"}
 trend.reac <- reactive({
 
 # sig.stars <- function(x)symnum(x, corr = FALSE, na = FALSE,
 #                 cutpoints = c(0, 0.001, 0.01, 0.05, 0.1, 1),
 #                 symbols = c("***", "**", "*", ".", " "))
   
-dta_tr <- BM[UPOV_ID == default.shape() &
-                 (year > input$date_trend[1] & year < input$date_trend[2]) & 
-                 variable == input$variable_trend]
+dta_tr <- BM[BM$UPOV_ID == default.shape() &
+                 (BM$year > input$date_trend[1] & BM$year < input$date_trend[2]) & 
+                 BM$variable == input$variable_trend, ]
   
   # ts.year <- dta_tr[!duplicated(year),] %>% select(annual.avg, year)
   # colnames(ts.year)[1] <- "var"
@@ -654,18 +687,24 @@ dta_tr <- BM[UPOV_ID == default.shape() &
   # ts.year$lmt <- model_r$fitted.values
 
   if(input$variable_trend == "T"){
-    ts.year = dta_tr[, .(value = mean(value)), by = .(year)]
-  }else{ts.year = dta_tr[, .(value = sum(value)), by = .(year)]}
+    # ts.year = dta_tr[, .(value = mean(value)), by = .(year)]
+    ts.year = dta_tr %>% group_by(year) %>% mutate(value = mean(value)) %>% ungroup()
+  }else{
+    ts.year = dta_tr %>% group_by(year) %>% mutate(value = sum(value)) %>% ungroup()
+    # ts.year = dta_tr[, .(dta_tr$value = sum(value)), by = .(year)]
+  }
 
   if(length(na.omit(ts.year$value)) == 0){
     ts.year$value <- 0
   }
 
-  model_y = ts.year[, list(list(lm(value ~ year)))]
-  ts.year$fit = model_y$V1[[1]]$fitted.values
+  ts.year <- as.data.table(ts.year)
 
+  model_y = ts.year[, list(list(lm(value ~ year)))]
   
-  
+  ts.year$fit <- model_y$V1[[1]]$fitted.values
+
+
   # ts.month <- dta_tr %>% select(value, month2, DTM)
   # colnames(ts.month)[1] <- "var"
   # ts.month$t <- (1:length(ts.month$var))
@@ -675,10 +714,14 @@ dta_tr <- BM[UPOV_ID == default.shape() &
   # ts.month$lmt <- model_m2$fitted.values
   
   if(input$variable_trend == "T"){
-  ts.month =dta_tr[, .(value = mean(value)), by = .(year, month2)]
+  # ts.month =dta_tr[, .(value = mean(value)), by = .(year, month2)]
+    ts.month = dta_tr %>% group_by(year, month2) %>% mutate(value = mean(value)) %>% ungroup()
   }else{
-  ts.month = dta_tr[, .(value = sum(value)), by = .(year, month2)]}
+  # ts.month = dta_tr[, .(value = sum(value)), by = .(year, month2)]
+  ts.month = dta_tr %>% group_by(year, month2) %>% mutate(value = sum(value)) %>% ungroup()
+  }
   
+  ts.month <- as.data.table(ts.month)
   
   if(length(na.omit(ts.month$value)) == 0){
     ts.month$value <- 0
@@ -686,19 +729,25 @@ dta_tr <- BM[UPOV_ID == default.shape() &
   
   model_m = ts.month[, list(list(lm(value ~ year))), by = month2]
   mesice <- unique(ts.month$month2)
+  
   ts.month$fit <- c(0)
   for(i in c(1:12)){
     ts.month[month2==mesice[i], fit := model_m$V1[[i]]$fitted.values]
   }
   
   if(input$variable_trend == "T"){
-    ts.season = dta_tr[, .(value = mean(value)), by = .(year, seasons)]
+    # ts.season = dta_tr[, .(value = mean(value)), by = .(year, seasons)]
+    ts.season = dta_tr %>% group_by(year, seasons) %>% mutate(value = mean(value)) %>% ungroup()
   }else{
-    ts.season = dta_tr[, .(value = sum(value)), by = .(year, seasons)]}
+    # ts.season = dta_tr[, .(value = sum(value)), by = .(year, seasons)]}
+    ts.season = dta_tr %>% group_by(year, seasons) %>% mutate(value = sum(value)) %>% ungroup()
+    }
   
   if(length(na.omit(ts.season$value))==0){
     ts.season$value <- 0
   }
+    
+  ts.season <- as.data.table(ts.season)
   
   model_s = ts.season[, list(list(lm(value ~ year))), by = seasons]
   seasons = unique(dta_tr$seasons)
@@ -844,18 +893,6 @@ Column {.sidebar data-width=400}
 
 ```{r indikatory: sidebar}
 
-help_text_vzorec <- c(
-  spi = "",
-  spei = "",
-  # pdsi = "",
-  scpdsi = "",
-  PP = "$$PP = \\frac{PET}{P}$$",
-  WQ90 = "$$WQ90 = \\frac{POV+POD+MZP}{Q90}$$",
-  WPP = "$$WPP = \\frac{POV+POD+MZP}{P-PET}$$",
-  WQ90_ = "$$WQ90\\_ = \\frac{POV+POD-VYP+MZP}{Q90}$$",
-  WPP_ = "$$WPP\\_ = \\frac{POV+POD-VYP+MZP}{P-PET}$$ ",
-  prum = "průměr indexů PP, WPP_ a WQ90_")
-
 
 renderUI({
   wellPanel(
@@ -866,50 +903,18 @@ renderUI({
   })
 
 wellPanel(
-  radioButtons("indikatory", label=NULL, choices = c("PDSI" = "pdsi", 
-                                                     "scPDSI" = "scpdsi", "SPEI" = "spei", "SPI" = "spi", 
-                                                     "PP", "WQ90", "WPP", "WQ90_", "WPP_",
-                                                     "průměry zranitelnosti" = "prum"), 
-            # "PDSI" = "C", "SGI" = "D", "SRI" = "E", "Nedostatkové objemy" = "F"),
-             selected = "scpdsi"),
+  radioButtons("indikatory", label=NULL, choices = c("SGI" = "sgi", 
+                                                     "SPEI" = "spei", "SPI" = "spi", 
+                                                     "PDSI" = "pdsi"),
+               selected = "sgi")
 
-  conditionalPanel(condition = "input.indikatory == 'spi' || input.indikatory == 'spei' || input.indikatory == 'pdsi'",
-  selectInput("krok", label = NULL, choices = c("1 měsíc" = 1, "3 měsíce" = 3,
-                                                "6 měsíců" = 6, "12 měsíců" = 12), selected = 3)),
-  conditionalPanel(condition = "input.indikatory == 'spi'",
-               selectInput("entry.variable.ind", label=NULL, selected = "P",
-                                      choices = c('P', 'R', 'RM', 'BF'))),
-  
-  conditionalPanel(condition = "input.indikatory == 'spi' || input.indikatory == 'spei'|| input.indikatory == 'scpdsi'",
-    dateInput("entry.date.ind", label = NULL, "yyyy-mm-dd", language = "cs",
-                           value = as.Date("1985-01-01"), startview = "decade",
-                           min = as.Date("1961-01-01"), max = as.Date("2018-06-01")), #2015-12-01
-    hr(),
-    HTML(paste("<b>SPI & SPEI: </b> 1961-01-01 až 2018-06-01 <br> <b>scPDSI: </b> 1961-01-01 až 2015-12-01"))
-    
-  )
 )
 
-
-
-renderUI({
-if(input$indikatory %in% c("PP","WQ90","WPP","WPP_","prum","WQ90_")){
-            wellPanel(
-              withMathJax(help_text_vzorec[input$indikatory]),
-              hr(),
-            HTML(paste("PET - potenciální evapotranspirace",
-                             "P - srážky",
-                             "POV - odběry z povrchových vod",
-                             "POD - odběry z podzemních vod",
-                             "VYP - vypouštění (databáze VÚV TGM, v.v.i.)",
-                             "MZP - minimální zůstatkový průtok",
-                             "Q90 - 90% kvantil průtoku", sep = "<br>"))
-            )
-            }
-  
-  
-})
-
+wellPanel(
+    dateInput("entry.date.ind", label = NULL, "yyyy-mm-dd", language = "cs",
+                           value = as.Date("2019-03-18"), startview = "year",
+                           min = as.Date("2010-01-04"), max = as.Date("2019-03-18"))
+)
 
 
 wellPanel(checkboxGroupInput("entry.layer.ind", label = "Vrstvy",
@@ -932,12 +937,12 @@ div(style="display:inline-block",
 ```{r indikatory: Reactions}
 
 #help-------------------------
-#default.shape.ind <- function(){return("DUN_0010")}
-#input<-c()
-#input$indikatory = "spi"
-#input$entry.variable.ind = "P"
-#input$krok = 3
-#input$entry.date.ind <- as.Date("1961-01-01")
+# default.shape.ind <- function(){return("DUN_0010")}
+# input<-c()
+# input$indikatory = "spi"
+# input$entry.variable.ind = "P"
+# input$krok = 3
+# input$entry.date.ind <- as.Date("2010-11-01")
 
 
 #Reactions--------------------
@@ -945,25 +950,15 @@ reac.ind <- eventReactive(input$go2,{
   
  vrstvy <- input$entry.layer.ind
  
- if(input$indikatory %in% c("spi", "spei")){
- ind_dta <- readRDS(file.path(.datadir,"webapp_data/indikatory_2015", paste0(input$indikatory, "_", input$krok, ".rds")))
- }else if(input$indikatory %in% c("scpdsi", "pdsi")){ #"pdsi",
-  ind_dta <- readRDS(file.path(.datadir,"indikatory", paste0(input$indikatory, ".rds")))
- }else{
-    ind_dta <- IND %>% select(UPOV_ID, value = input$indikatory)
-  }
+ ind_dta <- readRDS(file.path(.datadir,"webapp_data/indikatory_new", paste0(input$indikatory, ".rds")))
+ colnames(ind_dta)[3] <- "value"
 
-#Dlouhodobé průměry (celé období/vybrané období)
-if(input$indikatory == "spi"){
-    ind_dta_f <- ind_dta[variable == input$entry.variable.ind]
-    dta <- (sp::merge(povodi,ind_dta_f[year == year(input$entry.date.ind) & month==month(input$entry.date.ind)], by="UPOV_ID"))
-    }else if(input$indikatory %in% c("spei", "scpdsi", "pdsi")){ #"pdsi",
-    ind_dta_f <- ind_dta
-    dta <- (sp::merge(povodi,ind_dta_f[year == year(input$entry.date.ind) & month==month(input$entry.date.ind)], by="UPOV_ID"))
-    }else{
-      ind_dta_f <- ind_dta
-      dta <- sp::merge(povodi, ind_dta, by="UPOV_ID")
-    }
+ dta <- (sp::merge(povodi, 
+                   ind_dta[ind_dta$DTM == input$entry.date.ind, ],
+                   by="UPOV_ID"))
+
+# dta <- sp::merge(povodi, ind_dta, by="UPOV_ID")
+    
   
 #Vytvaření palet
 # (2,0 až inf) - tmave modra
@@ -975,33 +970,14 @@ if(input$indikatory == "spi"){
 # (- 2,0 až -inf) - tmave červena
   
   mojePaleta <- c("#800000", "#ff0000", "#feb316", "#eafe9a", "#99ff66", "#0066ff", "#000066")
-      
-  if(input$indikatory %in% c("spi", "spei", "pdsi", "scpdsi")){
-    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(Inf, 2, 1.4, 0.5, -0.5, -1.4, -2, -Inf),  
+
+  pal <- colorBin(mojePaleta, domain = dta$value, bins = c(Inf, 2, 1.4, 0.5, -0.5, -1.4, -2, -Inf),  
                       na.color = "#999999")
-  }else if(input$indikatory == "PP"){
-    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(1000, 1, 0.9, 0.6, -1000),  
-                      na.color = "#999999")
-  }else if(input$indikatory == "WPP"){
-    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(1000, 5, 3, 1, 0),  
-                      na.color = "#999999")
-  }else if(input$indikatory == "WQ90"){
-    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(1000, 10, 5, 2, 0),  
-                      na.color = "#999999")
-    }else if(input$indikatory == "WPP_"){
-    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(1000, 5, 1, 0, -100),  
-                      na.color = "#999999")
-    }else if(input$indikatory == "WQ90_"){
-    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(1000, 10, 2, 0, -1000),  
-                      na.color = "#999999")
-    }else if(input$indikatory == "prum"){
-    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(4.5, 3.5, 2.5, 1.5, 0.5),  
-                      na.color = "#999999")
-    }
+
   
   
   
-  return(list(vrstvy = vrstvy, dta=dta, ind_dta_f = ind_dta_f, pal = pal))
+  return(list(vrstvy = vrstvy, dta=dta, ind_dta = ind_dta, pal = pal))
 }, ignoreNULL = FALSE, ignoreInit = FALSE)
 
 
@@ -1141,9 +1117,9 @@ Row
 
 renderDygraph({
 
-  if(input$indikatory %in% c("spi", "spei", "scpdsi", "pdsi")){ #"pdsi", 
+   ind_dta <- reac.ind()$ind_dta
 
-    ts.indikatory <- reac.ind()$ind_dta_f[UPOV_ID == default.shape.ind()] %>% select(value, DTM)
+    ts.indikatory <- ind_dta[ind_dta$UPOV_ID == default.shape.ind(), ] %>% select(value, DTM)
     
     if(nrow(ts.indikatory) != 0){
 
@@ -1174,8 +1150,6 @@ renderDygraph({
           dyLegend(width = 400, show = "always", hideOnMouseOut = FALSE)
         
       }
-
-}else{}
 
 })
 
