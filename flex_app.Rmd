@@ -37,8 +37,8 @@ library(rhandsontable)
 #CatCa::give_paths()
 
 # .datadir <- "/home/irina/ownCloud/Shared/BILAN_UPOV/used_data"
-.datadir <- 'C:/Users/Irina/ownCloud/Shared/BILAN_UPOV/used_data'
-# .datadir <- "S:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
+# .datadir <- 'C:/Users/Irina/ownCloud/Shared/BILAN_UPOV/used_data'
+.datadir <- "s:/Odbor 210/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
 # .dirM <- "M:/SC_Data2"
 #.datadir <- getwd()
 
@@ -68,7 +68,7 @@ cp <- readRDS(file.path(.datadir, "webapp_data/to_from/cara_prekroceni_dt_2018.r
 
 popis <- readRDS(file.path(.datadir, "webapp_data/popis.rds"))
 
-# IND <- readRDS(file.path(.datadir, "indikatory/IND.rds"))
+# IND <- readRDS(file.path(.datadir, "/atory/IND.rds"))
 
 pars <- readRDS(file.path(.datadir, "webapp_data/pars/pars.rds"))
 u <- readRDS(file.path(.datadir, "webapp_data/uzivani/uzivani_2019_TS.rds")) #uzivani_06_17_dt.rds
@@ -1100,7 +1100,7 @@ reac.ind <- eventReactive(input$go2,{
  ind_dta <- readRDS(file.path(.datadir, "webapp_data/indikatory_2019", paste0(input$indikatory, '.rds')))
 
  dta <- (sp::merge(povodi, 
-                   ind_dta[ind_dta$year == year(input$entry.date.ind) & ind_dta$week == (week(input$entry.date.ind)-1), ],
+                   ind_dta[ind_dta$year == year(input$entry.date.ind) & ind_dta$week == (week(input$entry.date.ind)), ],
                    by="UPOV_ID"))
 
 # dta <- sp::merge(povodi, ind_dta, by="UPOV_ID")
@@ -1372,7 +1372,7 @@ checkboxGroupInput("entry.layer_u", label = "Vrstvy",
 
 wellPanel(
     HTML('<div class="help-tip" style="float: left">
-          <p style = "width: 120px !important; position: relative;">Hodnoty zadáte kliknutím na místo odběru po přihlášení</p>
+          <p style = "width: 110px !important; position: relative;">Hodnoty zadáte kliknutím na místo odběru po přihlášení</p>
           </div>'),
     checkboxInput("uziv_tab_user", label = div(tags$b("Zadání vlastních hodnot", style = "color: #001a33")), value = FALSE)
     )
