@@ -124,7 +124,7 @@ body {
   
   
 .help-tip {
-    position: realtive;
+    float: right;
     top: 10px;
     left: 310px;
     text-align: center;
@@ -134,7 +134,7 @@ body {
     height: 18px;
     font-size: 12px;
     line-height: 20px;
-    cursor: default;
+    cursor: default;    
 }
 
 .help-tip:before{

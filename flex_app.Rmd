@@ -37,28 +37,28 @@ library(rhandsontable)
 #CatCa::give_paths()
 
 # .datadir <- "/home/irina/ownCloud/Shared/BILAN_UPOV/used_data"
-# .datadir <- "C:/Users/irina/ownCloud/Shared/BILAN_UPOV/used_data"
-.datadir <- "S:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
-.dirM <- "M:/SC_Data2"
+.datadir <- 'C:/Users/Irina/ownCloud/Shared/BILAN_UPOV/used_data'
+# .datadir <- "S:/SOUKROMÉ ADRESÁŘE/Irina/sucho_data"
+# .dirM <- "M:/SC_Data2"
 #.datadir <- getwd()
 
 # BM_p <- readRDS(file.path(.datadir, "webapp_data/mbilan/bilan_month_dt_2018.rds"))
 
-BM <- readRDS(file.path(.datadir, "webapp_data/bilan_n/bilan_month_dt.rds"))
+BM <- readRDS(file.path(.datadir, "webapp_data/bilan_n/bilan_1961_2019.rds"))
 
-BM_week <- readRDS(file.path(.dirM, "week_stable.rds"))
+BM_week <- readRDS(file.path(.datadir, "webapp_data/bilan_n/week_stable.rds"))
 
-povodi <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/povodi.rds"))
-reky <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/reky.rds"))
-jezera <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/jezera.rds"))
-nadrze <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/nadrze.rds"))
-kraje <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/kraje.rds"))
-okresy <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/okresy.rds"))
+povodi <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi.rds"))
+reky <- readRDS(file.path(.datadir, "webapp_data/geo_rds/reky.rds"))
+jezera <- readRDS(file.path(.datadir, "webapp_data/geo_rds/jezera.rds"))
+nadrze <- readRDS(file.path(.datadir, "webapp_data/geo_rds/nadrze.rds"))
+kraje <- readRDS(file.path(.datadir, "webapp_data/geo_rds/kraje.rds"))
+okresy <- readRDS(file.path(.datadir, "webapp_data/geo_rds/okresy.rds"))
 povodi_III <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi_III.rds"))
-# povodi_III <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/povodi_III.rds"))
+# povodi_III <- readRDS(file.path(.datadir, "webapp_data/geo_rds/povodi_III.rds"))
 
 
-# QD_stanice <- readRDS(file.path(.datadir, "webapp_data/st_read_rds/stanice.rds"))
+# QD_stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/stanice.rds"))
 # QD_stanice <- readRDS(file.path(.datadir, "webapp_data/geo_rds/stanice.rds"))
 QD_stanice <- sf::st_read(file.path(.datadir, "webapp_data/geo/stanice.shp"), quiet = TRUE)
 
@@ -71,9 +71,10 @@ popis <- readRDS(file.path(.datadir, "webapp_data/popis.rds"))
 # IND <- readRDS(file.path(.datadir, "indikatory/IND.rds"))
 
 pars <- readRDS(file.path(.datadir, "webapp_data/pars/pars.rds"))
-u <- readRDS(file.path(.datadir, "webapp_data/uzivani/uzivani_06_17_dt.rds"))
-u_leaflet <- readRDS(file.path(.datadir, "webapp_data/uzivani/u_leaflet.rds"))
-u_pas <- readRDS(file.path(.datadir, "webapp_data/uzivani/uzivani_pas.rds"))
+u <- readRDS(file.path(.datadir, "webapp_data/uzivani/uzivani_2019_TS.rds")) #uzivani_06_17_dt.rds
+u_leaflet <- readRDS(file.path(.datadir, "webapp_data/uzivani/u_leaflet_2019.rds"))
+u_pas <- readRDS(file.path(.datadir, "webapp_data/uzivani/uzivani_pas_update.rds"))
+u_pas$ID <- paste(u_pas$ICOC, u_pas$JEV, sep = '_')
 QD <- readRDS(file.path(.datadir, "webapp_data/chmu/QD.rds"))
 dta_val <- readRDS(file.path(.datadir, "webapp_data/chmu/data_validace.rds"))
 chars <- readRDS(file.path(.datadir, "webapp_data/chmu/chars_mm.rds"))
@@ -139,6 +140,61 @@ Column {.sidebar data-width=400}
 
 ```{r ZM sidebar}
 
+# function - dateInput, zobrazeni mesice
+#---------------------------------------
+
+mydateInput <- function(inputId, label, value = NULL, min = NULL, max = NULL,
+                      format = "yyyy-mm-dd", startview = "month", weekstart = 0, language = "cs", minviewmode="months",
+                      width = NULL) {
+
+  # If value is a date object, convert it to a string with yyyy-mm-dd format
+  # Same for min and max
+  if (inherits(value, "Date"))  value <- format(value, "%Y-%m-%d")
+  if (inherits(min,   "Date"))  min   <- format(min,   "%Y-%m-%d")
+  if (inherits(max,   "Date"))  max   <- format(max,   "%Y-%m-%d")
+
+  htmltools::attachDependencies(
+    tags$div(id = inputId,
+             class = "shiny-date-input form-group shiny-input-container",
+             style = if (!is.null(width)) paste0("width: ", validateCssUnit(width), ";"),
+
+             controlLabel(inputId, label),
+             tags$input(type = "text",
+                        # datepicker class necessary for dropdown to display correctly
+                        class = "form-control datepicker",
+                        `data-date-language` = language,
+                        `data-date-weekstart` = weekstart,
+                        `data-date-format` = format,
+                        `data-date-start-view` = startview,
+                        `data-date-min-view-mode` = minviewmode,
+                        `data-min-date` = min,
+                        `data-max-date` = max,
+                        `data-initial-date` = value
+             )
+    ),
+    datePickerDependency
+  )
+}
+
+`%AND%` <- function(x, y) {
+  if (!is.null(x) && !is.na(x))
+    if (!is.null(y) && !is.na(y))
+      return(y)
+  return(NULL)
+}
+
+controlLabel <- function(controlName, label) {
+  label %AND% tags$label(class = "control-label", `for` = controlName, label)
+}
+
+datePickerDependency <- htmltools::htmlDependency(
+  "bootstrap-datepicker", "1.0.2", c(href = "shared/datepicker"),
+  script = "bootstrap-datepicker.js",
+  stylesheet = "bootstrap-datepicker.css")
+
+#---------------------------------------
+
+
 #Inputs--------------------
 
 #heslo
@@ -147,7 +203,7 @@ credentials <- as.data.frame(read.csv(file.path(.datadir,"webapp_data/hesla.csv"
 USER <- reactiveValues(Logged = FALSE)
 
 renderUI({
-  wellPanel(HTML('<div class="help-tip">
+  wellPanel(HTML('<div class="help-tip" style = "margin-bottom: 4px">
                <p>Zadejte heslo pro přístup k plné verzi aplikace.
                </p></div>'),
     HTML('<button data-toggle="collapse" data-target="#boxH" class="danger">Přihlášení</button>'),
@@ -210,32 +266,45 @@ wellPanel(HTML('<div class="help-tip">
   conditionalPanel(condition = "input.kartogram == 'B'",
                   
                  dateInput("entry.date", label = NULL, "yyyy-mm-dd", language = "cs",
-                           value = as.Date("2018-06-01"), startview = "decade",
-                           min = as.Date("1982-11-01"), max = as.Date("2018-06-01"))
+                           value = Sys.Date()-7,
+                           min = as.Date("1982-11-01"), max = Sys.Date())
                  ),
   conditionalPanel(condition = "input.kartogram == 'C'",
             
                  selectInput("entry.yearC", label = "Zvolte rok:",
-                             choices = seq(min(BM$year),max(BM$year),1))
+                             choices = seq(min(BM$year),max(BM$year),1),
+                             selected = 2019)
                  )
   )
 
-
   renderUI({
     wellPanel(
-      HTML('<div class="help-tip">
-            <p>Tady nastavte rozsah hodnot.</p>
-            </div>'),
-      sliderInput("entry.range", label = "Filtrace dle hodnoty",
-                  min = floor(reac()$def_min), 
-                  max = ceiling(reac()$def_max),
-                  value = c(floor(reac()$def_min),
-                            ceiling(reac()$def_max))),
-      textOutput("filtrInfo")
+      # HTML('<div class="help-tip">
+      #       <p>Nastavte průhlednost vrstvy</p>
+      #       </div>'),
+      sliderInput("FO", label = "Průhlednost vrstvy",
+                  min = 0,
+                  max = 100,
+                  value = 60)
     )
-            })
+  })
+
+
+  # renderUI({
+  #   wellPanel(
+  #     HTML('<div class="help-tip">
+  #           <p>Tady nastavte rozsah hodnot.</p>
+  #           </div>'),
+  #     sliderInput("entry.range", label = "Filtrace dle hodnoty",
+  #                 min = floor(reac()$def_min), 
+  #                 max = ceiling(reac()$def_max),
+  #                 value = c(floor(reac()$def_min),
+  #                           ceiling(reac()$def_max))),
+  #     textOutput("filtrInfo")
+  #   )
+  #           })
   
-  output$filtrInfo <- renderText(paste0("Použitý filtr:", round(reac()$inputed_min), "-", round(reac()$inputed_max)))
+  # output$filtrInfo <- renderText(paste0("Použitý filtr:", round(reac()$inputed_min), "-", round(reac()$inputed_max)))
   
   hr()
   
@@ -319,13 +388,13 @@ reac<- eventReactive(input$go1,{
   inputed_min = def_min
   inputed_max = def_max
   
-  if(!is.null(input$entry.range[1])){
-  if(input$entry.range[1] != def_min){
-    inputed_min = input$entry.range[1]}
-
-  if(input$entry.range[2] != def_max){
-    inputed_max = input$entry.range[2]}
-  }
+  # if(!is.null(input$entry.range[1])){
+  # if(input$entry.range[1] != def_min){
+  #   inputed_min = input$entry.range[1]}
+  # 
+  # if(input$entry.range[2] != def_max){
+  #   inputed_max = input$entry.range[2]}
+  # }
   
   dta <- base::subset(dta, (value >= inputed_min & value <= inputed_max) | is.na(value))
   
@@ -419,7 +488,7 @@ output$map<-renderLeaflet({
     if("P" %in% vrstvy){ #addPolygons
 map <-  map %>% addPolygons(data=dta, layerId = dta$UPOV_ID, color = "black",
                              weight = 1.5, opacity = 0.45, smoothFactor = 0,
-                             fillColor = ~pal(value), fillOpacity = 0.8,
+                             fillColor = ~pal(value), fillOpacity = input$FO/100,
                              group = "Povodí", stroke = T,
                  highlightOptions = highlightOptions(color = "#a53333",
                                                      opacity = 1,
@@ -518,35 +587,36 @@ leafletOutput("map")
 Row {.tabset}
 -------------------------------------
 
-### Denní data
+
 
 ```{r cr denni data}
-renderDygraph({
-  
-  d <- dir(file.path(.dirM, "data/BILout"))
-  bilan_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
-  dta_bd <- readRDS(file.path(.dirM, "data/BILout", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
-  
-  ts.bilance <- dta_bd %>%  select(input$entry.variable_d, DTM)
-
-  RangeMin <- min(ts.bilance %>% select(c(input$entry.variable_d)))-0.5
-  RangeMax <- max(ts.bilance %>% select(c(input$entry.variable_d)))+0.5
-  
-  ts.bilance <- xts::xts(ts.bilance, order.by = ts.bilance$DTM)
-
-  dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas") %>%
-  dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>%  
-  dyRangeSelector() %>% 
-  dyCrosshair(direction = "vertical")
-})
-
-absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
-                  draggable = FALSE, top = '52.7%', left = "auto", right = '0.5%', bottom = "auto",
-                  width = '15%',
-                  style = "opacity: 0.9; style = z-index: 400",
-    HTML('<button data-toggle="collapse" data-target="#box7" class="choose">Výběr časových řad</button>'),
-        tags$div(id = 'box7', class="collapse", style = "max-height: 250px; overflow-y:scroll",
-                 checkboxGroupInput("entry.variable_d", "Zvolte:", choices = choices, selected = c("RM"))))
+### Denní data
+# renderDygraph({
+#   
+#   d <- dir(file.path(.dirM, "data/BILout"))
+#   bilan_dir <- data.frame(source=d, UPOV_ID=gsub("*.rds","",d))
+#   dta_bd <- readRDS(file.path(.dirM, "data/BILout", bilan_dir$source[bilan_dir$UPOV_ID==default.shape()]))
+#   
+#   ts.bilance <- dta_bd %>%  select(input$entry.variable_d, DTM)
+# 
+#   RangeMin <- min(ts.bilance %>% select(c(input$entry.variable_d)))-0.5
+#   RangeMax <- max(ts.bilance %>% select(c(input$entry.variable_d)))+0.5
+#   
+#   ts.bilance <- xts::xts(ts.bilance, order.by = ts.bilance$DTM)
+# 
+#   dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas") %>%
+#   dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>%  
+#   dyRangeSelector() %>% 
+#   dyCrosshair(direction = "vertical")
+# })
+# 
+# absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
+#                   draggable = FALSE, top = '52.7%', left = "auto", right = '0.5%', bottom = "auto",
+#                   width = '15%',
+#                   style = "opacity: 0.9; style = z-index: 400",
+#     HTML('<button data-toggle="collapse" data-target="#box7" class="choose">Výběr časových řad</button>'),
+#         tags$div(id = 'box7', class="collapse", style = "max-height: 250px; overflow-y:scroll",
+#                  checkboxGroupInput("entry.variable_d", "Zvolte:", choices = choices, selected = c("RM"))))
 ```
 
 
@@ -556,17 +626,43 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
 
 renderDygraph({
   
-  ts.bilance <- BM_week[BM_week$IID == default.shape() & BM_week$variable == input$entry.variable3,] %>% select(value, DTM) 
+  if(is.null(input$entry.variable3)){
+    ts.bilance <- data.frame(value = rep(0,5), DTM = seq(Sys.Date()-4, Sys.Date(), 1))
+     ts.bilance <- xts::xts(ts.bilance, order.by = ts.bilance$DTM)
+     ts.bilance <- ts.bilance[,-which(colnames(ts.bilance) == "DTM")]
+     
+     dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas") %>%
+       dySeries("V1", label = "Zvolte proměnnou") %>%
+       dyOptions(colors = "gray", fillGraph = TRUE, fillAlpha = 0.4) %>%
+       dyLegend(width = 400, show = "always", hideOnMouseOut = FALSE)
+  }else{
   
-  RangeMin <- min(ts.bilance$value)-0.5
-  RangeMax <- max(ts.bilance$value)+0.5
+  ts.bilance <- BM_week[BM_week$IID == default.shape() & BM_week$variable == input$entry.variable3,] 
+  ts.bilance <- ts.bilance %>% dcast(DTM~variable) %>% select(input$entry.variable3, DTM) %>% arrange(DTM)
   
-  ts.bilance <- xts::xts(ts.bilance, order.by = ts.bilance$DTM)
-
-  dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas") %>%
-  dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>%  
-  dyRangeSelector() %>% 
-   dyCrosshair(direction = "vertical")
+  if(nrow(ts.bilance) != 0){
+      RangeMin <- min(ts.bilance %>% select(c(input$entry.variable3)))-0.5
+      RangeMax <- max(ts.bilance %>% select(c(input$entry.variable3)))+0.5
+    
+      ts.bilance <- xts::xts(ts.bilance[,-which(colnames(ts.bilance) == "DTM")], order.by = ts.bilance$DTM)
+    
+      dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas")  %>% 
+      dyOptions(connectSeparatedPoints = T) %>%
+      dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>%
+      dyRangeSelector() %>%
+      dyCrosshair(direction = "vertical")
+   }else{
+     ts.bilance <- data.frame(value = rep(0,5), DTM = seq(Sys.Date()-4, Sys.Date(), 1))
+     ts.bilance <- xts::xts(ts.bilance, order.by = ts.bilance$DTM)
+     ts.bilance <- ts.bilance[,-which(colnames(ts.bilance) == "DTM")]
+     
+     dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas") %>%
+       dySeries("V1", label = "Nejsou záznamy") %>%
+       dyOptions(colors = "gray", fillGraph = TRUE, fillAlpha = 0.4) %>%
+       dyLegend(width = 400, show = "always", hideOnMouseOut = FALSE)
+   }
+}
+  
 })
 
 absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
@@ -575,7 +671,7 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
                   style = "opacity: 0.9; style = z-index: 400",
     HTML('<button data-toggle="collapse" data-target="#box4" class="choose">Výběr časových řad</button>'),
         tags$div(id = 'box4', class="collapse", style = "max-height: 250px; overflow-y:scroll",
-                 checkboxGroupInput("entry.variable3", "Zvolte:", choices = choices, selected = c("RM"))))
+                 checkboxGroupInput("entry.variable3", "Zvolte:", choices = choices, selected = c("P"))))
 
 ```
 
@@ -584,28 +680,77 @@ absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
 
 ```{r cr mesicni data}
 
+# renderDygraph({
+#   
+#   ts.bilance <- BM[BM$UPOV_ID == default.shape() & BM$variable == input$entry.variable2,] %>% select(value, DTM) 
+#   
+#   RangeMin <- min(ts.bilance$value)-0.5
+#   RangeMax <- max(ts.bilance$value)+0.5
+#   
+#   ts.bilance <- xts::xts(ts.bilance[,-which(colnames(ts.bilance) == "DTM")], order.by = ts.bilance$DTM)
+# 
+#   dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas") %>%
+#   dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>%  
+#   dyRangeSelector() %>% 
+#    dyCrosshair(direction = "vertical")
+# })
+# 
+# absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
+#                   draggable = FALSE, top = '52.7%', left = "auto", right = '0.5%', bottom = "auto",
+#                   width = '15%',
+#                   style = "opacity: 0.9; style = z-index: 400",
+#     HTML('<button data-toggle="collapse" data-target="#box4" class="choose">Výběr časových řad</button>'),
+#         tags$div(id = 'box4', class="collapse", style = "max-height: 250px; overflow-y:scroll",
+#                  checkboxGroupInput("entry.variable2", "Zvolte:", choices = choices, selected = c("RM"))))
+
 renderDygraph({
   
-  ts.bilance <- BM[BM$UPOV_ID == default.shape() & BM$variable == input$entry.variable2,] %>% select(value, DTM) 
+  if(is.null(input$entry.variable2)){
+    ts.bilance <- data.frame(value = rep(0,5), DTM = seq(Sys.Date()-4, Sys.Date(), 1))
+     ts.bilance <- xts::xts(ts.bilance, order.by = ts.bilance$DTM)
+     ts.bilance <- ts.bilance[,-which(colnames(ts.bilance) == "DTM")]
+     
+     dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas") %>%
+       dySeries("V1", label = "Zvolte proměnnou") %>%
+       dyOptions(colors = "gray", fillGraph = TRUE, fillAlpha = 0.4) %>%
+       dyLegend(width = 400, show = "always", hideOnMouseOut = FALSE)
+  }else{
   
-  RangeMin <- min(ts.bilance$value)-0.5
-  RangeMax <- max(ts.bilance$value)+0.5
+  ts.bilance <- BM[BM$UPOV_ID == default.shape() & BM$variable == input$entry.variable2,]
+  ts.bilance <- ts.bilance %>% dcast(DTM~variable) %>% select(input$entry.variable2, DTM) %>% arrange(DTM)
   
-  ts.bilance <- xts::xts(ts.bilance, order.by = ts.bilance$DTM)
-
-  dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas") %>%
-  dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>%  
-  dyRangeSelector() %>% 
-   dyCrosshair(direction = "vertical")
+  if(nrow(ts.bilance) != 0){
+      RangeMin <- min(ts.bilance %>% select(c(input$entry.variable2)))-0.5
+      RangeMax <- max(ts.bilance %>% select(c(input$entry.variable2)))+0.5
+    
+      ts.bilance <- xts::xts(ts.bilance, order.by = ts.bilance$DTM)
+      ts.bilance <- ts.bilance[,-which(colnames(ts.bilance) == "DTM")]
+    
+      dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas")  %>% 
+      dyOptions(connectSeparatedPoints = T) %>%
+      dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>%
+      dyRangeSelector() %>%
+      dyCrosshair(direction = "vertical")
+   }else{
+     ts.bilance <- data.frame(value = rep(0,5), DTM = seq(Sys.Date()-4, Sys.Date(), 1))
+     ts.bilance <- xts::xts(ts.bilance[,-which(colnames(ts.bilance) == "DTM")], order.by = ts.bilance$DTM)
+     
+     dygraph(ts.bilance, main = paste(as.character(title.f())), xlab = "Čas") %>%
+       dySeries("V1", label = "Nejsou záznamy") %>%
+       dyOptions(colors = "gray", fillGraph = TRUE, fillAlpha = 0.4) %>%
+       dyLegend(width = 400, show = "always", hideOnMouseOut = FALSE)
+   }
+}
+  
 })
 
 absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
                   draggable = FALSE, top = '52.7%', left = "auto", right = '0.5%', bottom = "auto",
                   width = '15%',
                   style = "opacity: 0.9; style = z-index: 400",
-    HTML('<button data-toggle="collapse" data-target="#box4" class="choose">Výběr časových řad</button>'),
-        tags$div(id = 'box4', class="collapse", style = "max-height: 250px; overflow-y:scroll",
-                 checkboxGroupInput("entry.variable2", "Zvolte:", choices = choices, selected = c("RM"))))
+    HTML('<button data-toggle="collapse" data-target="#box2" class="choose">Výběr časových řad</button>'),
+        tags$div(id = 'box2', class="collapse", style = "max-height: 250px; overflow-y:scroll",
+                 checkboxGroupInput("entry.variable2", "Zvolte:", choices = choices, selected = c("P"))))
 
 ```
 
@@ -659,7 +804,7 @@ absolutePanel(class = "panel panel-default", fixed = TRUE,
                   style = "opacity: 1; style = z-index: 400",
     HTML('<button data-toggle="collapse" data-target="#box5" class="choose">Výběr pro čáru překročení</button>'),
         tags$div(id = 'box5', class="collapse", style = "max-height: 420px",
-                 selectInput("variable_cp", label=NULL , choices = choices, selected = c("RM"))))
+                 selectInput("variable_cp", label=NULL , choices = choices, selected = c("P"))))
 ```
 
 
@@ -824,8 +969,8 @@ absolutePanel(class = "panel panel-default", fixed = TRUE,
     HTML('<button data-toggle="collapse" data-target="#box6" class="choose">Výběr pro trendy</button>'),
         tags$div(id = 'box6', class="collapse", style = "max-height: 420px",
             wellPanel(
-                 selectInput("variable_trend", label=NULL , choices = choices, selected = c("RM")),
-                 sliderInput("date_trend", label = NULL, min = 1961, max = 2015, value = c(1990,2015))
+                 selectInput("variable_trend", label=NULL , choices = choices, selected = c("P")),
+                 sliderInput("date_trend", label = NULL, min = 1961, max = 2015, value = c(1990,2015), sep = "")
                  )
             )
     )
@@ -903,17 +1048,19 @@ renderUI({
   })
 
 wellPanel(
-  radioButtons("indikatory", label=NULL, choices = c("SGI" = "sgi", 
-                                                     "SPEI" = "spei", "SPI" = "spi", 
-                                                     "PDSI" = "pdsi"),
-               selected = "sgi")
+  radioButtons("indikatory", label=NULL, choices = c("SPEI" = "spei",
+                                                     "SGI" = "sgi", #"SPI" = "spi"),
+                                                     "SRI" = "sriF", 
+                                                     "Deficit půdní vláhy" = "def_puda",
+                                                     "Retenční kapacita" = "retence"),
+               selected = "spei")
 
 )
 
 wellPanel(
     dateInput("entry.date.ind", label = NULL, "yyyy-mm-dd", language = "cs",
-                           value = as.Date("2019-03-18"), startview = "year",
-                           min = as.Date("2010-01-04"), max = as.Date("2019-03-18"))
+                           value = Sys.Date()-14,
+                           min = as.Date("1981-01-01"), max = Sys.Date()-7)
 )
 
 
@@ -950,11 +1097,10 @@ reac.ind <- eventReactive(input$go2,{
   
  vrstvy <- input$entry.layer.ind
  
- ind_dta <- readRDS(file.path(.datadir,"webapp_data/indikatory_new", paste0(input$indikatory, ".rds")))
- colnames(ind_dta)[3] <- "value"
+ ind_dta <- readRDS(file.path(.datadir, "webapp_data/indikatory_2019", paste0(input$indikatory, '.rds')))
 
  dta <- (sp::merge(povodi, 
-                   ind_dta[ind_dta$DTM == input$entry.date.ind, ],
+                   ind_dta[ind_dta$year == year(input$entry.date.ind) & ind_dta$week == (week(input$entry.date.ind)-1), ],
                    by="UPOV_ID"))
 
 # dta <- sp::merge(povodi, ind_dta, by="UPOV_ID")
@@ -969,13 +1115,19 @@ reac.ind <- eventReactive(input$go2,{
 # (-1,4 až -2,0) - cervena
 # (- 2,0 až -inf) - tmave červena
   
-  mojePaleta <- c("#800000", "#ff0000", "#feb316", "#eafe9a", "#99ff66", "#0066ff", "#000066")
-
-  pal <- colorBin(mojePaleta, domain = dta$value, bins = c(Inf, 2, 1.4, 0.5, -0.5, -1.4, -2, -Inf),  
+# mojePaleta <- c("#800000", "#ff0000", "#feb316", "#eafe9a", "#99ff66", "#0066ff", "#000066")
+  
+  if(input$indikatory %in% c('spei', 'sgi', 'sriF')){
+    mojePaleta <- c("#003366", "#4C7FB2", "#99CCFF", "#FFFFFF", "#FFE78E", "#CC7347", "#990000")
+    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(Inf, 2, 1.4, 0.5, -0.5, -1.4, -2, -Inf),  
                       na.color = "#999999")
-
-  
-  
+  }else if(input$indikatory == 'retence'){
+    mojePaleta <- c("#990000", "#CC7347", "#FFE78E", "#FFFFFF", "#99CCFF", "#4C7FB2", "#003366")
+    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(0, 20, 40, 60, 80, 100), na.color = "#ffffff")
+  }else if(input$indikatory == 'def_puda'){
+    mojePaleta <- c("#990000", "#BB4D2F", "#DD9A5E", "#FFE78E", "#FFFFFF", "#99CCFF", "#6699CC", "#336699", "#003366")
+    pal <- colorBin(mojePaleta, domain = dta$value, bins = c(-100, -60, -30, -10, 0,  10,  30,  60, 100), na.color = "#ffffff")
+  }
   
   return(list(vrstvy = vrstvy, dta=dta, ind_dta = ind_dta, pal = pal))
 }, ignoreNULL = FALSE, ignoreInit = FALSE)
@@ -1129,10 +1281,12 @@ renderDygraph({
         ts.indikatory$value[is.na(ts.indikatory$value)]<-0
         
         ts.indikatory <- xts::xts(ts.indikatory, order.by = ts.indikatory$DTM)
+        ts.indikatory <- ts.indikatory[,-which(colnames(ts.indikatory) == "DTM")]
         
         dygraph(ts.indikatory,
                 main = paste(as.character(popis$NAZ_UTVAR[popis$UPOV_ID==default.shape.ind()])),
-                xlab = "Čas") %>%
+                xlab = "Čas")  %>% 
+          dyRangeSelector(dateWindow = c(as.Date('2016-01-01'), Sys.Date()), retainDateWindow = TRUE, height = 10) %>%
           dyAxis("y", valueRange = c(RangeMin, RangeMax)) %>%
           dyLimit(0, strokePattern = "solid", color = "black") %>%
           dyOptions(colors = "gray", fillGraph = TRUE, fillAlpha = 0.4) %>%
@@ -1175,11 +1329,17 @@ title.f2 <- reactive({
   return(title)
   })
 
+# default.circle <- reactive({
+#   if(is.null(input$uzivani_marker_click$id)){
+#   NAZICO.sel <- u_leaflet$NAZICO[1]}
+#   else{NAZICO.sel<-input$uzivani_marker_click$id}
+#   return(NAZICO.sel)})
+
 default.circle <- reactive({
   if(is.null(input$uzivani_marker_click$id)){
-  NAZICO.sel <- u_leaflet$NAZICO[1]}
-  else{NAZICO.sel<-input$uzivani_marker_click$id}
-  return(NAZICO.sel)})
+    ID.sel <- u_leaflet$ID[1]
+  }else{ID.sel<-input$uzivani_marker_click$id}
+  return(ID.sel)})
 
 #Reactions--------------------
 
@@ -1205,9 +1365,18 @@ hr(),
 checkboxGroupInput("entry.layer_u", label = "Vrstvy",
                                                         choices = c("Mapový podklad" = "MP", "Polygony" = "P", "Odběratele" = "O",
                                                                     "Řeky" = "R", "Jezera" = "J", "Nádrže" = "N"), 
-                                                        selected = c("MP", "P", "O")),
-hr(),
-checkboxInput("uziv_tab_user", label = div(tags$b("Zadání vlastních hodnot", style = "color: #001a33")), value = FALSE))
+                                                        selected = c("MP", "P", "O"))
+)
+
+# hr()
+
+wellPanel(
+    HTML('<div class="help-tip" style="float: left">
+          <p style = "width: 120px !important; position: relative;">Hodnoty zadáte kliknutím na místo odběru po přihlášení</p>
+          </div>'),
+    checkboxInput("uziv_tab_user", label = div(tags$b("Zadání vlastních hodnot", style = "color: #001a33")), value = FALSE)
+    )
+
 
 wellPanel(HTML(paste("<div style='font-size:.85em'>",paste("<b>POD</b> - odběr z podzemních vod",
           "<b>POV</b> - odběr z povrchových vod",
@@ -1243,8 +1412,8 @@ labels.points <- sprintf(
 # leaflet() %>% setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
     
   vrstvy <- input$entry.layer_u
-  # centr <- rgeos::gCentroid(povodi.ds(), byid = TRUE)
-  centr <- rgeos::gCentroid(spgeom = methods::as( object = povodi.ds(), Class = "Spatial"), byid = TRUE)
+  centr <- rgeos::gCentroid(povodi.ds(), byid = TRUE)
+  # centr <- rgeos::gCentroid(spgeom = methods::as(object = povodi.ds(), class = "Spatial"), byid = TRUE)
   
   uzivani <- leaflet() %>% setView(lng=centr@coords[1], lat = centr@coords[2], zoom=12)
   
@@ -1267,7 +1436,7 @@ labels.points <- sprintf(
   
   if("O" %in% vrstvy){
    uzivani <- uzivani %>% addCircleMarkers(data=u_leaflet, radius = 6.5, color = "black", fillColor = pal_2(u_leaflet$JEV),
-                 weight = 0.5, opacity = 0.7, fillOpacity = 1, layerId = u_leaflet$NAZICO,
+                 weight = 0.5, opacity = 0.7, fillOpacity = 1, layerId =  u_leaflet$ID,
                  popup = labels.points, clusterOptions = markerClusterOptions(spiderfyDistanceMultiplier=1.5)) %>% 
      addLegend(pal = pal_2, values = u_leaflet$JEV, opacity = 0.7, title = "Legenda",
               position = "topright")  }
@@ -1367,7 +1536,7 @@ observeEvent(input$ok, {
 observeEvent(input$send, {
 
   write.table(changes(), file.path(.datadir, "webapp_data/icoc_values", 
-                                   paste0(u_leaflet$ICOC[u_leaflet$NAZICO ==input$uzivani_marker_click$id],
+                                   paste0(u_leaflet$ICOC[u_leaflet$ID ==input$uzivani_marker_click$id],
                                           ".csv")))
   showModal(tableModal(done = TRUE))
    
@@ -1387,9 +1556,10 @@ observeEvent(input$send, {
 
 ```{r uzivani: casova rada}
 renderDygraph({
-  ts.uzivani <-  u[UPOV_ID == default.shape2()] %>% group_by(JEV, DTM) %>%
-                       summarise(sum = sum(value)) %>% ungroup %>% dcast(DTM~JEV, value.var = "sum")
+  ts.uzivani <-  u[u$UPOV_ID == default.shape2(),] %>% group_by(JEV, DTM) %>%
+                       summarise(sum = sum(real)) %>% ungroup %>% dcast(DTM~JEV, value.var = "sum")
   ts.uzivani <- xts::xts(ts.uzivani, order.by = ts.uzivani$DTM)
+  ts.uzivani <- ts.uzivani[,-which(colnames(ts.uzivani) == "DTM")]
   #ts.uzivani <- ts(ts.uzivani, start = decimal_date(as.Date("2006-12-01")), frequency = 1)
 
   dygraph(ts.uzivani, main = paste(as.character(title.f2())))
@@ -1403,7 +1573,7 @@ Row {data-heigth=400}
 
 ```{r uzivani: tab:odberatel}
 renderDataTable({
-  subtotal <- u[UPOV_ID == default.shape2()] %>% replace(is.na(.), 0) %>% group_by(NAZICO, JEV) %>% summarise(suma = sum(value)) %>% select(NAZICO, JEV, suma)}, class = 'compact cell-border', colnames = c("Odběratel", "Jev", "Suma"), options = list(scrollY = "300px", lengthMenu = c(100,200), language = list(search = 'Hledat:', lengthMenu = 'Zobrazit_MENU_položek')))
+  subtotal <- u[u$UPOV_ID == default.shape2(),] %>% replace(is.na(.), 0) %>% group_by(NAZICO, JEV) %>% summarise(suma = sum(real)) %>% select(NAZICO, JEV, suma)}, class = 'compact cell-border', colnames = c("Odběratel", "Jev", "Suma"), options = list(scrollY = "300px", lengthMenu = c(100,200), language = list(search = 'Hledat:', lengthMenu = 'Zobrazit_MENU_položek')))
 ```
 
 
@@ -1411,8 +1581,9 @@ renderDataTable({
 
 ```{r uzivani: TS odberatel}
 renderDygraph({
-  ts.uzivani <-  u[NAZICO == default.circle()] %>% dcast(DTM~JEV) 
+  ts.uzivani <-  u[u$ID == default.circle(),] %>% arrange(DTM) %>% dcast(DTM~JEV, value.var = "real") 
   ts.uzivani <- xts::xts(ts.uzivani, order.by = ts.uzivani$DTM)
+  ts.uzivani <- ts.uzivani[,-which(colnames(ts.uzivani) == "DTM")]
   #ts.uzivani <- ts(ts.uzivani, start = decimal_date(as.Date("2006-12-01")), frequency = 1)
 
   dygraph(ts.uzivani, main = paste(as.character(default.circle())))
@@ -1436,15 +1607,16 @@ title_uv <- reactive({
   title<- popis$NAZ_UTVAR[popis$UPOV_ID == default.shape_uv()]
   return(title)
   })
-title_bod_uv <- reactive({
-  title <- u$NAZICO[u$NAZICO == default.circle_uv()]
-  return(title)
-})
+# title_bod_uv <- reactive({
+#   title <- u[u$ID == default.circle_uv(),]$NAZICO
+#   return(title)
+# })
+
 default.circle_uv <- reactive({
   if(is.null(input$vyhled_uzivani_marker_click$id)){
-  NAZICO.sel <- u_leaflet$NAZICO[109]}
-  else{NAZICO.sel<-input$vyhled_uzivani_marker_click$id}
-  return(NAZICO.sel)})
+    ID.sel <- u_leaflet$ID[1]
+  }else{ID.sel<-input$vyhled_uzivani_marker_click$id}
+  return(ID.sel)})
 
 # u_leaflet$NAZICO[109]
 
@@ -1453,6 +1625,7 @@ default.circle_uv <- reactive({
 povodi.uv <- reactive({
   povodi[povodi$UPOV_ID==default.shape_uv(), ]
 })
+
 pal_2 <- colorFactor("Paired", domain = u_leaflet$JEV, na.color = "#ffffff")
 
 ```
@@ -1484,13 +1657,13 @@ HTML(paste("Jednotky: <b>tis.m3/měsíc</b>")))
 
 ```{r vyhled_uzivani: pas tab}
 renderTable({
-u_pas_ic <- u_pas %>% filter(NAZICO == default.circle_uv())
-c <- colnames(u_pas_ic)
-u_pas_ic[2,] <- u_pas_ic[1,]
-u_pas_ic[1,] <- c
-if(nrow(u_pas %>% filter(NAZICO == default.circle_uv())) > 0){
-u_pas_ic <- t(u_pas_ic)
-u_pas_ic}else{paste("Nejsou informace")}
+  u_pas_ic <- u_pas %>% filter(ID == default.circle_uv())
+  c <- colnames(u_pas_ic)
+  u_pas_ic[2,] <- u_pas_ic[1,]
+  u_pas_ic[1,] <- c
+  if(nrow(u_pas %>% filter(ID == default.circle_uv())) > 0){
+  u_pas_ic <- t(u_pas_ic)
+  u_pas_ic}else{paste("Nejsou informace")}
 }, digits = 3, spacing = 'xs', rownames = FALSE, colnames = FALSE)
 ```
 
@@ -1514,8 +1687,8 @@ labels.points <- sprintf(
 # centr <- getSpPPolygonsLabptSlots(povodi.ds())
 # leaflet() %>% setView(lng=centr[,1], lat = centr[,2], zoom=12) %>%
     
-  # centr <- rgeos::gCentroid(povodi.uv(), byid = TRUE)
-  centr <- rgeos::gCentroid(spgeom = methods::as( object = povodi.uv(), Class = "Spatial"), byid = TRUE)
+  centr <- rgeos::gCentroid(povodi.uv(), byid = TRUE)
+  # centr <- rgeos::gCentroid(spgeom = methods::as( object = povodi.uv(), Class = "Spatial"), byid = TRUE)
     
   vyhled_uzivani <- leaflet() %>% setView(lng=centr@coords[1], lat = centr@coords[2], zoom=12) 
   
@@ -1527,7 +1700,8 @@ labels.points <- sprintf(
   if("O" %in% vrstvy){ #addCircleMarkers
    vyhled_uzivani <- vyhled_uzivani %>% addCircleMarkers(data=u_leaflet, radius = 6.5, color = "black", 
                                                          fillColor = pal_2(u_leaflet$JEV),
-                                                         weight = 0.5, opacity = 0.7, fillOpacity = 1, layerId = u_leaflet$NAZICO,
+                                                         weight = 0.5, opacity = 0.7, fillOpacity = 1, 
+                                                         layerId = u_leaflet$ID,
                                                          popup = labels.points, 
                                                          clusterOptions = markerClusterOptions(spiderfyDistanceMultiplier=1.5)) %>% 
      addLegend(pal = pal_2, values = u_leaflet$JEV, opacity = 0.7, title = "Legenda",
@@ -1557,12 +1731,13 @@ Row {data-height=500}
 ```{r vyhled_uzivani: odber/povolen + pozadavek tab}
 
 output$odbery <- renderTable({
-  u_odber <- u %>% filter(NAZICO == default.circle_uv(), ROK == 2017) %>% select(MESIC, value)
+  # u_odber <- u %>% filter(NAZICO == default.circle_uv(), ROK == 2017) %>% select(MESIC, value)
+  u_odber <- u %>% mutate(ROK = year(DTM), MESIC = month(DTM)) %>% filter(ID == default.circle_uv(), ROK == 2018) %>% select(MESIC, value = real)
   
   if(nrow(u_odber) > 0){
-  u_odber <- rbind(u_odber, data.frame(MESIC = "RM", value = sum(u_odber$value)))
-  u_odber <- as.data.frame(t(u_odber))
-  u_odber
+    u_odber <- rbind(u_odber, data.frame(MESIC = "RM", value = sum(u_odber$value)))
+    u_odber <- as.data.frame(t(u_odber))
+    u_odber
   }else{print("Nejsou informace")}
 }, digits = 3, spacing = 'xs', rownames = FALSE, colnames = FALSE)
 
@@ -1596,10 +1771,11 @@ true_to_java <- function(x){
 }
 
 output$hotable_v <- renderRHandsontable({
-  u_val1 <- u %>% filter(NAZICO == default.circle_uv(), ROK == 2017) %>% select(MESIC, value) %>%
+  u_val <- u %>% mutate(ROK = year(DTM), MESIC = month(DTM)) %>% rename(value = real)
+  u_val1 <- u_val %>% filter(ID == default.circle_uv(), ROK == 2018) %>% select(MESIC, value) %>%
                   filter(MESIC %in% unique(as.character(month(date[1:4])))) %>% summarise(value=mean(value))
   # 
-  u_val2 <- u %>% filter(NAZICO == default.circle_uv(), ROK == 2017) %>% select(MESIC, value) %>%
+  u_val2 <- u_val %>% filter(ID == default.circle_uv(), ROK == 2018) %>% select(MESIC, value) %>%
                   filter(MESIC %in% unique(as.character(month(date[5:8])))) %>% summarise(value=mean(value))
   
   dt <- changes_v()
@@ -1636,7 +1812,7 @@ output$hotable_v <- renderRHandsontable({
 
 wellPanel(
   br(),
-  HTML(paste("<b>Odebrané množství 2017</b>")),
+  HTML(paste("<b>Odebrané množství 2018</b>")),
   tableOutput("odbery"),
   br(),
   HTML(paste("<b>Požadavek</b>")),
@@ -1649,8 +1825,9 @@ wellPanel(
 
 ```{r vyhled_uzivani:: TS odberatel}
 renderDygraph({
-  ts.uzivani.uv <- u[NAZICO == default.circle_uv()] %>% dcast(DTM~JEV)
+  ts.uzivani.uv <- u[u$ID == default.circle_uv(),] %>% dcast(DTM~JEV, value.var = "real")
   ts.uzivani.uv <- xts::xts(ts.uzivani.uv, order.by = ts.uzivani.uv$DTM)
+  ts.uzivani.uv <- ts.uzivani.uv[,-which(colnames(ts.uzivani.uv) == "DTM")]
   #ts.uzivani <- ts(ts.uzivani, start = decimal_date(as.Date("2006-12-01")), frequency = 1)
   dygraph(ts.uzivani.uv, main = paste(as.character(default.circle_uv())))
 })
