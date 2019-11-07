@@ -15,11 +15,20 @@ BM <- BM %>% left_join(seasons, by="month")
 BM$month2 <- as.factor(BM$month)
 levels(BM$month2) <- mesice
 
-BM <- BM %>% group_by(UPOV_ID, year, variable) %>% mutate(annual.avg = mean(value)) %>% ungroup
+var_list = unique(BM$variables)
+BM_full <- NULL
 
-BM <- BM %>% group_by(UPOV_ID, variable) %>% mutate(mean_ep = mean(value)) %>%  ungroup
+for(i in var_list){
+  if(i != 'T'){
+    BM2 <- BM[variable == i, ] %>% group_by(UPOV_ID, year) %>% mutate(annual.avg = sum(value)) %>% ungroup
+  }else{
+    BM2<- BM[variable == i, ] %>% group_by(UPOV_ID, year) %>% mutate(annual.avg = mean(value)) %>% ungroup
+  }
+  BM2 <- BM2 %>% group_by(UPOV_ID) %>% mutate(mean_ep = mean(value)) %>%  ungroup
+  BM_full <- rbind(BM_full, BM2)
+}
 
-saveRDS(BM, file.path(.datadir, 'bilan_1961_2019.rds'))
+saveRDS(BM_full, file.path(.datadir, 'BM_81-19.rds'))
 
 
 #IND
