@@ -1100,7 +1100,7 @@ reac.ind <- eventReactive(input$go2,{
  ind_dta <- readRDS(file.path(.datadir, "webapp_data/indikatory_2019", paste0(input$indikatory, '.rds')))
 
  dta <- (sp::merge(povodi, 
-                   ind_dta[ind_dta$year == year(input$entry.date.ind) & ind_dta$week == (week(input$entry.date.ind)), ],
+                   ind_dta[ind_dta$year == year(input$entry.date.ind) & (ind_dta$week+1) == (week(input$entry.date.ind)), ],
                    by="UPOV_ID"))
 
 # dta <- sp::merge(povodi, ind_dta, by="UPOV_ID")
@@ -1370,12 +1370,12 @@ checkboxGroupInput("entry.layer_u", label = "Vrstvy",
 
 # hr()
 
-wellPanel(
-    HTML('<div class="help-tip" style="float: left">
-          <p style = "width: 110px !important; position: relative;">Hodnoty zadáte kliknutím na místo odběru po přihlášení</p>
-          </div>'),
-    checkboxInput("uziv_tab_user", label = div(tags$b("Zadání vlastních hodnot", style = "color: #001a33")), value = FALSE)
-    )
+# wellPanel(
+#     HTML('<div class="help-tip" style="float: left">
+#           <p style = "width: 110px !important; position: relative;">Hodnoty zadáte kliknutím na místo odběru po přihlášení</p>
+#           </div>'),
+#     checkboxInput("uziv_tab_user", label = div(tags$b("Zadání vlastních hodnot", style = "color: #001a33")), value = FALSE)
+#     )
 
 
 wellPanel(HTML(paste("<div style='font-size:.85em'>",paste("<b>POD</b> - odběr z podzemních vod",
@@ -1463,84 +1463,84 @@ leafletOutput("uzivani")
 
 ```{r uzivani: popups}
 
-tab <- t(data.frame(hodnota = rep(0,12), row.names = 1:12))
-hnds_table <- reactiveVal(tab)
-
-changes <- reactive({
-  
-  if(is.null(input$hotable)){
-    tab <- tab
-    return(tab=tab)
-  }else{
-      tab <- as.data.frame(hot_to_r(input$hotable))
-    }
-
-    hnds_table(tab)
-    
-    return(tab)
-})
-
-
-output$hotable <- renderRHandsontable({
-  rhandsontable(hnds_table())
-})
-
-tableModal <- function(done = FALSE){
-  modalDialog(
-    title = "Vyplňte hodnoty", 
-    rHandsontableOutput("hotable"),
-    
-    if(done)
-    div(tags$b("Odesláno", style = "color: green")),
-    
-    if(!done)
-    div(tags$b("Zatím neodesláno", style = "color: blue")),
-    
-    footer = tagList(modalButton("Zavřit"),
-                     actionButton("send", "Odeslat")),
-    easyClose = TRUE, fade = TRUE, size = "l"
-  )
-}
-
-
-passwordModal <- function(failed = FALSE) {
-      modalDialog(
-        title = "",
-        passwordInput("heslo_uzivani", "Přihlaste se", value = "", width = NULL, placeholder = NULL), #textInput
-    
-        if(failed)
-          div(tags$b("Neplatné heslo", style = "color: red;")),
-
-        footer = tagList(modalButton("Zavřit"),
-                         actionButton("ok", "OK")),
-        easyClose = TRUE, fade = TRUE
-      )
-}
-
-
-
-observeEvent(input$uzivani_marker_click, {
-  if(input$uziv_tab_user == TRUE){
-  showModal(passwordModal())}
-  })
-
-observeEvent(input$ok, {
-      if(input$heslo_uzivani %in% credentials$heslo){
-        removeModal()
-        showModal(tableModal())
-        }else{
-        showModal(passwordModal(failed = TRUE))
-      }
-    })
-
-observeEvent(input$send, {
-
-  write.table(changes(), file.path(.datadir, "webapp_data/icoc_values", 
-                                   paste0(u_leaflet$ICOC[u_leaflet$ID ==input$uzivani_marker_click$id],
-                                          ".csv")))
-  showModal(tableModal(done = TRUE))
-   
-    })
+# tab <- t(data.frame(hodnota = rep(0,12), row.names = 1:12))
+# hnds_table <- reactiveVal(tab)
+# 
+# changes <- reactive({
+#   
+#   if(is.null(input$hotable)){
+#     tab <- tab
+#     return(tab=tab)
+#   }else{
+#       tab <- as.data.frame(hot_to_r(input$hotable))
+#     }
+# 
+#     hnds_table(tab)
+#     
+#     return(tab)
+# })
+# 
+# 
+# output$hotable <- renderRHandsontable({
+#   rhandsontable(hnds_table())
+# })
+# 
+# tableModal <- function(done = FALSE){
+#   modalDialog(
+#     title = "Vyplňte hodnoty", 
+#     rHandsontableOutput("hotable"),
+#     
+#     if(done)
+#     div(tags$b("Odesláno", style = "color: green")),
+#     
+#     if(!done)
+#     div(tags$b("Zatím neodesláno", style = "color: blue")),
+#     
+#     footer = tagList(modalButton("Zavřit"),
+#                      actionButton("send", "Odeslat")),
+#     easyClose = TRUE, fade = TRUE, size = "l"
+#   )
+# }
+# 
+# 
+# passwordModal <- function(failed = FALSE) {
+#       modalDialog(
+#         title = "",
+#         passwordInput("heslo_uzivani", "Přihlaste se", value = "", width = NULL, placeholder = NULL), #textInput
+#     
+#         if(failed)
+#           div(tags$b("Neplatné heslo", style = "color: red;")),
+# 
+#         footer = tagList(modalButton("Zavřit"),
+#                          actionButton("ok", "OK")),
+#         easyClose = TRUE, fade = TRUE
+#       )
+# }
+# 
+# 
+# 
+# observeEvent(input$uzivani_marker_click, {
+#   if(input$uziv_tab_user == TRUE){
+#   showModal(passwordModal())}
+#   })
+# 
+# observeEvent(input$ok, {
+#       if(input$heslo_uzivani %in% credentials$heslo){
+#         removeModal()
+#         showModal(tableModal())
+#         }else{
+#         showModal(passwordModal(failed = TRUE))
+#       }
+#     })
+# 
+# observeEvent(input$send, {
+# 
+#   write.table(changes(), file.path(.datadir, "webapp_data/icoc_values", 
+#                                    paste0(u_leaflet$ICOC[u_leaflet$ID ==input$uzivani_marker_click$id],
+#                                           ".csv")))
+#   showModal(tableModal(done = TRUE))
+#    
+#     })
 
 
 # .datadir, "/webapp_data/icoc_values/", 
@@ -1653,20 +1653,6 @@ hr(),
 HTML(paste("Jednotky: <b>tis.m3/měsíc</b>")))
 ```
 
-### Pasport odběratele {.tabset data-width=200}
-
-```{r vyhled_uzivani: pas tab}
-renderTable({
-  u_pas_ic <- u_pas %>% filter(ID == default.circle_uv())
-  c <- colnames(u_pas_ic)
-  u_pas_ic[2,] <- u_pas_ic[1,]
-  u_pas_ic[1,] <- c
-  if(nrow(u_pas %>% filter(ID == default.circle_uv())) > 0){
-  u_pas_ic <- t(u_pas_ic)
-  u_pas_ic}else{paste("Nejsou informace")}
-}, digits = 3, spacing = 'xs', rownames = FALSE, colnames = FALSE)
-```
-
 
 ### Mapa {data-width=650}
 
@@ -1726,98 +1712,113 @@ leafletOutput("vyhled_uzivani")
 Row {data-height=500}
 -------------------------------------
 
-### Tabulky {data-width=355}
+### Pasport odběratele {.tabset data-width=200}
+
+```{r vyhled_uzivani: pas tab}
+renderTable({
+  u_pas_ic <- u_pas %>% filter(ID == default.circle_uv())
+  c <- colnames(u_pas_ic)
+  u_pas_ic[2,] <- u_pas_ic[1,]
+  u_pas_ic[1,] <- c
+  if(nrow(u_pas %>% filter(ID == default.circle_uv())) > 0){
+  u_pas_ic <- t(u_pas_ic)
+  u_pas_ic}else{paste("Nejsou informace")}
+}, digits = 3, spacing = 'xs', rownames = FALSE, colnames = FALSE)
+```
+
+
 
 ```{r vyhled_uzivani: odber/povolen + pozadavek tab}
+### Tabulky {data-width=355}
 
-output$odbery <- renderTable({
-  # u_odber <- u %>% filter(NAZICO == default.circle_uv(), ROK == 2017) %>% select(MESIC, value)
-  u_odber <- u %>% mutate(ROK = year(DTM), MESIC = month(DTM)) %>% filter(ID == default.circle_uv(), ROK == 2018) %>% select(MESIC, value = real)
-  
-  if(nrow(u_odber) > 0){
-    u_odber <- rbind(u_odber, data.frame(MESIC = "RM", value = sum(u_odber$value)))
-    u_odber <- as.data.frame(t(u_odber))
-    u_odber
-  }else{print("Nejsou informace")}
-}, digits = 3, spacing = 'xs', rownames = FALSE, colnames = FALSE)
-
-date <- seq(from = Sys.Date(), by = "weeks", length.out = 8)
-tab <- as.data.frame(t(data.frame(hodnota = rep(0,8), 
-                                  row.names = format(date, "%d.%m.%Y"))))
-hnds_table_v <- reactiveVal(tab)
-
-changes_v <- reactive({
-  
-  if(is.null(input$hotable_v)){
-    tab <- tab
-    return(tab=tab)
-  }else{
-      tab <- as.data.frame(hot_to_r(input$hotable_v))
-    }
-
-    hnds_table_v(tab)
-
-    
-    return(tab)
-})
-
-
-true_to_java <- function(x){
-  if(x){
-    return("true")
-  }else{
-    return("false")
-  }
-}
-
-output$hotable_v <- renderRHandsontable({
-  u_val <- u %>% mutate(ROK = year(DTM), MESIC = month(DTM)) %>% rename(value = real)
-  u_val1 <- u_val %>% filter(ID == default.circle_uv(), ROK == 2018) %>% select(MESIC, value) %>%
-                  filter(MESIC %in% unique(as.character(month(date[1:4])))) %>% summarise(value=mean(value))
-  # 
-  u_val2 <- u_val %>% filter(ID == default.circle_uv(), ROK == 2018) %>% select(MESIC, value) %>%
-                  filter(MESIC %in% unique(as.character(month(date[5:8])))) %>% summarise(value=mean(value))
-  
-  dt <- changes_v()
-  
-  true1 <- sum(dt[1,1:4], na.rm = T) > u_val1$value
-  true2 <- sum(dt[1,5:8], na.rm = T) > u_val2$value
-
-  true2 <- true_to_java(true2)
-  true1 <- true_to_java(true1)
-  
-  rdtext <- paste0("function (instance, td, row, col, prop, value, cellProperties) {
-             Handsontable.renderers.NumericRenderer.apply(this, arguments);
-             if(col < 4){
-                 if(",true1,") {
-                    td.style.background = 'pink';
-                 }else if('false' && value != 0){
-                    td.style.background = 'lightgreen';
-                 }
-              }else{
-                if(",true2,") {
-                  td.style.background = 'pink';
-                }else if('false' && value != 0){
-                    td.style.background = 'lightgreen';
-                }
-              }
-             }")
-  
-
-  rhandsontable(dt, stretchH = "all", height = 130,  rowHeaderWidth = 95, readOnly = FALSE)  %>%
-    # hot_col("value", type = "numeric") %>% 
-    hot_cols(renderer = rdtext, format="0.00e+0")
- })
-
-
-wellPanel(
-  br(),
-  HTML(paste("<b>Odebrané množství 2018</b>")),
-  tableOutput("odbery"),
-  br(),
-  HTML(paste("<b>Požadavek</b>")),
-  rHandsontableOutput("hotable_v"),
-  br(), style = "padding: 3px;")
+# output$odbery <- renderTable({
+#   # u_odber <- u %>% filter(NAZICO == default.circle_uv(), ROK == 2017) %>% select(MESIC, value)
+#   u_odber <- u %>% mutate(ROK = year(DTM), MESIC = month(DTM)) %>% filter(ID == default.circle_uv(), ROK == 2018) %>% select(MESIC, value = real)
+#   
+#   if(nrow(u_odber) > 0){
+#     u_odber <- rbind(u_odber, data.frame(MESIC = "RM", value = sum(u_odber$value)))
+#     u_odber <- as.data.frame(t(u_odber))
+#     u_odber
+#   }else{print("Nejsou informace")}
+# }, digits = 3, spacing = 'xs', rownames = FALSE, colnames = FALSE)
+# 
+# date <- seq(from = Sys.Date(), by = "weeks", length.out = 8)
+# tab <- as.data.frame(t(data.frame(hodnota = rep(0,8), 
+#                                   row.names = format(date, "%d.%m.%Y"))))
+# hnds_table_v <- reactiveVal(tab)
+# 
+# changes_v <- reactive({
+#   
+#   if(is.null(input$hotable_v)){
+#     tab <- tab
+#     return(tab=tab)
+#   }else{
+#       tab <- as.data.frame(hot_to_r(input$hotable_v))
+#     }
+# 
+#     hnds_table_v(tab)
+# 
+#     
+#     return(tab)
+# })
+# 
+# 
+# true_to_java <- function(x){
+#   if(x){
+#     return("true")
+#   }else{
+#     return("false")
+#   }
+# }
+# 
+# output$hotable_v <- renderRHandsontable({
+#   u_val <- u %>% mutate(ROK = year(DTM), MESIC = month(DTM)) %>% rename(value = real)
+#   u_val1 <- u_val %>% filter(ID == default.circle_uv(), ROK == 2018) %>% select(MESIC, value) %>%
+#                   filter(MESIC %in% unique(as.character(month(date[1:4])))) %>% summarise(value=mean(value))
+#   # 
+#   u_val2 <- u_val %>% filter(ID == default.circle_uv(), ROK == 2018) %>% select(MESIC, value) %>%
+#                   filter(MESIC %in% unique(as.character(month(date[5:8])))) %>% summarise(value=mean(value))
+#   
+#   dt <- changes_v()
+#   
+#   true1 <- sum(dt[1,1:4], na.rm = T) > u_val1$value
+#   true2 <- sum(dt[1,5:8], na.rm = T) > u_val2$value
+# 
+#   true2 <- true_to_java(true2)
+#   true1 <- true_to_java(true1)
+#   
+#   rdtext <- paste0("function (instance, td, row, col, prop, value, cellProperties) {
+#              Handsontable.renderers.NumericRenderer.apply(this, arguments);
+#              if(col < 4){
+#                  if(",true1,") {
+#                     td.style.background = 'pink';
+#                  }else if('false' && value != 0){
+#                     td.style.background = 'lightgreen';
+#                  }
+#               }else{
+#                 if(",true2,") {
+#                   td.style.background = 'pink';
+#                 }else if('false' && value != 0){
+#                     td.style.background = 'lightgreen';
+#                 }
+#               }
+#              }")
+#   
+# 
+#   rhandsontable(dt, stretchH = "all", height = 130,  rowHeaderWidth = 95, readOnly = FALSE)  %>%
+#     # hot_col("value", type = "numeric") %>% 
+#     hot_cols(renderer = rdtext, format="0.00e+0")
+#  })
+# 
+# 
+# wellPanel(
+#   br(),
+#   HTML(paste("<b>Odebrané množství 2018</b>")),
+#   tableOutput("odbery"),
+#   br(),
+#   HTML(paste("<b>Požadavek</b>")),
+#   rHandsontableOutput("hotable_v"),
+#   br(), style = "padding: 3px;")
 
 ```
 
