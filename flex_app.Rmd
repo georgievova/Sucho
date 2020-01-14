@@ -2,7 +2,7 @@
 title: "HAMR"
 output: 
   flexdashboard::flex_dashboard:
-    logo: img/logos_trans_white.png
+    logo: img/logos_trans_white2.png
     orientation: rows
     vertical_layout: fill
     css: 'styles.css'
@@ -2320,7 +2320,7 @@ Bělidla 986/4a, 603 00 Brno
 </div>
 
 <div class='well well-sm inst'>
-<img src="img/logo_chmi.png" style="height:50px" />
+<img src="img/logo_chmu_n.png" style="height:50px" />
 
 ##### **Český hydrometeorologický ústav**
 
